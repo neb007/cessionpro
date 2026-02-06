@@ -1,0 +1,34 @@
+{
+  "name": "Conversation",
+  "type": "object",
+  "properties": {
+    "participant_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Emails des participants"
+    },
+    "business_id": {
+      "type": "string",
+      "description": "Annonce concern\u00e9e"
+    },
+    "business_title": {
+      "type": "string"
+    },
+    "last_message": {
+      "type": "string"
+    },
+    "last_message_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "unread_count": {
+      "type": "object",
+      "description": "Compteur de messages non lus par participant"
+    }
+  },
+  "required": [
+    "participant_emails"
+  ]
+}

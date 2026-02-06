@@ -1,0 +1,53 @@
+{
+  "name": "Lead",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string",
+      "description": "ID de l'annonce concern\u00e9e"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Email de l'acheteur int\u00e9ress\u00e9"
+    },
+    "buyer_name": {
+      "type": "string",
+      "description": "Nom de l'acheteur"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "in_discussion",
+        "qualified",
+        "not_interested",
+        "converted"
+      ],
+      "default": "new",
+      "description": "Statut du lead"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "message",
+        "favorite",
+        "contact_form"
+      ],
+      "description": "Origine du lead"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes du vendeur sur ce lead"
+    },
+    "last_contact_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date du dernier contact"
+    }
+  },
+  "required": [
+    "business_id",
+    "buyer_email"
+  ]
+}

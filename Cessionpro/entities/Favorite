@@ -1,0 +1,22 @@
+{
+  "name": "Favorite",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string",
+      "description": "ID de l'annonce"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email de l'utilisateur"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes personnelles"
+    }
+  },
+  "required": [
+    "business_id",
+    "user_email"
+  ]
+}

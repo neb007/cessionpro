@@ -1,0 +1,199 @@
+{
+  "name": "Business",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titre de l'annonce"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description d\u00e9taill\u00e9e de l'entreprise"
+    },
+    "sector": {
+      "type": "string",
+      "enum": [
+        "technology",
+        "retail",
+        "hospitality",
+        "manufacturing",
+        "services",
+        "healthcare",
+        "construction",
+        "transport",
+        "agriculture",
+        "other"
+      ],
+      "description": "Secteur d'activit\u00e9"
+    },
+    "asking_price": {
+      "type": "number",
+      "description": "Prix de cession demand\u00e9"
+    },
+    "annual_revenue": {
+      "type": "number",
+      "description": "Chiffre d'affaires annuel"
+    },
+    "ebitda": {
+      "type": "number",
+      "description": "EBITDA / R\u00e9sultat d'exploitation"
+    },
+    "employees": {
+      "type": "number",
+      "description": "Nombre d'employ\u00e9s"
+    },
+    "location": {
+      "type": "string",
+      "description": "Localisation (ville, r\u00e9gion)"
+    },
+    "country": {
+      "type": "string",
+      "enum": [
+        "france",
+        "belgium",
+        "switzerland",
+        "luxembourg",
+        "germany",
+        "spain",
+        "italy",
+        "netherlands",
+        "portugal",
+        "other"
+      ],
+      "default": "france"
+    },
+    "region": {
+      "type": "string",
+      "description": "R\u00e9gion sp\u00e9cifique"
+    },
+    "year_founded": {
+      "type": "number",
+      "description": "Ann\u00e9e de cr\u00e9ation"
+    },
+    "reason_for_sale": {
+      "type": "string",
+      "enum": [
+        "retirement",
+        "new_project",
+        "health",
+        "relocation",
+        "other"
+      ],
+      "description": "Raison de la vente"
+    },
+    "assets_included": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Actifs inclus dans la vente"
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Photos de l'entreprise"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "pending",
+        "sold",
+        "withdrawn"
+      ],
+      "default": "active"
+    },
+    "confidential": {
+      "type": "boolean",
+      "default": false,
+      "description": "Annonce confidentielle"
+    },
+    "views_count": {
+      "type": "number",
+      "default": 0
+    },
+    "seller_email": {
+      "type": "string",
+      "description": "Email du vendeur"
+    },
+    "legal_structure": {
+      "type": "string",
+      "enum": [
+        "sarl",
+        "sas",
+        "sa",
+        "eurl",
+        "sasu",
+        "sci",
+        "snc",
+        "auto_entrepreneur",
+        "other"
+      ],
+      "description": "Structure juridique"
+    },
+    "registration_number": {
+      "type": "string",
+      "description": "Num\u00e9ro SIREN/SIRET ou \u00e9quivalent"
+    },
+    "lease_info": {
+      "type": "string",
+      "description": "Informations sur les baux commerciaux"
+    },
+    "licenses": {
+      "type": "string",
+      "description": "Licences et autorisations sp\u00e9cifiques"
+    },
+    "financial_years": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "number"
+          },
+          "revenue": {
+            "type": "number"
+          },
+          "ebitda": {
+            "type": "number"
+          },
+          "ebit": {
+            "type": "number"
+          },
+          "net_result": {
+            "type": "number"
+          },
+          "employees_count": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Historique financier sur plusieurs ann\u00e9es"
+    },
+    "market_position": {
+      "type": "string",
+      "description": "Positionnement sur le march\u00e9"
+    },
+    "competitive_advantages": {
+      "type": "string",
+      "description": "Avantages concurrentiels"
+    },
+    "growth_opportunities": {
+      "type": "string",
+      "description": "Opportunit\u00e9s de d\u00e9veloppement"
+    },
+    "customer_base": {
+      "type": "string",
+      "description": "Description de la client\u00e8le"
+    }
+  },
+  "required": [
+    "title",
+    "sector",
+    "asking_price",
+    "location"
+  ]
+}
