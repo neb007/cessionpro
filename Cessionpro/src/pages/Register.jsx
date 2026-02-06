@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Logo from '@/components/Logo';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -202,6 +203,11 @@ export default function Register() {
         >
           {/* Card Container */}
           <div className="bg-white rounded-3xl shadow-2xl p-8 sm:p-10">
+            {/* Logo */}
+            <div className="flex justify-center mb-8">
+              <Logo size="md" showText={false} />
+            </div>
+
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="font-display text-3xl font-bold text-gray-900 mb-2">
