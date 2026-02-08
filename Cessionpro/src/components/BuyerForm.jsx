@@ -15,6 +15,127 @@ import { Save, Send, Loader2, Search } from 'lucide-react';
 
 const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
 const BUSINESS_TYPES = ['entreprise', 'fond_de_commerce', 'franchise'];
+const EUROPEAN_COUNTRIES = [
+  { value: 'france', label: '🇫🇷 France' },
+  { value: 'belgium', label: '🇧🇪 Belgique' },
+  { value: 'switzerland', label: '🇨🇭 Suisse' },
+  { value: 'germany', label: '🇩🇪 Allemagne' },
+  { value: 'italy', label: '🇮🇹 Italie' },
+  { value: 'spain', label: '🇪🇸 Espagne' },
+  { value: 'netherlands', label: '🇳🇱 Pays-Bas' },
+  { value: 'portugal', label: '🇵🇹 Portugal' },
+  { value: 'austria', label: '🇦🇹 Autriche' },
+  { value: 'poland', label: '🇵🇱 Pologne' },
+  { value: 'czechia', label: '🇨🇿 Tchéquie' },
+  { value: 'hungary', label: '🇭🇺 Hongrie' },
+  { value: 'romania', label: '🇷🇴 Roumanie' },
+  { value: 'greece', label: '🇬🇷 Grèce' },
+  { value: 'sweden', label: '🇸🇪 Suède' },
+  { value: 'denmark', label: '🇩🇰 Danemark' },
+  { value: 'finland', label: '🇫🇮 Finlande' },
+  { value: 'ireland', label: '🇮🇪 Irlande' },
+  { value: 'luxembourg', label: '🇱🇺 Luxembourg' },
+  { value: 'cyprus', label: '🇨🇾 Chypre' }
+];
+
+const FRENCH_DEPARTMENTS = [
+  { value: '01', label: '01 - Ain' },
+  { value: '02', label: '02 - Aisne' },
+  { value: '03', label: '03 - Allier' },
+  { value: '04', label: '04 - Alpes-de-Haute-Provence' },
+  { value: '05', label: '05 - Hautes-Alpes' },
+  { value: '06', label: '06 - Alpes-Maritimes' },
+  { value: '07', label: '07 - Ardèche' },
+  { value: '08', label: '08 - Ardennes' },
+  { value: '09', label: '09 - Ariège' },
+  { value: '10', label: '10 - Aube' },
+  { value: '11', label: '11 - Aude' },
+  { value: '12', label: '12 - Aveyron' },
+  { value: '13', label: '13 - Bouches-du-Rhône' },
+  { value: '14', label: '14 - Calvados' },
+  { value: '15', label: '15 - Cantal' },
+  { value: '16', label: '16 - Charente' },
+  { value: '17', label: '17 - Charente-Maritime' },
+  { value: '18', label: '18 - Cher' },
+  { value: '19', label: '19 - Corrèze' },
+  { value: '2a', label: '2A - Corse-du-Sud' },
+  { value: '2b', label: '2B - Haute-Corse' },
+  { value: '21', label: '21 - Côte-d\'Or' },
+  { value: '22', label: '22 - Côtes-d\'Armor' },
+  { value: '23', label: '23 - Creuse' },
+  { value: '24', label: '24 - Dordogne' },
+  { value: '25', label: '25 - Doubs' },
+  { value: '26', label: '26 - Drôme' },
+  { value: '27', label: '27 - Eure' },
+  { value: '28', label: '28 - Eure-et-Loir' },
+  { value: '29', label: '29 - Finistère' },
+  { value: '30', label: '30 - Gard' },
+  { value: '31', label: '31 - Haute-Garonne' },
+  { value: '32', label: '32 - Gers' },
+  { value: '33', label: '33 - Gironde' },
+  { value: '34', label: '34 - Hérault' },
+  { value: '35', label: '35 - Ille-et-Vilaine' },
+  { value: '36', label: '36 - Indre' },
+  { value: '37', label: '37 - Indre-et-Loire' },
+  { value: '38', label: '38 - Isère' },
+  { value: '39', label: '39 - Jura' },
+  { value: '40', label: '40 - Landes' },
+  { value: '41', label: '41 - Loir-et-Cher' },
+  { value: '42', label: '42 - Loire' },
+  { value: '43', label: '43 - Haute-Loire' },
+  { value: '44', label: '44 - Loire-Atlantique' },
+  { value: '45', label: '45 - Loiret' },
+  { value: '46', label: '46 - Lot' },
+  { value: '47', label: '47 - Lot-et-Garonne' },
+  { value: '48', label: '48 - Lozère' },
+  { value: '49', label: '49 - Maine-et-Loire' },
+  { value: '50', label: '50 - Manche' },
+  { value: '51', label: '51 - Marne' },
+  { value: '52', label: '52 - Haute-Marne' },
+  { value: '53', label: '53 - Mayenne' },
+  { value: '54', label: '54 - Meurthe-et-Moselle' },
+  { value: '55', label: '55 - Meuse' },
+  { value: '56', label: '56 - Morbihan' },
+  { value: '57', label: '57 - Moselle' },
+  { value: '58', label: '58 - Nièvre' },
+  { value: '59', label: '59 - Nord' },
+  { value: '60', label: '60 - Oise' },
+  { value: '61', label: '61 - Orne' },
+  { value: '62', label: '62 - Pas-de-Calais' },
+  { value: '63', label: '63 - Puy-de-Dôme' },
+  { value: '64', label: '64 - Pyrénées-Atlantiques' },
+  { value: '65', label: '65 - Hautes-Pyrénées' },
+  { value: '66', label: '66 - Pyrénées-Orientales' },
+  { value: '67', label: '67 - Bas-Rhin' },
+  { value: '68', label: '68 - Haut-Rhin' },
+  { value: '69', label: '69 - Rhône' },
+  { value: '70', label: '70 - Haute-Saône' },
+  { value: '71', label: '71 - Saône-et-Loire' },
+  { value: '72', label: '72 - Sarthe' },
+  { value: '73', label: '73 - Savoie' },
+  { value: '74', label: '74 - Haute-Savoie' },
+  { value: '75', label: '75 - Paris' },
+  { value: '76', label: '76 - Seine-Maritime' },
+  { value: '77', label: '77 - Seine-et-Marne' },
+  { value: '78', label: '78 - Yvelines' },
+  { value: '79', label: '79 - Deux-Sèvres' },
+  { value: '80', label: '80 - Somme' },
+  { value: '81', label: '81 - Tarn' },
+  { value: '82', label: '82 - Tarn-et-Garonne' },
+  { value: '83', label: '83 - Var' },
+  { value: '84', label: '84 - Vaucluse' },
+  { value: '85', label: '85 - Vendée' },
+  { value: '86', label: '86 - Vienne' },
+  { value: '87', label: '87 - Haute-Vienne' },
+  { value: '88', label: '88 - Vosges' },
+  { value: '89', label: '89 - Yonne' },
+  { value: '90', label: '90 - Territoire de Belfort' },
+  { value: '91', label: '91 - Essonne' },
+  { value: '92', label: '92 - Hauts-de-Seine' },
+  { value: '93', label: '93 - Seine-Saint-Denis' },
+  { value: '94', label: '94 - Val-de-Marne' },
+  { value: '95', label: '95 - Val-d\'Oise' }
+];
 
 export default function BuyerForm({
   formData,
@@ -44,22 +165,24 @@ export default function BuyerForm({
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <Label>{t('title')} *</Label>
+              <Label><span className="text-red-500">*</span> {t('title')}</Label>
               <Input
                 value={formData.title}
                 onChange={(e) => handleChange('title', e.target.value)}
                 placeholder={language === 'fr' ? 'Ex: Cherche entreprise tech ou restaurant' : 'Ex: Looking for tech or restaurant business'}
                 className="mt-2"
+                required
               />
             </div>
 
             <div>
-              <Label>{t('description')}</Label>
+              <Label><span className="text-red-500">*</span> {t('description')}</Label>
               <Textarea
                 value={formData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder={language === 'fr' ? 'Décrivez votre profil et vos objectifs...' : 'Describe your profile and objectives...'}
                 className="mt-2 min-h-32"
+                required
               />
             </div>
           </CardContent>
@@ -115,12 +238,12 @@ export default function BuyerForm({
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="font-display">
-              {language === 'fr' ? 'Critères de recherche' : 'Search Criteria'}
+              <span className="text-red-500">*</span> {language === 'fr' ? 'Critères de recherche' : 'Search Criteria'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>{language === 'fr' ? 'Secteurs d\'intérêt' : 'Interested Sectors'}</Label>
+              <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Secteurs d\'intérêt' : 'Interested Sectors'}</Label>
               <p className="text-xs text-gray-500 mb-2">
                 {language === 'fr' ? 'Sélectionnez les secteurs' : 'Select sectors of interest'}
               </p>
@@ -217,7 +340,7 @@ export default function BuyerForm({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>{language === 'fr' ? 'Type de profil' : 'Profile Type'}</Label>
+              <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Type de profil' : 'Profile Type'}</Label>
               <Select value={formData.buyer_profile_type} onValueChange={(v) => handleChange('buyer_profile_type', v)}>
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder={language === 'fr' ? 'Sélectionner' : 'Select'} />
@@ -233,15 +356,32 @@ export default function BuyerForm({
             </div>
 
             <div>
-              <Label>{language === 'fr' ? 'Lieux d\'intérêt' : 'Interested Locations'}</Label>
-              <Input
-                value={formData.buyer_locations.join(', ')}
-                onChange={(e) => handleChange('buyer_locations', e.target.value.split(',').map(l => l.trim()).filter(l => l))}
-                placeholder={language === 'fr' ? 'Ex: Paris, Lyon, Marseille' : 'Ex: Paris, Lyon, Marseille'}
-                className="mt-2"
-              />
+              <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Lieux d\'intérêt' : 'Interested Locations'}</Label>
+              <Select value={formData.buyer_locations?.[0] || ''} onValueChange={(v) => handleChange('buyer_locations', v ? [v] : [])}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder={language === 'fr' ? 'Sélectionner un lieu' : 'Select a location'} />
+                </SelectTrigger>
+                <SelectContent className="max-h-80">
+                  <div className="px-2 py-1.5 font-semibold text-sm bg-gray-100">
+                    {language === 'fr' ? '🇫🇷 Départements Français' : '🇫🇷 French Departments'}
+                  </div>
+                  {FRENCH_DEPARTMENTS.map(dept => (
+                    <SelectItem key={dept.value} value={dept.value}>
+                      {dept.label}
+                    </SelectItem>
+                  ))}
+                  <div className="px-2 py-1.5 font-semibold text-sm bg-gray-100 mt-2">
+                    {language === 'fr' ? '🌍 Pays Européens' : '🌍 European Countries'}
+                  </div>
+                  {EUROPEAN_COUNTRIES.map(country => (
+                    <SelectItem key={country.value} value={country.value}>
+                      {country.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-gray-500 mt-1">
-                {language === 'fr' ? 'Séparées par des virgules' : 'Separated by commas'}
+                {language === 'fr' ? 'Sélectionnez au moins un lieu d\'intérêt' : 'Select at least one interested location'}
               </p>
             </div>
 

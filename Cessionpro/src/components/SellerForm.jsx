@@ -123,7 +123,7 @@ export default function SellerForm({
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <Label>{t('sector')} *</Label>
+                    <Label><span className="text-red-500">*</span> {t('sector')}</Label>
                     <Select value={formData.sector} onValueChange={(v) => handleChange('sector', v)}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder={t('filter_by_sector')} />
@@ -137,7 +137,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{language === 'fr' ? 'Type de Cession' : 'Business Type'}</Label>
+                    <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Type de Cession' : 'Business Type'}</Label>
                     <Select value={formData.business_type} onValueChange={(v) => handleChange('business_type', v)}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder={language === 'fr' ? 'Sélectionner un type' : 'Select type'} />
@@ -173,12 +173,13 @@ export default function SellerForm({
 
                 <div className="grid sm:grid-cols-4 gap-4">
                   <div>
-                    <Label>{t('location')} *</Label>
+                    <Label><span className="text-red-500">*</span> {t('location')}</Label>
                     <Input
                       value={formData.location}
                       onChange={(e) => handleChange('location', e.target.value)}
                       placeholder={language === 'fr' ? 'Ville' : 'City'}
                       className="mt-2"
+                      required
                     />
                   </div>
 
@@ -219,14 +220,14 @@ export default function SellerForm({
 
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <div>
-                    <p className="font-medium text-gray-900">{t('confidential')}</p>
+                    <p className="font-medium text-gray-900">{language === 'fr' ? 'Masquer la localisation' : 'Hide Location'}</p>
                     <p className="text-sm text-gray-500">
-                      {language === 'fr' ? "L'annonce sera masquée aux visiteurs non connectés" : 'Listing will be hidden from non-logged users'}
+                      {language === 'fr' ? "Masquer la ville, département et région dans l'annonce" : 'Hide city, department and region in listing'}
                     </p>
                   </div>
                   <Switch
-                    checked={formData.confidential}
-                    onCheckedChange={(v) => handleChange('confidential', v)}
+                    checked={formData.hide_location}
+                    onCheckedChange={(v) => handleChange('hide_location', v)}
                   />
                 </div>
               </CardContent>
@@ -242,13 +243,14 @@ export default function SellerForm({
               <CardContent className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <Label>{t('price')} * (€)</Label>
+                    <Label><span className="text-red-500">*</span> {t('price')} (€)</Label>
                     <Input
                       type="number"
                       value={formData.asking_price}
                       onChange={(e) => handleChange('asking_price', e.target.value)}
                       placeholder="500000"
                       className="mt-2 font-mono"
+                      required
                     />
                   </div>
 

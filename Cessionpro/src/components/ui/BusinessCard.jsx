@@ -139,12 +139,15 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
                 </p>
               </div>
               <div>
-                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 text-green-600" /> CROISSANCE
+                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">
+                  CROISSANCE
                 </p>
-                <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-green-600">
-                  {business.growth_percentage > 0 ? '+' : ''}{business.growth_percentage || 0}%
-                </p>
+                <div className="flex items-center justify-start gap-1">
+                  <TrendingUp className="w-3 h-3 text-green-600 flex-shrink-0" />
+                  <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-green-600">
+                    {business.growth_percentage > 0 ? '+' : ''}{business.growth_percentage || 0}%
+                  </p>
+                </div>
               </div>
             </div>
 

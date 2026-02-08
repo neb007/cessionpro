@@ -176,6 +176,12 @@ export default function Businesses() {
     const search = urlParams.get('search');
     if (search) setSearchQuery(search);
     
+    // Get type filter from query params
+    const type = urlParams.get('type');
+    if (type && (type === 'cession' || type === 'acquisition')) {
+      setListingType(type);
+    }
+    
     loadData();
     
     // Set up interval to refresh data periodically
