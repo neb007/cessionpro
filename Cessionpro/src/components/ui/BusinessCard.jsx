@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { MapPin, Heart, MessageCircle, CheckCircle2, Users, TrendingUp, Eye } from 'lucide-react';
+import { MapPin, Heart, MessageCircle, CheckCircle2, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -73,6 +73,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
             
             {/* Views badge on image */}
             <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium">
+              <Eye className="w-4 h-4" />
               <span className="font-mono">{business.views_count || 0}</span>
             </div>
           </div>
@@ -82,7 +83,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
           {/* Nom + Favoris */}
           <div className="flex items-start justify-between gap-2 mb-2">
             <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)} className="flex-1 min-w-0">
-              <h3 className="font-display font-semibold text-base text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2">
+              <h3 style={{ fontFamily: 'Sora', fontWeight: 700 }} className="text-base text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2">
                 {business.title}
               </h3>
             </Link>
@@ -105,7 +106,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
 
           {/* Localisation + Message */}
           <div className="flex items-start justify-between gap-2 mb-3">
-            <div className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
+            <div style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500 }} className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
               <MapPin className="w-4 h-4 mr-1.5 text-gray-400 flex-shrink-0" />
               <span className="truncate">{business.location}</span>
             </div>
@@ -132,17 +133,16 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
           <div className="pt-3 border-t border-gray-100 mt-auto space-y-3">
             <div className="flex items-center justify-between gap-2 text-xs">
               <div>
-                <p className="text-[#8A98AD] uppercase tracking-wider">CA</p>
-                <p className="font-mono font-semibold text-[#3B4759]">
+                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }} className="text-[#8A98AD] uppercase tracking-wider">CA</p>
+                <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700 }} className="text-[#3B4759]">
                   {formatPrice(business.annual_revenue)}
                 </p>
               </div>
               <div>
-                <p className="text-[#8A98AD] uppercase tracking-wider flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 text-green-600" />
-                  CROISSANCE
+                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }} className="text-[#8A98AD] uppercase tracking-wider flex items-center gap-1">
+                  📈 CROISSANCE
                 </p>
-                <p className="font-mono font-semibold text-green-600">
+                <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700 }} className="text-green-600">
                   {business.growth_percentage > 0 ? '+' : ''}{business.growth_percentage || 0}%
                 </p>
               </div>
@@ -151,10 +151,10 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
             <div className="pt-2 border-t border-gray-100">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs text-[#8A98AD] uppercase tracking-wider mb-1">
+                  <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }} className="text-xs text-[#8A98AD] uppercase tracking-wider mb-1">
                     {language === 'fr' ? 'Prix Demandé' : 'Asking Price'}
                   </p>
-                  <p className="font-mono text-lg font-bold text-[#FF6B4A]">
+                  <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700 }} className="text-lg text-[#FF6B4A]">
                     {formatPrice(business.asking_price)}
                   </p>
                 </div>
@@ -169,10 +169,10 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
 
           {/* Badge Cession/Acquisition + Référence */}
           <div className="mt-3 flex items-center justify-between gap-2">
-            <Badge variant="secondary" className="inline-flex items-center rounded-md px-2.5 py-0.5 font-semibold bg-purple-50 text-purple-700 border-0 text-[11px]">
+            <Badge variant="secondary" style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }} className="inline-flex items-center rounded-md px-2.5 py-0.5 bg-purple-50 text-purple-700 border-0 text-[11px]">
               {announcementLabel}
             </Badge>
-            <Badge variant="secondary" className="inline-flex items-center rounded-md px-2.5 py-0.5 font-semibold bg-gray-100 text-gray-600 border-0 text-[11px] font-mono">
+            <Badge variant="secondary" style={{ fontFamily: 'JetBrains Mono', fontWeight: 700 }} className="inline-flex items-center rounded-md px-2.5 py-0.5 bg-gray-100 text-gray-600 border-0 text-[11px]">
               {referenceLabel}
             </Badge>
           </div>

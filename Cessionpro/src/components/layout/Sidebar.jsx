@@ -151,10 +151,10 @@ export default function Sidebar({ user }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 w-60 bg-white transition-transform duration-300 z-50 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 w-48 transition-transform duration-300 z-50 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{ overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        style={{ backgroundColor: '#FBFBF9', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <style>{`
           aside::-webkit-scrollbar {
@@ -163,7 +163,7 @@ export default function Sidebar({ user }) {
         `}</style>
 
         {/* Mobile Close Button */}
-        <div className="lg:hidden sticky top-0 flex items-center justify-between p-4 border-b border-gray-100 bg-white">
+        <div className="lg:hidden sticky top-0 flex items-center justify-between p-4 border-b border-gray-100" style={{ backgroundColor: '#FBFBF9' }}>
           <span className="font-display font-bold text-lg text-[#3B4759]">Menu</span>
           <button
             className="inline-flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors p-2"
@@ -200,7 +200,8 @@ export default function Sidebar({ user }) {
                   navigate(item.queryParams ? `/Annonces${item.queryParams}` : `/${item.page}`);
                   handleMenuItemClick();
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-3 transition-all duration-200 text-sm font-medium ${
+                style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                className={`w-full flex items-center gap-3 px-3 py-3 transition-all duration-200 text-sm ${
                   currentPage === item.page
                     ? 'text-[#3B4759]'
                     : 'text-[#6B7A94] hover:text-[#3B4759]'
@@ -292,7 +293,8 @@ export default function Sidebar({ user }) {
                   navigate('/Pricing');
                   handleMenuItemClick();
                 }}
-                className="w-full flex items-center gap-3 px-3 py-3 text-[#6B7A94] hover:bg-gray-50 hover:text-[#3B4759] transition-all duration-200 text-sm font-medium">
+                style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                className="w-full flex items-center gap-3 px-3 py-3 text-[#6B7A94] hover:bg-gray-50 hover:text-[#3B4759] transition-all duration-200 text-sm">
                 <CreditCard className="w-5 h-5" />
                 <span>{language === 'fr' ? 'Mon abonnement' : 'My Subscription'}</span>
               </button>
@@ -309,7 +311,8 @@ export default function Sidebar({ user }) {
               {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-3 text-red-600 hover:bg-red-50 transition-all duration-200 group text-sm font-medium"
+                style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                className="w-full flex items-center gap-3 px-3 py-3 text-red-600 hover:bg-red-50 transition-all duration-200 group text-sm"
               >
                 <LogOut className="w-5 h-5" />
                 <span>{language === 'fr' ? 'Déconnexion' : 'Logout'}</span>
@@ -323,7 +326,7 @@ export default function Sidebar({ user }) {
             {/* Language Switcher */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="w-full flex items-center gap-3 px-3 py-3 text-[#6B7A94] hover:bg-gray-50 hover:text-[#3B4759] transition-all duration-200 text-sm font-medium">
+                <button style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }} className="w-full flex items-center gap-3 px-3 py-3 text-[#6B7A94] hover:bg-gray-50 hover:text-[#3B4759] transition-all duration-200 text-sm">
                   <Globe className="w-5 h-5" />
                   <span className="uppercase font-mono text-xs">{language}</span>
                 </button>

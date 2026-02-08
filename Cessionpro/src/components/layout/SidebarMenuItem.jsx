@@ -14,6 +14,7 @@ export default function SidebarMenuItem({
     <Link
       to={`/${page}`}
       onClick={onClick}
+      style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
       className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 group ${
         isActive
           ? 'bg-[#FF6B4A]/10 text-[#FF6B4A]'
@@ -24,7 +25,7 @@ export default function SidebarMenuItem({
         <Icon className={`w-5 h-5 transition-colors ${
           isActive ? 'text-[#FF6B4A]' : 'text-[#6B7A94] group-hover:text-[#3B4759]'
         }`} />
-        <span className="font-medium text-sm">{label}</span>
+        <span className="text-sm">{label}</span>
       </div>
       {isPremium && (
         <Badge variant="secondary" className="ml-2 text-xs">Pro</Badge>
