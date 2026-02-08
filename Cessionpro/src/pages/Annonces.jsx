@@ -303,60 +303,26 @@ export default function Businesses() {
 
         {/* Search & Filters Bar */}
         <div className="w-full p-4 mb-0" style={{ backgroundColor: '#F6F5F3' }}>
-          {/* Tab-style Type Navigation */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 pb-3 border-b border-[#E7E2DE]">
-            <button
-              onClick={() => setListingType('all')}
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                listingType === 'all'
-                  ? 'bg-[#FFF0ED] text-[#FF6B4A] shadow-sm'
-                  : 'text-[#6B7A94] hover:bg-[#F8F3F0]'
-              }`}
-            >
-              <List className="w-4 h-4" /> {language === 'fr' ? 'Tout' : 'All'}
-            </button>
-            <button
-              onClick={() => setListingType('cession')}
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                listingType === 'cession'
-                  ? 'bg-[#FFF0ED] text-[#FF6B4A] shadow-sm'
-                  : 'text-[#6B7A94] hover:bg-[#F8F3F0]'
-              }`}
-            >
-              <ArrowRight className="w-4 h-4" /> {language === 'fr' ? 'Cessions' : 'Sales'}
-            </button>
-            <button
-              onClick={() => setListingType('acquisition')}
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                listingType === 'acquisition'
-                  ? 'bg-[#FFF0ED] text-[#FF6B4A] shadow-sm'
-                  : 'text-[#6B7A94] hover:bg-[#F8F3F0]'
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4" /> {language === 'fr' ? 'Acquisitions' : 'Acquisitions'}
-            </button>
-            
-            {/* Sort Dropdown */}
-            <div className="w-full sm:w-auto sm:ml-auto">
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-[#6B7A94]">
-                <span>{language === 'fr' ? 'Trier par:' : 'Sort by:'}</span>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-44 h-9 sm:h-10 text-xs sm:text-sm border-gray-200 rounded-full bg-white shadow-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="-created_date">{language === 'fr' ? 'Plus récent' : 'Newest'}</SelectItem>
-                    <SelectItem value="price_asc">{language === 'fr' ? 'Prix: Croissant' : 'Price: Low-High'}</SelectItem>
-                    <SelectItem value="price_desc">{language === 'fr' ? 'Prix: Décroissant' : 'Price: High-Low'}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Sort Dropdown */}
+          <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-[#E7E2DE]">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-[#6B7A94]">
+              <span>{language === 'fr' ? 'Trier par:' : 'Sort by:'}</span>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-40 h-9 text-xs sm:text-sm border-gray-200 rounded-lg bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="-created_date">{language === 'fr' ? 'Plus récent' : 'Newest'}</SelectItem>
+                  <SelectItem value="price_asc">{language === 'fr' ? 'Prix: Croissant' : 'Price: Low-High'}</SelectItem>
+                  <SelectItem value="price_desc">{language === 'fr' ? 'Prix: Décroissant' : 'Price: High-Low'}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Filters Row */}
-          <div className="flex flex-nowrap md:flex-wrap items-center gap-2 pt-3 overflow-x-auto md:overflow-visible scrollbar-hide">
-            <div className="min-w-[160px]">
+          {/* Filters Row - Responsive Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div className="col-span-2 sm:col-span-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
@@ -364,11 +330,11 @@ export default function Businesses() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t('search_placeholder')}
-                  className="pl-9 h-9 text-sm border-gray-300 focus:border-primary rounded-lg w-full bg-white"
+                  className="pl-9 h-9 text-xs sm:text-sm border-gray-300 focus:border-primary rounded-lg w-full bg-white"
                 />
               </div>
             </div>
-            <div className="min-w-[120px]">
+            <div className="col-span-1">
               <Select value={selectedSector} onValueChange={setSelectedSector}>
                 <SelectTrigger className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm">
                   <SelectValue placeholder={language === 'fr' ? 'Sect.' : 'Sect.'} />
@@ -383,7 +349,7 @@ export default function Businesses() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="min-w-[100px]">
+            <div className="col-span-1">
               <Select value={selectedCountry} onValueChange={setSelectedCountry}>
                 <SelectTrigger className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm">
                   <SelectValue placeholder={language === 'fr' ? 'Pays' : 'Pays'} />
@@ -398,7 +364,7 @@ export default function Businesses() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="min-w-[100px]">
+            <div className="col-span-1">
               <Select 
                 value={selectedDepartment} 
                 onValueChange={setSelectedDepartment}
@@ -421,7 +387,7 @@ export default function Businesses() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="min-w-[90px]">
+            <div className="col-span-1">
               <Input
                 type="number"
                 value={budgetRange[0] === 0 ? '' : budgetRange[0]}
@@ -430,7 +396,7 @@ export default function Businesses() {
                 className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm"
               />
             </div>
-            <div className="min-w-[90px]">
+            <div className="col-span-1">
               <Input
                 type="number"
                 value={budgetRange[1] === 5000000 ? '' : budgetRange[1]}

@@ -95,19 +95,17 @@ export default function Sidebar({ user }) {
   const explorerItems = [
     {
       label: language === 'fr' ? 'Toutes les annonces' : 'All Listings',
-      page: 'Annonces',
+      path: '/Annonces',
       icon: Briefcase
     },
     {
       label: language === 'fr' ? 'Cessions' : 'Sales',
-      page: 'Annonces',
-      queryParams: '?type=cession',
+      path: '/Annonces?type=cession',
       icon: ArrowRightFromLine
     },
     {
       label: language === 'fr' ? 'Acquisitions' : 'Acquisitions',
-      page: 'Annonces',
-      queryParams: '?type=acquisition',
+      path: '/Annonces?type=acquisition',
       icon: ArrowLeftFromLine
     }
   ];
@@ -197,12 +195,12 @@ export default function Sidebar({ user }) {
               <button
                 key={item.label}
                 onClick={() => {
-                  navigate(item.queryParams ? `/Annonces${item.queryParams}` : `/${item.page}`);
+                  navigate(item.path);
                   handleMenuItemClick();
                 }}
                 style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
                 className={`w-full flex items-center gap-3 px-3 py-3 transition-all duration-200 text-sm ${
-                  currentPage === item.page
+                  currentPage === 'Annonces'
                     ? 'text-[#3B4759]'
                     : 'text-[#6B7A94] hover:text-[#3B4759]'
                 }`}

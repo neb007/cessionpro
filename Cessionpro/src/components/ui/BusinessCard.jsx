@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { MapPin, Heart, MessageCircle, CheckCircle2, Eye } from 'lucide-react';
+import { MapPin, Heart, MessageCircle, CheckCircle2, Eye, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -83,7 +83,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
           {/* Nom + Favoris */}
           <div className="flex items-start justify-between gap-2 mb-2">
             <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)} className="flex-1 min-w-0">
-              <h3 style={{ fontFamily: 'Sora', fontWeight: 700 }} className="text-base text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2">
+              <h3 style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: '16px' }} className="text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2 leading-tight">
                 {business.title}
               </h3>
             </Link>
@@ -131,35 +131,35 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
 
           {/* Détails financiers */}
           <div className="pt-3 border-t border-gray-100 mt-auto space-y-3">
-            <div className="flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }} className="text-[#8A98AD] uppercase tracking-wider">CA</p>
-                <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700 }} className="text-[#3B4759]">
+                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">CA</p>
+                <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-[#3B4759]">
                   {formatPrice(business.annual_revenue)}
                 </p>
               </div>
               <div>
-                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }} className="text-[#8A98AD] uppercase tracking-wider flex items-center gap-1">
-                  📈 CROISSANCE
+                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 text-green-600" /> CROISSANCE
                 </p>
-                <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700 }} className="text-green-600">
+                <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-green-600">
                   {business.growth_percentage > 0 ? '+' : ''}{business.growth_percentage || 0}%
                 </p>
               </div>
             </div>
 
             <div className="pt-2 border-t border-gray-100">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }} className="text-xs text-[#8A98AD] uppercase tracking-wider mb-1">
+              <div className="flex items-end justify-between gap-3">
+                <div className="flex-1">
+                  <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider mb-1">
                     {language === 'fr' ? 'Prix Demandé' : 'Asking Price'}
                   </p>
-                  <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700 }} className="text-lg text-[#FF6B4A]">
+                  <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '22px' }} className="text-[#FF6B4A] leading-none">
                     {formatPrice(business.asking_price)}
                   </p>
                 </div>
                 {business.verified && (
-                  <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 text-[11px]">
+                  <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 text-[11px] whitespace-nowrap">
                     ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
                   </Badge>
                 )}
