@@ -31,6 +31,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { DicebearAvatar } from '@/components/messages/DicebearAvatar';
 
 const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
 
@@ -45,6 +46,8 @@ export default function Profile() {
   
   const [formData, setFormData] = useState({
     user_type: 'buyer',
+    first_name: '',
+    last_name: '',
     company_name: '',
     phone: '',
     bio: '',
@@ -55,7 +58,8 @@ export default function Profile() {
     budget_max: '',
     experience: '',
     visible_in_directory: true,
-    preferred_language: 'fr'
+    preferred_language: 'fr',
+    notification_emails_enabled: true
   });
 
   useEffect(() => {
@@ -71,6 +75,8 @@ export default function Profile() {
     try {
       setFormData({
         user_type: user.user_type || 'buyer',
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
         company_name: user.company_name || '',
         phone: user.phone || '',
         bio: user.bio || '',
@@ -81,7 +87,8 @@ export default function Profile() {
         budget_max: user.budget_max?.toString() || '',
         experience: user.experience || '',
         visible_in_directory: user.visible_in_directory !== false,
-        preferred_language: user.preferred_language || 'fr'
+        preferred_language: user.preferred_language || 'fr',
+        notification_emails_enabled: user.notification_emails_enabled !== false
       });
     } catch (e) {
       console.error(e);
@@ -163,13 +170,12 @@ export default function Profile() {
             <CardContent className="p-6">
               <div className="flex items-center gap-6 mb-6">
                 <div className="relative">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-violet-400 to-primary flex items-center justify-center text-white text-3xl font-medium overflow-hidden">
-                    {formData.avatar_url ? (
-                      <img src={formData.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      user?.full_name?.[0]?.toUpperCase() || 'U'
-                    )}
-                  </div>
+                  <DicebearAvatar 
+                    email={user?.email} 
+                    name={user?.full_name} 
+                    size="xxl"
+                    className="shadow-md"
+                  />
                   <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
                     <Camera className="w-4 h-4 text-gray-600" />
                     <input
@@ -351,6 +357,44 @@ export default function Profile() {
               </CardContent>
             </Card>
           )}
+
+          {/* Messaging Settings */}
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-transparent">
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                📧 {language === 'fr' ? 'Paramètres Messagerie' : 'Messaging Settings'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl backdrop-blur-sm">
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {language === 'fr' ? 'Notifications par Email' : 'Email Notifications'}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {language === 'fr' 
+                      ? 'Recevoir un digest des messages toutes les 10 minutes' 
+                      : 'Receive message digest every 10 minutes'}
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.notification_emails_enabled}
+                  onCheckedChange={(v) => handleChange('notification_emails_enabled', v)}
+                />
+              </div>
+              {!formData.notification_emails_enabled && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800"
+                >
+                  {language === 'fr' 
+                    ? '🔕 Les notifications email sont désactivées' 
+                    : '🔕 Email notifications are disabled'}
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Save Button */}
           <div className="flex justify-end gap-4">

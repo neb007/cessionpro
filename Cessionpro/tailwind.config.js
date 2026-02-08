@@ -1,14 +1,19 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     darkMode: ["class"],
-    content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
+    content: ["./Cessionpro/index.html", "./Cessionpro/src/**/*.{ts,tsx,js,jsx}"],
   theme: {
   	extend: {
-      fontFamily: {
-        sora: ['Sora', 'sans-serif'],
-        jakarta: ['Plus Jakarta Sans', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-      },
+  		fontFamily: {
+  			sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif'],
+  			heading: ['Sora', 'system-ui', 'sans-serif'],
+  			mono: ['JetBrains Mono', 'monospace'],
+  		},
+  		borderRadius: {
+  			lg: 'var(--radius)',
+  			md: 'calc(var(--radius) - 2px)',
+  			sm: 'calc(var(--radius) - 4px)'
+  		},
       fontSize: {
         'display-lg': ['3.5rem', { lineHeight: '1.1', fontWeight: '700', fontFamily: 'Sora' }],
         'display': ['2.5rem', { lineHeight: '1.2', fontWeight: '700', fontFamily: 'Sora' }],
@@ -17,11 +22,6 @@ module.exports = {
         'h3': ['1.25rem', { lineHeight: '1.4', fontWeight: '600', fontFamily: 'Sora' }],
         'body': ['1rem', { lineHeight: '1.5', fontFamily: 'Plus Jakarta Sans' }],
       },
-  		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
-  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -35,6 +35,8 @@ module.exports = {
   			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
+  				hover: 'hsl(var(--primary-hover))',
+  				light: 'hsl(var(--primary-light))',
   				foreground: 'hsl(var(--primary-foreground))'
   			},
   			secondary: {
@@ -53,6 +55,16 @@ module.exports = {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
+  			charcoal: {
+  				DEFAULT: 'hsl(var(--charcoal))',
+  				light: 'hsl(var(--charcoal-light))'
+  			},
+  			violet: {
+  				DEFAULT: 'hsl(var(--violet))',
+  				light: 'hsl(var(--violet-light))'
+  			},
+  			success: 'hsl(var(--success))',
+  			warning: 'hsl(var(--warning))',
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
@@ -73,6 +85,13 @@ module.exports = {
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
   			}
+  		},
+  		boxShadow: {
+  			'sm': 'var(--shadow-sm)',
+  			'md': 'var(--shadow-md)',
+  			'lg': 'var(--shadow-lg)',
+  			'hover': 'var(--shadow-hover)',
+  			'glow': 'var(--shadow-glow)',
   		},
   		keyframes: {
   			'accordion-down': {

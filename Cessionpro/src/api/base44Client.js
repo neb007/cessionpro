@@ -313,12 +313,12 @@ const base44 = {
     },
 
     Lead: {
-      list: async (sortBy = 'created_date') => {
+      list: async (sortBy = 'created_at') => {
         try {
           const { data, error } = await supabase
             .from('leads')
             .select('*')
-            .order(sortBy || 'created_date', { ascending: false });
+            .order(sortBy || 'created_at', { ascending: false });
 
           if (error) throw error;
           return data || [];
@@ -342,7 +342,7 @@ const base44 = {
             query = query.eq('status', filters.status);
           }
 
-          query = query.order('created_date', { ascending: false });
+          query = query.order('created_at', { ascending: false });
 
           const { data, error } = await query;
           if (error) throw error;
@@ -359,8 +359,7 @@ const base44 = {
             .from('leads')
             .insert([{
               ...data,
-              status: data.status || 'new',
-              created_date: new Date().toISOString()
+              status: data.status || 'new'
             }])
             .select();
 
@@ -377,8 +376,7 @@ const base44 = {
           const { data: leadData, error } = await supabase
             .from('leads')
             .update({
-              ...data,
-              updated_date: new Date().toISOString()
+              ...data
             })
             .eq('id', id)
             .select();
@@ -520,9 +518,7 @@ const base44 = {
           const { data: convData, error } = await supabase
             .from('conversations')
             .insert([{
-              ...data,
-              created_date: new Date().toISOString(),
-              updated_date: new Date().toISOString()
+              ...data
             }])
             .select();
 
@@ -539,8 +535,7 @@ const base44 = {
           const { data: convData, error } = await supabase
             .from('conversations')
             .update({
-              ...data,
-              updated_date: new Date().toISOString()
+              ...data
             })
             .eq('id', id)
             .select();
@@ -594,8 +589,7 @@ const base44 = {
           const { data: msgData, error } = await supabase
             .from('messages')
             .insert([{
-              ...data,
-              created_date: new Date().toISOString()
+              ...data
             }])
             .select();
 

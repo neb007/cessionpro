@@ -74,7 +74,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center">
                 <Building2 className="w-4 h-4 text-white" />
               </div>
               <span className="font-display font-bold text-lg text-gray-900 hidden sm:inline">
@@ -86,7 +86,7 @@ export default function Home() {
                 {language === 'fr' ? 'Se connecter' : 'Login'}
               </Link>
               <Link to="/Register">
-                <Button className="bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6D] hover:from-[#FF5A3A] hover:to-[#FF7F5D] text-white">
+                <Button className="bg-gradient-to-r from-primary to-orange-500 hover:from-primary-hover hover:to-orange-600 text-white">
                   {language === 'fr' ? 'Créer un compte' : 'Sign up'}
                 </Button>
               </Link>

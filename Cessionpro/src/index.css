@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,78 +6,104 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98.5%;
-    --foreground: 59 11% 27%;
-    --card: 0 0% 100%;
-    --card-foreground: 59 11% 27%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 59 11% 27%;
-    --primary: 11 100% 58%;
+    /* Couleurs principales */
+    --primary: 11 100% 64%;
+    --primary-hover: 11 100% 58%;
+    --primary-light: 11 100% 95%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 90% 61%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 215 16% 55%;
-    --muted-foreground: 215 16% 55%;
-    --accent: 11 100% 65%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84.2% 60.2%;
+    
+    /* Texte */
+    --foreground: 217 25% 28%;
+    --muted-foreground: 217 15% 55%;
+    
+    /* Fonds */
+    --background: 40 23% 97%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 25% 28%;
+    
+    /* Charcoal */
+    --charcoal: 217 25% 28%;
+    --charcoal-light: 217 20% 40%;
+    
+    /* Violet */
+    --violet: 258 90% 66%;
+    --violet-light: 258 90% 95%;
+    
+    /* États */
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 92%;
-    --input: 0 0% 96%;
-    --ring: 11 100% 58%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Autres */
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 25% 28%;
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 0 0% 100%;
+    --accent: 11 100% 64%;
+    --accent-foreground: 0 0% 100%;
+    --border: 217 25% 28% / 0.1;
+    --input: 217 25% 28% / 0.05;
+    --ring: 11 100% 64%;
+    --chart-1: 11 100% 64%;
+    --chart-2: 258 90% 66%;
+    --chart-3: 217 25% 28%;
+    --chart-4: 142 76% 36%;
+    --chart-5: 38 92% 50%;
+    
+    /* Border Radius */
+    --radius: 0.75rem;
+    
+    /* Sidebar */
+    --sidebar-background: 40 23% 97%;
+    --sidebar-foreground: 217 25% 28%;
+    --sidebar-primary: 11 100% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 11 100% 95%;
+    --sidebar-accent-foreground: 11 100% 64%;
+    --sidebar-border: 217 25% 28% / 0.1;
+    --sidebar-ring: 11 100% 64%;
+    
+    /* Dégradés */
+    --gradient-primary: linear-gradient(135deg, hsl(11 100% 64%), hsl(27 96% 61%));
+    --gradient-coral: linear-gradient(135deg, hsl(11 100% 64%), hsl(27 96% 61%));
+    --gradient-hero: linear-gradient(135deg, hsl(217 25% 28%), hsl(217 30% 22%));
+    --gradient-violet: linear-gradient(135deg, hsl(258 90% 66%), hsl(280 85% 60%));
+    
+    /* Ombres */
+    --shadow-sm: 0 1px 2px 0 hsl(217 25% 28% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(217 25% 28% / 0.08);
+    --shadow-lg: 0 10px 15px -3px hsl(217 25% 28% / 0.08);
+    --shadow-hover: 0 8px 24px -4px hsl(11 100% 64% / 0.15);
+    --shadow-glow: 0 0 20px hsl(11 100% 64% / 0.3);
   }
 
   .dark {
-    --background: 0 0% 3.9%;
+    --background: 217 25% 12%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
+    --card: 217 25% 15%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
+    --popover: 217 25% 15%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --primary: 11 100% 64%;
+    --primary-foreground: 217 25% 12%;
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 217 25% 12%;
+    --muted: 217 25% 40%;
+    --muted-foreground: 217 15% 70%;
+    --accent: 11 100% 64%;
+    --accent-foreground: 217 25% 12%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 0 0% 98% / 0.1;
+    --input: 0 0% 98% / 0.1;
+    --ring: 11 100% 64%;
+    --sidebar-background: 217 25% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 11 100% 64%;
+    --sidebar-primary-foreground: 217 25% 12%;
   }
 }
-
-
 
 @layer base {
   * {
@@ -90,11 +116,24 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Sora', sans-serif;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-weight: 600;
+  }
+
+  h1 {
+    @apply text-3xl font-bold;
+  }
+
+  h2 {
+    @apply text-2xl font-bold;
+  }
+
+  h3 {
+    @apply text-xl font-semibold;
   }
 
   /* Custom animations for smooth transitions */
@@ -139,6 +178,78 @@
       transform: scale(1);
     }
   }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes messageBounce {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.95);
+    }
+    50% {
+      opacity: 0.8;
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes popIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.5) rotate(0deg);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+  }
+
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-2deg); }
+    75% { transform: rotate(2deg); }
+  }
+
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 0 rgba(255, 107, 74, 0.4); }
+    50% { box-shadow: 0 0 20px rgba(255, 107, 74, 0.8); }
+  }
 }
 
 @layer components {
@@ -149,16 +260,21 @@
 
   /* Cards with subtle animations */
   .card {
-    @apply transition-all duration-300 ease-out;
+    @apply transition-all duration-300 ease-out bg-card rounded-lg;
   }
 
   .card:hover {
-    @apply shadow-lg;
+    @apply shadow-md;
+  }
+
+  /* Card avec glow corail au hover */
+  .card-hover-coral:hover {
+    box-shadow: 0 8px 24px -4px hsl(11 100% 64% / 0.15);
   }
 
   /* Input and form elements */
   input, textarea, select {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
   /* Smooth focus states */
@@ -168,16 +284,24 @@
 
   /* Button base styles with smooth transitions */
   button {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     @apply font-medium;
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all;
+    @apply bg-primary text-primary-foreground hover:bg-[hsl(11_100%_58%)] active:scale-95 transition-all;
   }
 
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 active:scale-95 transition-all;
+    @apply bg-violet text-secondary-foreground hover:bg-[hsl(258_90%_60%)] active:scale-95 transition-all;
+  }
+
+  .btn-destructive {
+    @apply bg-destructive text-destructive-foreground hover:bg-[hsl(0_84%_55%)] active:scale-95 transition-all;
+  }
+
+  .btn-success {
+    @apply bg-success text-white hover:bg-[hsl(142_76%_30%)] active:scale-95 transition-all;
   }
 
   /* Smooth animation utilities */
@@ -199,11 +323,51 @@
 
   /* Hide scrollbar while allowing scroll */
   .scrollbar-hide {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   .scrollbar-hide::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+    display: none;
+  }
+
+  /* Font for numbers/prices */
+  .font-numbers {
+    font-family: 'JetBrains Mono', monospace;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Dégradé texte corail */
+  .text-gradient-coral {
+    background: var(--gradient-coral);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .badge-secondary {
+    @apply bg-violet/10 text-violet;
+  }
+
+  .badge-success {
+    @apply bg-success/10 text-success;
+  }
+
+  .badge-warning {
+    @apply bg-warning/10 text-warning;
+  }
+
+  .badge-destructive {
+    @apply bg-destructive/10 text-destructive;
   }
 }

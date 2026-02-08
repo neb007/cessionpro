@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { MapPin, Eye, Heart, MessageCircle, CheckCircle2 } from 'lucide-react';
+import { MapPin, Heart, MessageCircle, CheckCircle2, Users, TrendingUp, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -14,16 +14,16 @@ import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 
 const sectorColors = {
-  technology: 'bg-[#FFE5DF] text-[#FF6B4A]',
-  retail: 'bg-[#FFE5DF] text-[#FF8F6D]',
-  hospitality: 'bg-[#FFF3E0] text-[#FFA488]',
-  manufacturing: 'bg-[#E3F2FD] text-[#5B9BD5]',
-  services: 'bg-[#E8F5E9] text-[#66BB6A]',
-  healthcare: 'bg-[#FFE5DF] text-[#FF6B4A]',
-  construction: 'bg-[#FFE5DF] text-[#FF8F6D]',
-  transport: 'bg-[#E0F2F1] text-[#4DB6AC]',
-  agriculture: 'bg-[#F1F8E9] text-[#9CCC65]',
-  other: 'bg-gray-100 text-[#6B7A94]',
+  technology: 'bg-primary-light text-primary',
+  retail: 'bg-primary-light text-primary',
+  hospitality: 'bg-primary-light text-primary',
+  manufacturing: 'bg-blue-100 text-blue-700',
+  services: 'bg-success/10 text-success',
+  healthcare: 'bg-primary-light text-primary',
+  construction: 'bg-primary-light text-primary',
+  transport: 'bg-cyan-100 text-cyan-700',
+  agriculture: 'bg-lime-100 text-lime-700',
+  other: 'bg-gray-100 text-muted-foreground',
 };
 
 export default function BusinessCard({ business, isFavorite, onToggleFavorite }) {
@@ -54,14 +54,14 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -3 }}
       transition={{ duration: 0.3 }}
       className="h-full"
     >
-      <Card className="group overflow-hidden border-0 shadow-sm hover:shadow-xl transition-all duration-500 bg-white h-full flex flex-col">
+      <Card className="group overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full flex flex-col rounded-2xl">
         {/* Image Section with Category and Views */}
         <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)}>
-          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
+          <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
             <img
               src={imageUrl}
               alt={business.title}
@@ -71,99 +71,104 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
             {/* Overlay gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            {/* Views with Eye Icon (Top Right) */}
+            {/* Views badge on image */}
             <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium">
-              <Eye className="w-3.5 h-3.5" />
               <span className="font-mono">{business.views_count || 0}</span>
             </div>
           </div>
         </Link>
         
-        <CardContent className="p-4 sm:p-5 flex flex-col flex-grow">
-          {/* Title with Favorite Button */}
-          <div className="flex items-start justify-between gap-2 mb-1">
+        <CardContent className="p-4 flex flex-col flex-grow">
+          {/* Nom + Favoris */}
+          <div className="flex items-start justify-between gap-2 mb-2">
             <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)} className="flex-1 min-w-0">
-              <h3 className="font-display font-semibold text-base sm:text-lg text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2">
+              <h3 className="font-display font-semibold text-base text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2">
                 {business.title}
               </h3>
             </Link>
-            <div className="flex flex-col items-end gap-2">
-              {onToggleFavorite && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onToggleFavorite(business.id);
-                  }}
-                  className={`p-2 rounded-full transition-all duration-300 flex-shrink-0 ${
-                    isFavorite 
-                      ? 'bg-rose-50 text-rose-500' 
-                      : 'bg-gray-50 text-gray-400 hover:bg-rose-50 hover:text-rose-500'
-                  }`}
-                >
-                  <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
-                </button>
-              )}
+            {onToggleFavorite && (
               <button
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.preventDefault();
-                  try {
-                    const currentUser = user || await base44.auth.me();
-                    setUser(currentUser);
-                    setShowMessageModal(true);
-                  } catch (error) {
-                    base44.auth.redirectToLogin();
-                  }
+                  onToggleFavorite(business.id);
                 }}
-                className="p-2 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-primary transition-colors"
-                aria-label={language === 'fr' ? 'Envoyer un message' : 'Send message'}
-                title={language === 'fr' ? 'Envoyer un message' : 'Send message'}
+                className={`p-2 rounded-full transition-all duration-300 flex-shrink-0 ${
+                  isFavorite 
+                    ? 'bg-rose-50 text-rose-500' 
+                    : 'bg-gray-50 text-gray-400 hover:bg-rose-50 hover:text-rose-500'
+                }`}
               >
-                <MessageCircle className="w-4 h-4" />
+                <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
               </button>
-            </div>
+            )}
           </div>
 
-          <div className="flex items-start justify-between gap-2 mb-4">
+          {/* Localisation + Message */}
+          <div className="flex items-start justify-between gap-2 mb-3">
             <div className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
               <MapPin className="w-4 h-4 mr-1.5 text-gray-400 flex-shrink-0" />
               <span className="truncate">{business.location}</span>
             </div>
-            {/* Reference badge removed here to avoid duplicate */}
+            <button
+              onClick={async (e) => {
+                e.preventDefault();
+                try {
+                  const currentUser = user || await base44.auth.me();
+                  setUser(currentUser);
+                  setShowMessageModal(true);
+                } catch (error) {
+                  base44.auth.redirectToLogin();
+                }
+              }}
+              className="p-2 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-primary transition-colors"
+              aria-label={language === 'fr' ? 'Envoyer un message' : 'Send message'}
+              title={language === 'fr' ? 'Envoyer un message' : 'Send message'}
+            >
+              <MessageCircle className="w-4 h-4" />
+            </button>
           </div>
 
-          {business.verified && (
-            <div className="mb-4">
-              <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 text-[11px]">
-                ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
-              </Badge>
+          {/* Détails financiers */}
+          <div className="pt-3 border-t border-gray-100 mt-auto space-y-3">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <div>
+                <p className="text-[#8A98AD] uppercase tracking-wider">CA</p>
+                <p className="font-mono font-semibold text-[#3B4759]">
+                  {formatPrice(business.annual_revenue)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[#8A98AD] uppercase tracking-wider flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 text-green-600" />
+                  CROISSANCE
+                </p>
+                <p className="font-mono font-semibold text-green-600">
+                  {business.growth_percentage > 0 ? '+' : ''}{business.growth_percentage || 0}%
+                </p>
+              </div>
             </div>
-          )}
-          
-          {/* Financial Info */}
-          <div className="pt-3 border-t border-gray-100 mt-auto">
-            <p className="text-xs text-[#8A98AD] uppercase tracking-wider mb-2">
-              {language === 'fr' ? 'Prix' : 'Price'}
-            </p>
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-mono text-lg font-bold text-[#FF6B4A]">
-                {formatPrice(business.asking_price)}
-              </p>
-              
-              {/* Show CA only for cessions with annual_revenue */}
-              {isCession && business.annual_revenue && (
-                <div className="text-right">
-                  <p className="text-xs text-[#8A98AD] uppercase tracking-wider">
-                    CA
+
+            <div className="pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs text-[#8A98AD] uppercase tracking-wider mb-1">
+                    {language === 'fr' ? 'Prix Demandé' : 'Asking Price'}
                   </p>
-                  <p className="font-mono text-sm font-semibold text-[#5B9BD5]">
-                    {formatPrice(business.annual_revenue)}
+                  <p className="font-mono text-lg font-bold text-[#FF6B4A]">
+                    {formatPrice(business.asking_price)}
                   </p>
                 </div>
-              )}
+                {business.verified && (
+                  <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 text-[11px]">
+                    ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+          {/* Badge Cession/Acquisition + Référence */}
+          <div className="mt-3 flex items-center justify-between gap-2">
             <Badge variant="secondary" className="inline-flex items-center rounded-md px-2.5 py-0.5 font-semibold bg-purple-50 text-purple-700 border-0 text-[11px]">
               {announcementLabel}
             </Badge>

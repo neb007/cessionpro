@@ -34,7 +34,9 @@ import {
   MeetingScheduler,
   TypingIndicator
 } from '@/components/messages';
-import { emailNotificationService } from '@/services/emailNotificationService';
+import { DicebearAvatar } from '@/components/messages/DicebearAvatar';
+import { MessageReactions } from '@/components/messages/MessageReactions';
+import { messageNotificationQueue } from '@/services/messageNotificationQueue';
 import { antiBypassService } from '@/services/antiBypassService';
 
 export default function Messages() {
@@ -50,6 +52,8 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -92,8 +96,7 @@ export default function Messages() {
   const loadMessages = async (conversationId) => {
     try {
       const msgs = await base44.entities.Message.filter(
-        { conversation_id: conversationId },
-        'created_date'
+        { conversation_id: conversationId }
       );
       setMessages(msgs);
 
@@ -119,6 +122,28 @@ export default function Messages() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleMessageChange = (e) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    // Detect typing
+    if (value.trim() && !isTyping) {
+      setIsTyping(true);
+    }
+
+    // Reset typing timer
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+    }
+
+    // Set new timeout
+    const timeout = setTimeout(() => {
+      setIsTyping(false);
+    }, 3000); // Stop typing after 3 seconds of inactivity
+
+    setTypingTimeout(timeout);
   };
 
   const sendMessage = async () => {
@@ -156,20 +181,30 @@ export default function Messages() {
         }
       });
 
-      // Send email notification
+      // Add message to notification queue (batches every 10 min)
       try {
-        await emailNotificationService.sendMessageNotification({
-          recipientEmail: otherParticipant,
-          recipientName: selectedConversation.participant_names?.[otherParticipant] || otherParticipant,
-          senderName: user?.full_name || user?.email,
-          messagePreview: newMessage.substring(0, 100),
-          conversationId: selectedConversation.id,
-          businessTitle: selectedConversation.business_title,
-          language
-        });
-      } catch (emailError) {
-        console.warn('Email notification failed (non-critical):', emailError);
+        // Get recipient notification preference (default true if not set)
+        const recipientNotificationsEnabled = true; // TODO: Get from user profile
+        
+        messageNotificationQueue.addNotification(
+          otherParticipant,
+          {
+            senderEmail: user.email,
+            senderName: user?.full_name || user?.email,
+            messagePreview: newMessage.substring(0, 100),
+            conversationId: selectedConversation.id,
+            businessTitle: selectedConversation.business_title,
+            messageContent: newMessage
+          },
+          recipientNotificationsEnabled // Pass notification flag
+        );
+      } catch (error) {
+        console.warn('Queue notification failed (non-critical):', error);
       }
+
+      // Clear typing indicator
+      setIsTyping(false);
+      if (typingTimeout) clearTimeout(typingTimeout);
 
       setNewMessage('');
       loadMessages(selectedConversation.id);
@@ -180,15 +215,27 @@ export default function Messages() {
   };
 
   const formatMessageTime = (date) => {
-    const d = new Date(date);
-    const locale = language === 'fr' ? fr : enUS;
-    
-    if (isToday(d)) {
-      return format(d, 'HH:mm');
-    } else if (isYesterday(d)) {
-      return (language === 'fr' ? 'Hier ' : 'Yesterday ') + format(d, 'HH:mm');
+    try {
+      if (!date) return '';
+      const d = new Date(date);
+      
+      // Validate the date
+      if (isNaN(d.getTime())) {
+        return '';
+      }
+      
+      const locale = language === 'fr' ? fr : enUS;
+      
+      if (isToday(d)) {
+        return format(d, 'HH:mm');
+      } else if (isYesterday(d)) {
+        return (language === 'fr' ? 'Hier ' : 'Yesterday ') + format(d, 'HH:mm');
+      }
+      return format(d, 'd MMM HH:mm', { locale });
+    } catch (error) {
+      console.warn('Error formatting message time:', error);
+      return '';
     }
-    return format(d, 'd MMM HH:mm', { locale });
   };
 
   const getOtherParticipant = (conv) => {
@@ -243,14 +290,17 @@ export default function Messages() {
                   <button
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv)}
-                    className={`w-full p-4 text-left transition-colors ${
+                    className={`w-full p-4 text-left transition-colors group ${
                       isActive ? 'bg-primary/5' : 'hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-400 to-primary flex items-center justify-center text-white font-medium flex-shrink-0">
-                        {conv.business_title?.[0]?.toUpperCase() || 'M'}
-                      </div>
+                      <DicebearAvatar 
+                        email={getOtherParticipant(conv)} 
+                        name={getOtherParticipant(conv)}
+                        size="lg"
+                        className="group-hover:animate-pulse"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <p className={`font-medium truncate ${isActive ? 'text-primary' : 'text-gray-900'}`}>
@@ -312,24 +362,43 @@ export default function Messages() {
                 <AnimatePresence initial={false}>
                   {messages.map((msg, idx) => {
                     const isOwn = msg.sender_email === user?.email;
+                    const senderEmail = msg.sender_email;
                     
                     return (
                       <motion.div
                         key={msg.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                        initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ type: "spring", stiffness: 100 }}
+                        className={`flex gap-3 group ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                       >
-                        <div className={`max-w-[80%] ${isOwn ? 'order-1' : 'order-2'}`}>
-                          <div
-                            className={`rounded-2xl px-4 py-3 ${
+                        {/* Avatar */}
+                        <motion.div 
+                          className="flex-shrink-0 mt-1"
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <DicebearAvatar 
+                            email={senderEmail} 
+                            name={senderEmail}
+                            size="lg"
+                            showBorder={false}
+                            className="group-hover:shadow-lg"
+                          />
+                        </motion.div>
+
+                        <div className={`max-w-[70%]`}>
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            transition={{ duration: 0.2 }}
+                            className={`rounded-2xl px-4 py-3 cursor-pointer ${
                               isOwn
                                 ? 'bg-primary text-white rounded-br-md'
                                 : 'bg-white text-gray-900 shadow-sm rounded-bl-md'
                             }`}
                           >
                             <p className="whitespace-pre-wrap">{msg.content}</p>
-                          </div>
+                          </motion.div>
                           <div className={`flex items-center gap-1 mt-1 text-xs text-gray-400 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                             <span>{formatMessageTime(msg.created_date)}</span>
                             {isOwn && (
@@ -344,6 +413,53 @@ export default function Messages() {
                       </motion.div>
                     );
                   })}
+
+                  {/* Typing Indicator */}
+                  {isTyping && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex gap-3"
+                    >
+                      <div className="flex-shrink-0 mt-1">
+                        <DicebearAvatar 
+                          email={getOtherParticipant(selectedConversation)} 
+                          name={getOtherParticipant(selectedConversation)}
+                          size="lg"
+                          showBorder={false}
+                        />
+                      </div>
+                      <div>
+                        <motion.div
+                          animate={{ scale: [0.95, 1.05, 0.95] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="bg-gray-200 text-gray-600 rounded-2xl rounded-bl-md px-4 py-3 flex gap-2"
+                        >
+                          <span className="text-xs">
+                            {language === 'fr' ? 'Tape un message...' : 'typing...'}
+                          </span>
+                          <div className="flex gap-1">
+                            <motion.div
+                              animate={{ opacity: [0.3, 1, 0.3] }}
+                              transition={{ duration: 0.8, repeat: Infinity, delay: 0 }}
+                              className="w-2 h-2 bg-gray-400 rounded-full"
+                            />
+                            <motion.div
+                              animate={{ opacity: [0.3, 1, 0.3] }}
+                              transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
+                              className="w-2 h-2 bg-gray-400 rounded-full"
+                            />
+                            <motion.div
+                              animate={{ opacity: [0.3, 1, 0.3] }}
+                              transition={{ duration: 0.8, repeat: Infinity, delay: 0.4 }}
+                              className="w-2 h-2 bg-gray-400 rounded-full"
+                            />
+                          </div>
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
                 <div ref={messagesEndRef} />
               </div>
@@ -360,7 +476,7 @@ export default function Messages() {
               >
                 <Input
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleMessageChange}
                   placeholder={t('type_message')}
                   className="flex-1"
                   disabled={sending}

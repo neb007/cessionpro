@@ -8,7 +8,6 @@ import { useAuth } from '@/lib/AuthContext';
 import BusinessCard from '@/components/ui/BusinessCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 
 import {
   Select,
@@ -20,13 +19,25 @@ import {
 import { 
   Search, 
   X,
-  MapPin,
-  ShieldCheck,
-  Plus
+  List,
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
+const COUNTRIES = [
+  { value: 'france', label: 'France' },
+  { value: 'belgium', label: 'Belgique' },
+  { value: 'switzerland', label: 'Suisse' }
+];
+const DEPARTMENTS = [
+  { value: 'paris', label: '75 - Paris' },
+  { value: 'rhone', label: '69 - Rhône' },
+  { value: 'bouches-du-rhone', label: '13 - Bouches-du-Rhône' },
+  { value: 'gironde', label: '33 - Gironde' },
+  { value: 'nord', label: '59 - Nord' }
+];
 
 export default function Businesses() {
   const { t, language } = useLanguage();
@@ -41,7 +52,8 @@ export default function Businesses() {
   const [listingType, setListingType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
   const [sortBy, setSortBy] = useState('-created_date');
   const [budgetRange, setBudgetRange] = useState([0, 5000000]);
 
@@ -68,7 +80,7 @@ export default function Businesses() {
         { status: 'active' }
       );
       console.log('Loaded businesses:', businesses);
-      setBusinesses(businesses || []);
+      setBusinesses([...(businesses || []), ...mockBusinesses]);
     } catch (e) {
       console.error('Error loading businesses:', e);
       // Fallback to mock data on error
@@ -110,10 +122,16 @@ export default function Businesses() {
     }
 
     // Sector
-    if (selectedSector && business.sector !== selectedSector) return false;
+    if (selectedSector && selectedSector !== 'all' && business.sector !== selectedSector) return false;
 
-    // Location
-    if (selectedLocation && !business.location?.toLowerCase().includes(selectedLocation.toLowerCase())) {
+    // Country
+    if (selectedCountry && selectedCountry !== 'all' && business.country?.toLowerCase() !== selectedCountry.toLowerCase()) {
+      return false;
+    }
+
+    // Department
+    const departmentValue = business.department || business.region || business.location || '';
+    if (selectedDepartment && selectedDepartment !== 'all' && !departmentValue.toLowerCase().includes(selectedDepartment.toLowerCase())) {
       return false;
     }
 
@@ -144,84 +162,105 @@ export default function Businesses() {
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedSector('');
-    setSelectedLocation('');
+    setSelectedCountry('');
+    setSelectedDepartment('');
     setBudgetRange([0, 5000000]);
   };
 
-  const hasActiveFilters = searchQuery || selectedSector || selectedLocation || budgetRange[0] !== 0 || budgetRange[1] !== 5000000;
+  const hasActiveFilters =
+    searchQuery ||
+    (selectedSector && selectedSector !== 'all') ||
+    (selectedCountry && selectedCountry !== 'all') ||
+    (selectedDepartment && selectedDepartment !== 'all') ||
+    budgetRange[0] !== 0 ||
+    budgetRange[1] !== 5000000;
 
   return (
-    <div className="min-h-screen py-8 lg:py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-6 lg:py-8 bg-[#FAF9F7]">
+      <div className="w-full px-6">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
               {t('all_businesses')}
             </h1>
           </div>
-          {isAuthenticated && (
-            <Button 
-              onClick={() => navigate(createPageUrl('CreateBusiness'))} 
-              className="bg-gradient-to-r from-primary to-blue-600 whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {t('create_listing')}
-            </Button>
-          )}
         </div>
 
         {/* Search & Filters Bar */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-          {/* Search Bar and Type Buttons */}
-          <div className="flex flex-col lg:flex-row items-center gap-4 mb-4">
-            {/* Type Buttons */}
-            <div className="flex-shrink-0 flex space-x-2">
-              <Button
-                variant={listingType === 'all' ? 'default' : 'outline'}
-                onClick={() => setListingType('all')}
-                className={listingType === 'all' ? 'bg-gradient-to-r from-primary to-blue-600 text-white' : ''}
-              >
-                {language === 'fr' ? 'Tout' : 'All'}
-              </Button>
-              <Button
-                variant={listingType === 'cession' ? 'default' : 'outline'}
-                onClick={() => setListingType('cession')}
-                className={listingType === 'cession' ? 'bg-gradient-to-r from-primary to-blue-600 text-white' : ''}
-              >
-                {language === 'fr' ? 'Cession' : 'Sale'}
-              </Button>
-              <Button
-                variant={listingType === 'acquisition' ? 'default' : 'outline'}
-                onClick={() => setListingType('acquisition')}
-                className={listingType === 'acquisition' ? 'bg-gradient-to-r from-primary to-blue-600 text-white' : ''}
-              >
-                {language === 'fr' ? 'Acquisition' : 'Acquisition'}
-              </Button>
-            </div>
-
-            {/* Main Search Input */}
-            <div className="flex-1 relative w-full lg:w-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('search_placeholder')}
-                className="pl-12 h-12 text-base border-gray-200 focus:border-primary rounded-xl w-full"
-              />
+        <div className="w-full bg-amber-50 p-4 mb-0">
+          {/* Tab-style Type Navigation */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 pb-3 border-b border-[#E7E2DE]">
+            <button
+              onClick={() => setListingType('all')}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                listingType === 'all'
+                  ? 'bg-[#FFF0ED] text-[#FF6B4A] shadow-sm'
+                  : 'text-[#6B7A94] hover:bg-[#F8F3F0]'
+              }`}
+            >
+              <List className="w-4 h-4" /> {language === 'fr' ? 'Tout' : 'All'}
+            </button>
+            <button
+              onClick={() => setListingType('cession')}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                listingType === 'cession'
+                  ? 'bg-[#FFF0ED] text-[#FF6B4A] shadow-sm'
+                  : 'text-[#6B7A94] hover:bg-[#F8F3F0]'
+              }`}
+            >
+              <ArrowRight className="w-4 h-4" /> {language === 'fr' ? 'Cessions' : 'Sales'}
+            </button>
+            <button
+              onClick={() => setListingType('acquisition')}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                listingType === 'acquisition'
+                  ? 'bg-[#FFF0ED] text-[#FF6B4A] shadow-sm'
+                  : 'text-[#6B7A94] hover:bg-[#F8F3F0]'
+              }`}
+            >
+              <ArrowLeft className="w-4 h-4" /> {language === 'fr' ? 'Acquisitions' : 'Acquisitions'}
+            </button>
+            
+            {/* Sort Dropdown */}
+            <div className="w-full sm:w-auto sm:ml-auto">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-[#6B7A94]">
+                <span>{language === 'fr' ? 'Trier par:' : 'Sort by:'}</span>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-44 h-9 sm:h-10 text-xs sm:text-sm border-gray-200 rounded-full bg-white shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="-created_date">{language === 'fr' ? 'Plus récent' : 'Newest'}</SelectItem>
+                    <SelectItem value="price_asc">{language === 'fr' ? 'Prix: Croissant' : 'Price: Low-High'}</SelectItem>
+                    <SelectItem value="price_desc">{language === 'fr' ? 'Prix: Décroissant' : 'Price: High-Low'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
           {/* Filters Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
-            <div>
+          <div className="flex flex-nowrap md:flex-wrap items-center gap-2 pt-3 overflow-x-auto md:overflow-visible scrollbar-hide">
+            <div className="min-w-[160px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('search_placeholder')}
+                  className="pl-9 h-9 text-sm border-gray-300 focus:border-primary rounded-lg w-full bg-white"
+                />
+              </div>
+            </div>
+            <div className="min-w-[120px]">
               <Select value={selectedSector} onValueChange={setSelectedSector}>
-                <SelectTrigger className="h-12 w-full">
-                  <SelectValue placeholder={language === 'fr' ? 'Secteur' : 'Sector'} />
+                <SelectTrigger className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm">
+                  <SelectValue placeholder={language === 'fr' ? 'Sect.' : 'Sect.'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>{language === 'fr' ? 'Tous les secteurs' : 'All sectors'}</SelectItem>
+                  <SelectItem value="all">{language === 'fr' ? 'Tous' : 'All'}</SelectItem>
                   {SECTORS.map(sector => (
                     <SelectItem key={sector} value={sector}>
                       {t(sector)}
@@ -230,46 +269,59 @@ export default function Businesses() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
-                <Input
-                  type="text"
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  placeholder={language === 'fr' ? 'Localisation' : 'Location'}
-                  className="pl-10 h-12 w-full"
-                />
-              </div>
+            <div className="min-w-[100px]">
+              <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                <SelectTrigger className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm">
+                  <SelectValue placeholder={language === 'fr' ? 'Pays' : 'Pays'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{language === 'fr' ? 'Tous' : 'All'}</SelectItem>
+                  {COUNTRIES.map(country => (
+                    <SelectItem key={country.value} value={country.value}>
+                      {country.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-
-            {/* Budget Min Input */}
-            <div>
+            <div className="min-w-[100px]">
+              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <SelectTrigger className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm">
+                  <SelectValue placeholder={language === 'fr' ? 'Dép.' : 'Dpt.'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{language === 'fr' ? 'Tous' : 'All'}</SelectItem>
+                  {DEPARTMENTS.map(department => (
+                    <SelectItem key={department.value} value={department.value}>
+                      {department.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-[90px]">
               <Input
                 type="number"
                 value={budgetRange[0] === 0 ? '' : budgetRange[0]}
                 onChange={(e) => setBudgetRange([Number(e.target.value) || 0, budgetRange[1]])}
-                placeholder={language === 'fr' ? 'Budget Min' : 'Min Budget'}
-                className="h-12 w-full"
+                placeholder={language === 'fr' ? 'Min' : 'Min'}
+                className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm"
               />
             </div>
-
-            {/* Budget Max Input */}
-            <div>
+            <div className="min-w-[90px]">
               <Input
                 type="number"
                 value={budgetRange[1] === 5000000 ? '' : budgetRange[1]}
                 onChange={(e) => setBudgetRange([budgetRange[0], Number(e.target.value) || 5000000])}
-                placeholder={language === 'fr' ? 'Budget Max' : 'Max Budget'}
-                className="h-12 w-full"
+                placeholder={language === 'fr' ? 'Max' : 'Max'}
+                className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm"
               />
             </div>
           </div>
 
           {/* Active Filters */}
           {hasActiveFilters && (
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
               <span className="text-sm text-gray-500">Filtres actifs:</span>
               <div className="flex flex-wrap gap-2">
                 {searchQuery && (
@@ -280,7 +332,7 @@ export default function Businesses() {
                     </button>
                   </span>
                 )}
-                {selectedSector && (
+                {selectedSector && selectedSector !== 'all' && (
                   <span className="inline-flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-sm">
                     {t(selectedSector)}
                     <button onClick={() => setSelectedSector('')}>
@@ -298,28 +350,30 @@ export default function Businesses() {
                     </button>
                   </span>
                 )}
-                {selectedLocation && (
+                {selectedCountry && selectedCountry !== 'all' && (
                   <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
-                    {selectedLocation}
-                    <button onClick={() => setSelectedLocation('')}>
+                    {selectedCountry}
+                    <button onClick={() => setSelectedCountry('')}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {selectedDepartment && selectedDepartment !== 'all' && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                    {selectedDepartment}
+                    <button onClick={() => setSelectedDepartment('')}>
                       <X className="w-3 h-3" />
                     </button>
                   </span>
                 )}
               </div>
-              <button
-                onClick={clearFilters}
-                className="text-sm text-gray-500 hover:text-gray-700 ml-auto"
-              >
-                {t('cancel')}
-              </button>
             </div>
           )}
         </div>
 
         {/* Results */}
         {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="bg-gray-100 rounded-2xl h-80 animate-pulse" />
             ))}
@@ -342,7 +396,7 @@ export default function Businesses() {
         ) : (
           <motion.div
             layout
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6"
           >
             <AnimatePresence mode="popLayout">
               {sortedBusinesses.map((business) => (
@@ -354,21 +408,6 @@ export default function Businesses() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   className="relative"
                 >
-                  {business.verified && (
-                    <div className="absolute top-4 left-4 z-10">
-                      <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-lg">
-                        <ShieldCheck className="w-3 h-3 mr-1" />
-                        {language === 'fr' ? 'Vérifié' : 'Verified'}
-                      </Badge>
-                    </div>
-                  )}
-                  {business.type === 'acquisition' && (
-                    <div className="absolute top-4 right-4 z-10">
-                      <Badge className="bg-gradient-to-r from-blue-500 to-violet-500 text-white border-0 shadow-lg">
-                        {language === 'fr' ? 'Recherche' : 'Looking'}
-                      </Badge>
-                    </div>
-                  )}
                   <BusinessCard
                     business={business}
                     isFavorite={favorites.includes(business.id)}

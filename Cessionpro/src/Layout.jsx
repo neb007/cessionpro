@@ -85,7 +85,7 @@ function LayoutContent({ children, currentPageName }) {
       {/* Main Content */}
       <div className="flex min-h-screen">
         {user && currentPageName !== 'Home' && <Sidebar user={user} />}
-        <main className="flex-1 w-full px-3 sm:px-4 md:px-6 lg:px-8">{children}</main>
+        <main className="flex-1 w-full px-0 sm:px-0 md:px-0 lg:px-0 ml-0">{children}</main>
       </div>
 
       {/* Footer */}
