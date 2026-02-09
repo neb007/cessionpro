@@ -271,6 +271,58 @@ export default function CreateBusiness() {
           <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">
             {editingId ? t('edit_listing') : t('create_listing')}
           </h1>
+          
+          {/* Display badges when editing */}
+          {editingId && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              <span 
+                style={{ 
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: 'white',
+                  backgroundColor: '#f47e50',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  display: 'inline-block'
+                }}
+              >
+                {announcementType === 'sale' ? (language === 'fr' ? 'Cession' : 'Sale') : (language === 'fr' ? 'Acquisition' : 'Acquisition')}
+              </span>
+              {formData.business_type && (
+                <span 
+                  style={{ 
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: 'white',
+                    backgroundColor: '#f47e50',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    display: 'inline-block'
+                  }}
+                >
+                  {t(formData.business_type)}
+                </span>
+              )}
+              {formData.reference_number && (
+                <span 
+                  style={{ 
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: 'white',
+                    backgroundColor: '#f47e50',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    display: 'inline-block'
+                  }}
+                >
+                  {formData.reference_number}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Announcement Type Radio */}
@@ -278,6 +330,8 @@ export default function CreateBusiness() {
           announcementType={announcementType}
           onChange={setAnnouncementType}
           language={language}
+          disabled={!!editingId}
+          hideOption={announcementType === 'sale' ? 'search' : 'sale'}
         />
 
         {/* Conditional Form Rendering */}
@@ -290,6 +344,7 @@ export default function CreateBusiness() {
             language={language}
             t={t}
             user={user}
+            editingId={editingId}
           />
         ) : (
           <BuyerForm
@@ -299,6 +354,8 @@ export default function CreateBusiness() {
             saving={saving}
             language={language}
             t={t}
+            user={user}
+            editingId={editingId}
           />
         )}
 

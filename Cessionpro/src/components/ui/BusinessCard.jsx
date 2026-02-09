@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
+import { calculateGrowthPercentage } from '@/utils/growthCalculator';
 
 const sectorColors = {
   technology: 'bg-primary-light text-primary',
@@ -49,6 +50,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
   const announcementLabel = isCession
     ? (language === 'fr' ? 'Cession' : 'Sale')
     : (language === 'fr' ? 'Acquisition' : 'Acquisition');
+  const growthPercentage = calculateGrowthPercentage(business.financial_years);
 
   return (
     <motion.div
@@ -145,7 +147,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
                 <div className="flex items-center justify-start gap-1">
                   <TrendingUp className="w-3 h-3 text-green-600 flex-shrink-0" />
                   <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-green-600">
-                    {business.growth_percentage > 0 ? '+' : ''}{business.growth_percentage || 0}%
+                    {growthPercentage > 0 ? '+' : ''}{growthPercentage || 0}%
                   </p>
                 </div>
               </div>

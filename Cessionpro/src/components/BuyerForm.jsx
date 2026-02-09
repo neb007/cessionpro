@@ -174,9 +174,11 @@ export default function BuyerForm({
   saving,
   language,
   t,
-  user
+  user,
+  editingId
 }) {
   const [locationInput, setLocationInput] = useState('');
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
   const handleChange = (field, value) => {
     onFormChange({ ...formData, [field]: value });
@@ -186,12 +188,34 @@ export default function BuyerForm({
     if (value && !formData.buyer_locations.includes(value)) {
       handleChange('buyer_locations', [...formData.buyer_locations, value]);
       setLocationInput('');
+      setShowLocationDropdown(false);
     }
   };
 
   const removeLocation = (value) => {
     handleChange('buyer_locations', formData.buyer_locations.filter(loc => loc !== value));
   };
+
+  // Filter locations based on input
+  const getFilteredLocations = () => {
+    if (!locationInput.trim()) {
+      return [];
+    }
+    const searchTerm = locationInput.toLowerCase();
+    const depts = FRENCH_DEPARTMENTS.filter(dept => 
+      dept.label.toLowerCase().includes(searchTerm) && 
+      !formData.buyer_locations.includes(dept.value)
+    ).slice(0, 5);
+    
+    const countries = EUROPEAN_COUNTRIES.filter(country => 
+      country.label.toLowerCase().includes(searchTerm) &&
+      !formData.buyer_locations.includes(country.value)
+    ).slice(0, 5);
+    
+    return [...depts, ...countries];
+  };
+
+  const filteredLocations = getFilteredLocations();
 
   // Auto-generate default image based on first selected sector
   useEffect(() => {
@@ -418,31 +442,30 @@ export default function BuyerForm({
               </Select>
             </div>
 
-            <div>
+            <div className="relative">
               <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Lieux d\'intérêt' : 'Interested Locations'}</Label>
-              <Select value={locationInput} onValueChange={addLocation}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder={language === 'fr' ? 'Ajouter un lieu' : 'Add a location'} />
-                </SelectTrigger>
-                <SelectContent className="max-h-80">
-                  <div className="px-2 py-1.5 font-semibold text-sm bg-gray-100">
-                    {language === 'fr' ? '🇫🇷 Départements Français' : '🇫🇷 French Departments'}
-                  </div>
-                  {FRENCH_DEPARTMENTS.map(dept => (
-                    <SelectItem key={dept.value} value={dept.value}>
-                      {dept.label}
-                    </SelectItem>
+              <Input
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
+                onFocus={() => setShowLocationDropdown(true)}
+                placeholder={language === 'fr' ? 'Tapez un département ou un pays (ex: 75, Paris, France)' : 'Type a department or country (ex: 75, Paris, France)'}
+                className="mt-2"
+              />
+              
+              {/* Autocomplete Dropdown */}
+              {showLocationDropdown && locationInput.trim() && filteredLocations.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                  {filteredLocations.map((item, idx) => (
+                    <button
+                      key={`${item.value}-${idx}`}
+                      onClick={() => addLocation(item.value)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <span className="text-sm text-gray-900">{item.label}</span>
+                    </button>
                   ))}
-                  <div className="px-2 py-1.5 font-semibold text-sm bg-gray-100 mt-2">
-                    {language === 'fr' ? '🌍 Pays Européens' : '🌍 European Countries'}
-                  </div>
-                  {EUROPEAN_COUNTRIES.map(country => (
-                    <SelectItem key={country.value} value={country.value}>
-                      {country.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                </div>
+              )}
               
               {/* Display selected locations */}
               {formData.buyer_locations && formData.buyer_locations.length > 0 && (

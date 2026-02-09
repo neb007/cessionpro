@@ -53,7 +53,8 @@ export default function SellerForm({
   saving,
   language,
   t,
-  user
+  user,
+  editingId
 }) {
   const [newAsset, setNewAsset] = useState('');
 
@@ -260,6 +261,15 @@ export default function SellerForm({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {editingId && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+                    <p className="text-sm text-amber-800">
+                      {language === 'fr' 
+                        ? 'Les informations financières ne peuvent pas être modifiées après la publication.' 
+                        : 'Financial information cannot be modified after publication.'}
+                    </p>
+                  </div>
+                )}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <Label><span className="text-red-500">*</span> {t('price')} (€)</Label>
@@ -270,6 +280,7 @@ export default function SellerForm({
                       placeholder="500000"
                       className="mt-2 font-mono"
                       required
+                      disabled={!!editingId}
                     />
                   </div>
 
@@ -281,6 +292,7 @@ export default function SellerForm({
                       onChange={(e) => handleChange('annual_revenue', e.target.value)}
                       placeholder="1000000"
                       className="mt-2 font-mono"
+                      disabled={!!editingId}
                     />
                   </div>
 
@@ -292,6 +304,7 @@ export default function SellerForm({
                       onChange={(e) => handleChange('ebitda', e.target.value)}
                       placeholder="200000"
                       className="mt-2 font-mono"
+                      disabled={!!editingId}
                     />
                   </div>
 
@@ -303,6 +316,7 @@ export default function SellerForm({
                       onChange={(e) => handleChange('employees', e.target.value)}
                       placeholder="10"
                       className="mt-2 font-mono"
+                      disabled={!!editingId}
                     />
                   </div>
 
@@ -314,6 +328,7 @@ export default function SellerForm({
                       onChange={(e) => handleChange('year_founded', e.target.value)}
                       placeholder="2010"
                       className="mt-2 font-mono"
+                      disabled={!!editingId}
                     />
                   </div>
                 </div>
@@ -431,6 +446,7 @@ export default function SellerForm({
               financialYears={formData.financial_years}
               onChange={(years) => handleChange('financial_years', years)}
               language={language}
+              editingId={editingId}
             />
 
             {/* Assets */}

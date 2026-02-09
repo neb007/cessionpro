@@ -85,7 +85,7 @@ export default function Home() {
               <Link to="/Login" className="text-gray-900 hover:text-gray-700 font-medium transition-colors px-4 py-2">
                 {language === 'fr' ? 'Se connecter' : 'Login'}
               </Link>
-              <Link to="/Register">
+              <Link to="/AccountCreation">
                 <Button className="bg-gradient-to-r from-primary to-orange-500 hover:from-primary-hover hover:to-orange-600 text-white">
                   {language === 'fr' ? 'Créer un compte' : 'Sign up'}
                 </Button>
@@ -393,7 +393,7 @@ export default function Home() {
                   : 'Join CessionPro and access a network of qualified buyers and sellers.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/register">
+                <Link to="/AccountCreation">
                   <Button className="bg-white text-primary hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-xl">
                     {language === 'fr' ? 'Créer un compte gratuit' : 'Create a free account'}
                   </Button>

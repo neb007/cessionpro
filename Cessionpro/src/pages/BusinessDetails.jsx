@@ -236,16 +236,49 @@ export default function BusinessDetails() {
               </h1>
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs flex-1">
-                  <span style={{ color: '#3B4759' }} className="font-medium">
+                  <span 
+                    style={{ 
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontWeight: 500,
+                      fontSize: '14px',
+                      color: 'white',
+                      backgroundColor: '#f47e50',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      display: 'inline-block'
+                    }}
+                  >
                     {business.type === 'acquisition' ? (language === 'fr' ? 'Acquisition' : 'Acquisition') : (language === 'fr' ? 'Cession' : 'Sale')}
                   </span>
                   {business.business_type && (
-                    <span style={{ color: '#3B4759' }} className="font-medium">
+                    <span 
+                      style={{ 
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontWeight: 500,
+                        fontSize: '14px',
+                        color: 'white',
+                        backgroundColor: '#f47e50',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        display: 'inline-block'
+                      }}
+                    >
                       {t(business.business_type)}
                     </span>
                   )}
                   {business.reference_number && (
-                    <span style={{ color: '#3B4759' }} className="font-medium font-mono">
+                    <span 
+                      style={{ 
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontWeight: 500,
+                        fontSize: '14px',
+                        color: 'white',
+                        backgroundColor: '#f47e50',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        display: 'inline-block'
+                      }}
+                    >
                       {business.reference_number}
                     </span>
                   )}
@@ -332,10 +365,10 @@ export default function BusinessDetails() {
                       <p className="text-sm text-gray-500 mb-2">{t('assets_included')}</p>
                       <div className="flex flex-wrap gap-2">
                         {business.assets_included.map((asset, idx) => (
-                          <Badge key={idx} variant="secondary" className="bg-gray-100">
-                            <CheckCircle2 className="w-3 h-3 mr-1 text-green-500" />
-                            {asset}
-                          </Badge>
+                          <div key={idx} className="flex items-center gap-1 text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 500, fontSize: '16px' }}>
+                            <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            <span>{asset}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
