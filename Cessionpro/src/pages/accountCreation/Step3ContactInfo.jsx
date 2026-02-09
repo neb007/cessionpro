@@ -117,16 +117,13 @@ export default function Step3ContactInfo({
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="space-y-8"
+      className="space-y-4"
     >
       {/* Header */}
-      <motion.div variants={itemVariants} className="space-y-2">
-        <h2 className="font-display text-3xl font-bold text-charcoal">
-          Informations de Contact
+      <motion.div variants={itemVariants}>
+        <h2 className="font-display text-base sm:text-lg font-bold text-charcoal">
+          Vos Informations
         </h2>
-        <p className="text-muted-foreground text-base">
-          Complétez votre profil pour finaliser votre inscription
-        </p>
       </motion.div>
 
       {/* Error Alert */}
@@ -136,9 +133,9 @@ export default function Step3ContactInfo({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Alert variant="destructive" className="border-red-200 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-700 text-sm">
+          <Alert variant="destructive" className="border-red-200 bg-red-50 py-2">
+            <AlertCircle className="h-3 w-3 text-red-600" />
+            <AlertDescription className="text-red-700 text-xs mt-1">
               {error}
             </AlertDescription>
           </Alert>
@@ -146,14 +143,11 @@ export default function Step3ContactInfo({
       )}
 
       {/* Section 1: Personal Information (Required) */}
-      <motion.div variants={itemVariants} className="space-y-4">
-        <div>
-          <h3 className="font-display text-lg font-semibold text-charcoal mb-4">
-            Informations Personnelles <span className="text-primary">*</span>
+      <motion.div variants={itemVariants} className="space-y-3">
+        <div className="mb-0">
+          <h3 className="font-display text-sm font-semibold text-charcoal">
+            Informations <span className="text-primary">*</span>
           </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Ces champs sont obligatoires pour créer votre annonce
-          </p>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
@@ -366,14 +360,11 @@ export default function Step3ContactInfo({
       </motion.div>
 
       {/* Section 3: Sector Interests */}
-      <motion.div variants={itemVariants} className="space-y-4">
+      <motion.div variants={itemVariants} className="space-y-2">
         <div>
-          <h3 className="font-display text-lg font-semibold text-charcoal mb-2">
-            Secteurs d'intérêt
+          <h3 className="font-display text-sm font-semibold text-charcoal">
+            Secteurs
           </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Sélectionnez jusqu'à 3 secteurs pour personnaliser votre expérience
-          </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -414,23 +405,8 @@ export default function Step3ContactInfo({
         )}
       </motion.div>
 
-      {/* Info Box */}
-      <motion.div
-        variants={itemVariants}
-        className="p-5 bg-violet/5 border border-violet/20 rounded-lg space-y-2"
-      >
-        <p className="text-sm font-semibold text-charcoal">
-          ℹ️ Mentions importantes
-        </p>
-        <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-          <li>• Vos données sont chiffrées et sécurisées</li>
-          <li>• Vous pouvez modifier vos informations après l'inscription</li>
-          <li>• Les champs marqués d'un * sont obligatoires</li>
-        </ul>
-      </motion.div>
-
       {/* Action Buttons */}
-      <motion.div variants={itemVariants} className="flex gap-4 pt-6">
+      <motion.div variants={itemVariants} className="flex gap-3 pt-3">
         <Button
           onClick={onBack}
           disabled={isLoading}

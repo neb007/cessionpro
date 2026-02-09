@@ -80,10 +80,10 @@ export default function Step2ProfileType({
     >
       {/* Header */}
       <motion.div variants={itemVariants} className="space-y-2">
-        <h2 className="font-display text-3xl font-bold text-charcoal">
+        <h2 className="font-display text-2xl sm:text-3xl font-bold text-charcoal">
           Profil et Segmentation
         </h2>
-        <p className="text-muted-foreground text-base">
+        <p className="text-muted-foreground text-sm sm:text-base">
           Ces informations nous aident à personnaliser votre expérience
         </p>
       </motion.div>

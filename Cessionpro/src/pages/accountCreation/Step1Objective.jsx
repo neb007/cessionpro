@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Briefcase, Mail, Linkedin } from 'lucide-react';
+import { Target, Briefcase, Mail, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 
@@ -26,21 +26,13 @@ export default function Step1Objective({ onSelectObjective, onEmailSignup, isLoa
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="space-y-8"
+      className="space-y-6"
     >
-      {/* Logo */}
-      <motion.div variants={itemVariants} className="flex justify-center mb-6">
-        <Logo size="md" showText={false} />
-      </motion.div>
-
       {/* Header */}
-      <motion.div variants={itemVariants} className="text-center space-y-3">
+      <motion.div variants={itemVariants} className="text-center space-y-2">
         <h1 className="font-display text-3xl sm:text-4xl font-bold text-charcoal">
           Quel est votre objectif ?
         </h1>
-        <p className="text-muted-foreground text-lg">
-          Choisissez comment vous utilisez CessionPro
-        </p>
       </motion.div>
 
       {/* Objective Cards */}
@@ -54,21 +46,21 @@ export default function Step1Objective({ onSelectObjective, onEmailSignup, isLoa
           disabled={isLoading}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="group text-left"
+          className="group text-center"
         >
-          <div className="bg-white rounded-lg shadow-md hover:shadow-hover transition-all duration-300 p-8 border-2 border-transparent hover:border-primary cursor-pointer h-full">
-            <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-md hover:shadow-hover transition-all duration-300 p-4 sm:p-6 border-2 border-transparent hover:border-primary cursor-pointer h-full">
+            <div className="space-y-3 sm:space-y-4 flex flex-col items-center">
               {/* Icon */}
-              <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <ShoppingCart className="w-8 h-8 text-primary" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
 
               {/* Content */}
-              <div className="space-y-3">
-                <h2 className="font-display text-2xl font-bold text-charcoal group-hover:text-primary transition-colors">
+              <div className="space-y-2">
+                <h2 className="font-display text-lg sm:text-xl font-bold text-charcoal group-hover:text-primary transition-colors">
                   Acheter
                 </h2>
-                <p className="text-muted-foreground text-base leading-relaxed">
+                <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
                   Acquéreur cherchant à reprendre une entreprise
                 </p>
               </div>
@@ -88,21 +80,21 @@ export default function Step1Objective({ onSelectObjective, onEmailSignup, isLoa
           disabled={isLoading}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="group text-left"
+          className="group text-center"
         >
-          <div className="bg-white rounded-lg shadow-md hover:shadow-hover transition-all duration-300 p-8 border-2 border-transparent hover:border-primary cursor-pointer h-full">
-            <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-md hover:shadow-hover transition-all duration-300 p-4 sm:p-6 border-2 border-transparent hover:border-primary cursor-pointer h-full">
+            <div className="space-y-3 sm:space-y-4 flex flex-col items-center">
               {/* Icon */}
-              <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <Briefcase className="w-8 h-8 text-primary" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
 
               {/* Content */}
-              <div className="space-y-3">
-                <h2 className="font-display text-2xl font-bold text-charcoal group-hover:text-primary transition-colors">
+              <div className="space-y-2">
+                <h2 className="font-display text-lg sm:text-xl font-bold text-charcoal group-hover:text-primary transition-colors">
                   Vendre
                 </h2>
-                <p className="text-muted-foreground text-base leading-relaxed">
+                <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
                   Cédant proposant son entreprise à la reprise
                 </p>
               </div>

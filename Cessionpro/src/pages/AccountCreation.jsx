@@ -156,22 +156,24 @@ export default function AccountCreation() {
       </div>
 
       {/* Main Container */}
-      <div className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+      <div className="relative min-h-screen flex items-center justify-center px-3 py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="w-full max-w-2xl"
+          className="w-full max-w-lg"
         >
           {/* Card Container */}
-          <div className="bg-white rounded-lg shadow-2xl p-8 sm:p-12 space-y-8">
+          <div className="bg-white rounded-lg shadow-2xl p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
             {/* Logo */}
-            <div className="flex justify-center mb-4">
-              <Logo size="md" showText={false} />
+            <div className="flex justify-center mb-1">
+              <Logo size="sm" showText={false} />
             </div>
 
             {/* Progress Bar */}
-            <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} />
+            <div className="mt-2 mb-1">
+              <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} />
+            </div>
 
             {/* Step Content with Animation */}
             <AnimatePresence mode="wait" custom={currentStep}>
