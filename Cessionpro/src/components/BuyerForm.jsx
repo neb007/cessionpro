@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,9 +11,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Save, Send, Loader2, Search } from 'lucide-react';
+import { Save, Send, Loader2, Search, X } from 'lucide-react';
+import ImageGallery from '@/components/ImageGallery';
+import { getDefaultImageForSector } from '@/constants/defaultImages';
 
-const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
+const SECTORS = [
+  'technology',
+  'retail',
+  'hospitality',
+  'manufacturing',
+  'services',
+  'healthcare',
+  'construction',
+  'transport',
+  'agriculture',
+  'real_estate',
+  'finance',
+  'ecommerce',
+  'beauty',
+  'education',
+  'events',
+  'logistics',
+  'food_beverage',
+  'other'
+];
 const BUSINESS_TYPES = ['entreprise', 'fond_de_commerce', 'franchise'];
 const EUROPEAN_COUNTRIES = [
   { value: 'france', label: '🇫🇷 France' },
@@ -137,17 +158,59 @@ const FRENCH_DEPARTMENTS = [
   { value: '95', label: '95 - Val-d\'Oise' }
 ];
 
+// Get label for location value
+const getLocationLabel = (value) => {
+  const dept = FRENCH_DEPARTMENTS.find(d => d.value === value);
+  if (dept) return dept.label;
+  const country = EUROPEAN_COUNTRIES.find(c => c.value === value);
+  if (country) return country.label;
+  return value;
+};
+
 export default function BuyerForm({
   formData,
   onFormChange,
   onSubmit,
   saving,
   language,
-  t
+  t,
+  user
 }) {
+  const [locationInput, setLocationInput] = useState('');
+
   const handleChange = (field, value) => {
     onFormChange({ ...formData, [field]: value });
   };
+
+  const addLocation = (value) => {
+    if (value && !formData.buyer_locations.includes(value)) {
+      handleChange('buyer_locations', [...formData.buyer_locations, value]);
+      setLocationInput('');
+    }
+  };
+
+  const removeLocation = (value) => {
+    handleChange('buyer_locations', formData.buyer_locations.filter(loc => loc !== value));
+  };
+
+  // Auto-generate default image based on first selected sector
+  useEffect(() => {
+    if (formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0) {
+      const firstSector = formData.buyer_sectors_interested[0];
+      const defaultImageUrl = getDefaultImageForSector(firstSector);
+      
+      // Only set default if no custom image is uploaded
+      const hasCustomImage = formData.buyer_image && formData.buyer_image.some(img => !img.isDefault);
+      if (!hasCustomImage) {
+        handleChange('buyer_image', [
+          {
+            url: defaultImageUrl,
+            isDefault: true
+          }
+        ]);
+      }
+    }
+  }, [formData.buyer_sectors_interested]);
 
   return (
     <div className="w-full flex flex-col h-full overflow-hidden">
@@ -269,7 +332,7 @@ export default function BuyerForm({
             </div>
 
             <div>
-              <Label>{language === 'fr' ? 'Type de Cession recherché' : 'Business Type Sought'}</Label>
+              <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Type de Cession recherché' : 'Business Type Sought'}</Label>
               <Select value={formData.business_type_sought} onValueChange={(v) => handleChange('business_type_sought', v)}>
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder={language === 'fr' ? 'Sélectionner un type' : 'Select type'} />
@@ -357,9 +420,9 @@ export default function BuyerForm({
 
             <div>
               <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Lieux d\'intérêt' : 'Interested Locations'}</Label>
-              <Select value={formData.buyer_locations?.[0] || ''} onValueChange={(v) => handleChange('buyer_locations', v ? [v] : [])}>
+              <Select value={locationInput} onValueChange={addLocation}>
                 <SelectTrigger className="mt-2">
-                  <SelectValue placeholder={language === 'fr' ? 'Sélectionner un lieu' : 'Select a location'} />
+                  <SelectValue placeholder={language === 'fr' ? 'Ajouter un lieu' : 'Add a location'} />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
                   <div className="px-2 py-1.5 font-semibold text-sm bg-gray-100">
@@ -380,7 +443,27 @@ export default function BuyerForm({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500 mt-1">
+              
+              {/* Display selected locations */}
+              {formData.buyer_locations && formData.buyer_locations.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {formData.buyer_locations.map(loc => (
+                    <div
+                      key={loc}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
+                    >
+                      {getLocationLabel(loc)}
+                      <button
+                        onClick={() => removeLocation(loc)}
+                        className="ml-1 hover:text-primary/60"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-2">
                 {language === 'fr' ? 'Sélectionnez au moins un lieu d\'intérêt' : 'Select at least one interested location'}
               </p>
             </div>
@@ -394,6 +477,26 @@ export default function BuyerForm({
                 className="mt-2 min-h-32"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Photo Upload - Single Photo */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-display">
+              {language === 'fr' ? 'Photo de Profil' : 'Profile Photo'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ImageGallery
+              images={formData.buyer_image || []}
+              onImagesChange={(images) => handleChange('buyer_image', images)}
+              maxPhotos={1}
+              defaultImage={formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0 ? getDefaultImageForSector(formData.buyer_sectors_interested[0]) : ''}
+              sectorLabel={formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0 ? formData.buyer_sectors_interested[0] : ''}
+              userEmail={user?.email}
+              language={language}
+            />
           </CardContent>
         </Card>
 
@@ -425,5 +528,5 @@ export default function BuyerForm({
         </div>
       </div>
     </div>
-    );
-  }
+  );
+}

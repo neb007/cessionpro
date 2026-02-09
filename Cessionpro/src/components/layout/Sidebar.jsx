@@ -44,9 +44,18 @@ export default function Sidebar({ user }) {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Get current page name from path
+  // Get current page name from path AND query params
   const getCurrentPage = () => {
     const path = location.pathname.replace('/', '');
+    const searchParams = new URLSearchParams(location.search);
+    const typeParam = searchParams.get('type');
+    
+    // Return combined identifier
+    if (path === 'Annonces' || path === '') {
+      if (typeParam === 'cession') return 'Annonces-cession';
+      if (typeParam === 'acquisition') return 'Annonces-acquisition';
+      return 'Annonces';
+    }
     return path || 'Annonces';
   };
 
@@ -96,17 +105,20 @@ export default function Sidebar({ user }) {
     {
       label: language === 'fr' ? 'Toutes les annonces' : 'All Listings',
       path: '/Annonces',
-      icon: Briefcase
+      icon: Briefcase,
+      pageKey: 'Annonces'
     },
     {
       label: language === 'fr' ? 'Cessions' : 'Sales',
       path: '/Annonces?type=cession',
-      icon: ArrowRightFromLine
+      icon: ArrowRightFromLine,
+      pageKey: 'Annonces-cession'
     },
     {
       label: language === 'fr' ? 'Acquisitions' : 'Acquisitions',
       path: '/Annonces?type=acquisition',
-      icon: ArrowLeftFromLine
+      icon: ArrowLeftFromLine,
+      pageKey: 'Annonces-acquisition'
     }
   ];
 
@@ -200,8 +212,8 @@ export default function Sidebar({ user }) {
                 }}
                 style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
                 className={`w-full flex items-center gap-3 px-3 py-3 transition-all duration-200 text-sm ${
-                  currentPage === 'Annonces'
-                    ? 'text-[#3B4759]'
+                  currentPage === item.pageKey
+                    ? 'bg-orange-50 text-[#FF6B4A] font-medium'
                     : 'text-[#6B7A94] hover:text-[#3B4759]'
                 }`}
               >

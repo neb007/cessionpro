@@ -21,7 +21,26 @@ import { getDefaultImageForSector } from '@/constants/defaultImages';
 import { getRegionForFrenchCity } from '@/utils/frenchCitiesToRegions';
 import { getDepartmentForFrenchCity } from '@/utils/frenchCitiesToDepartments';
 
-const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
+const SECTORS = [
+  'technology',
+  'retail',
+  'hospitality',
+  'manufacturing',
+  'services',
+  'healthcare',
+  'construction',
+  'transport',
+  'agriculture',
+  'real_estate',
+  'finance',
+  'ecommerce',
+  'beauty',
+  'education',
+  'events',
+  'logistics',
+  'food_beverage',
+  'other'
+];
 const REASONS = ['retirement', 'new_project', 'health', 'relocation', 'other'];
 const COUNTRIES = ['france', 'belgium', 'switzerland', 'luxembourg', 'germany', 'spain', 'italy', 'netherlands', 'portugal', 'other'];
 const LEGAL_STRUCTURES = ['sarl', 'sas', 'sa', 'eurl', 'sasu', 'sci', 'snc', 'auto_entrepreneur', 'other'];
@@ -465,7 +484,7 @@ export default function SellerForm({
                   images={formData.images}
                   onImagesChange={handleImagesChange}
                   defaultImage={formData.sector ? getDefaultImageForSector(formData.sector) : ''}
-                  maxPhotos={3}
+                  maxPhotos={5}
                   sectorLabel={formData.sector}
                   userEmail={user?.email}
                   language={language}

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import FinancialChart from '@/components/Financial/FinancialChart';
+import BentoPhotoGallery from '@/components/BentoPhotoGallery';
 
 const sectorColors = {
   technology: 'bg-violet-100 text-violet-700',
@@ -290,80 +291,9 @@ export default function BusinessDetails() {
           {t('businesses')}
         </button>
 
-        {/* Image Gallery */}
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 mb-8">
-          <div className="aspect-[21/9] relative">
-            {images && images.length > 0 ? (
-              <>
-                <motion.img
-                  key={currentImageIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  src={images[currentImageIndex]}
-                  alt={business.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop';
-                  }}
-                />
-                
-                {images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentImageIndex((currentImageIndex - 1 + images.length) % images.length)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg hover:bg-white transition-colors"
-                    >
-                      <ChevronLeft className="w-6 h-6" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentImageIndex((currentImageIndex + 1) % images.length)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg hover:bg-white transition-colors"
-                    >
-                      <ChevronRight className="w-6 h-6" />
-                    </button>
-                    
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                      {images.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentImageIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            idx === currentImageIndex ? 'bg-white w-6' : 'bg-white/50'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center">
-                  <Building2 className="w-16 h-16 text-primary/40" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Badges Overlay */}
-          <div className="absolute top-4 left-4 flex gap-2">
-            <Badge className={`${sectorColors[business.sector]} border-0 font-medium`}>
-              {t(business.sector)}
-            </Badge>
-            {business.confidential && (
-              <Badge className="bg-gray-900/80 text-white border-0">
-                <Lock className="w-3 h-3 mr-1" />
-                {t('confidential')}
-              </Badge>
-            )}
-          </div>
-
-          {/* Stats Overlay */}
-          <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 rounded-full bg-white/90 backdrop-blur-sm text-sm text-gray-600">
-            <Eye className="w-4 h-4" />
-            <span className="font-mono">{business.views_count || 0}</span>
-            <span>{t('views')}</span>
-          </div>
+        {/* Bento Photo Gallery */}
+        <div className="mb-8">
+          <BentoPhotoGallery business={business} language={language} />
         </div>
 
         {/* Content */}

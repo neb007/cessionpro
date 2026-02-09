@@ -32,7 +32,7 @@ export default function AnnouncementTypeToggle({
           >
             <Building2 className="w-5 h-5" />
             <span className="font-medium">
-              {language === 'fr' ? 'Je vends' : 'I\'m selling'}
+              {language === 'fr' ? 'Cession' : 'Sale'}
             </span>
           </Button>
         </motion.div>
@@ -52,7 +52,7 @@ export default function AnnouncementTypeToggle({
           >
             <Search className="w-5 h-5" />
             <span className="font-medium">
-              {language === 'fr' ? 'Je cherche' : 'I\'m looking'}
+              {language === 'fr' ? 'Acquisition' : 'Acquisition'}
             </span>
           </Button>
         </motion.div>
