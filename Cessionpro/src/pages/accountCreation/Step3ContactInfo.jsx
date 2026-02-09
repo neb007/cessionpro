@@ -408,17 +408,9 @@ export default function Step3ContactInfo({
       {/* Action Buttons */}
       <motion.div variants={itemVariants} className="flex gap-3 pt-3">
         <Button
-          onClick={onBack}
-          disabled={isLoading}
-          variant="outline"
-          className="flex-1 h-12 border-2 border-charcoal/20 text-charcoal hover:bg-gray-50 transition-all"
-        >
-          Retour
-        </Button>
-        <Button
           onClick={onNext}
           disabled={!isFormValid || isLoading}
-          className="flex-1 h-12 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full h-12 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>

@@ -200,35 +200,12 @@ export default function Step2ProfileType({
         )}
       </motion.div>
 
-      {/* Info Box */}
-      <motion.div
-        variants={itemVariants}
-        className="p-5 bg-violet/5 border border-violet/20 rounded-lg space-y-2"
-      >
-        <p className="text-sm font-semibold text-charcoal">
-          💡 Ces informations seront utilisées pour
-        </p>
-        <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-          <li>• Personnaliser vos recommandations</li>
-          <li>• Optimiser le Smart Matching</li>
-          <li>• Vous proposer des opportunités pertinentes</li>
-        </ul>
-      </motion.div>
-
       {/* Action Buttons */}
-      <motion.div variants={itemVariants} className="flex gap-4 pt-6">
-        <Button
-          onClick={onBack}
-          disabled={isLoading}
-          variant="outline"
-          className="flex-1 h-12 border-2 border-charcoal/20 text-charcoal hover:bg-gray-50 transition-all"
-        >
-          Retour
-        </Button>
+      <motion.div variants={itemVariants} className="flex gap-3 pt-3">
         <Button
           onClick={onNext}
           disabled={!isValid || isLoading}
-          className="flex-1 h-12 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-12 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continuer
         </Button>
