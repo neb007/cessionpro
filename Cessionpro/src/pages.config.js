@@ -48,6 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import Alerts from './pages/Alerts';
+import AccountCreation from './pages/AccountCreation';
 import AuthCallback from './pages/AuthCallback';
 import BusinessDetails from './pages/BusinessDetails';
 import Annonces from './pages/Annonces';
@@ -72,6 +73,7 @@ import __Layout from './Layout.jsx';
 
 export const PAGES = {
     "Alerts": Alerts,
+    "AccountCreation": AccountCreation,
     "AuthCallback": AuthCallback,
     "BusinessDetails": BusinessDetails,
     "Annonces": Annonces,
