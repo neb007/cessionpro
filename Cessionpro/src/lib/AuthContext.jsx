@@ -72,18 +72,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (email, password) => {
+  const register = async (email, password, additionalData = {}) => {
     try {
       setAuthError(null);
+      
+      // Prepare user metadata with additional profile information
+      const rawUserMetaData = {
+        email,
+        full_name: additionalData.firstName && additionalData.lastName 
+          ? `${additionalData.firstName} ${additionalData.lastName}` 
+          : '',
+        first_name: additionalData.firstName || '',
+        last_name: additionalData.lastName || '',
+        company_name: additionalData.company || '',
+        phone: additionalData.phone || '',
+        user_goal: additionalData.userGoal || '',
+        profile_type: additionalData.profileType || '',
+        transaction_size: additionalData.transactionSize || '',
+        sectors: additionalData.sectors ? JSON.stringify(additionalData.sectors) : '[]'
+      };
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          data: rawUserMetaData,
           emailRedirectTo: `${window.location.origin}/auth-callback`
         }
       });
 
       if (error) throw error;
+
+      // If signup successful, save the profile data to the profiles table
+      if (data.user) {
+        await saveProfileData(data.user.id, rawUserMetaData);
+      }
+
       return data;
     } catch (error) {
       console.error('Registration error:', error);
@@ -92,6 +116,40 @@ export const AuthProvider = ({ children }) => {
         message: error.message || 'Registration failed'
       });
       throw error;
+    }
+  };
+
+  const saveProfileData = async (userId, userData) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: userData.email,
+          full_name: userData.full_name,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          company_name: userData.company_name,
+          phone: userData.phone,
+          user_goal: userData.user_goal,
+          profile_type: userData.profile_type,
+          transaction_size: userData.transaction_size,
+          sectors: userData.sectors ? (typeof userData.sectors === 'string' ? JSON.parse(userData.sectors) : userData.sectors) : [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      if (error) {
+        console.error('Error saving profile data:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Profile save error:', error);
+      // Don't throw here - registration was successful, just profile save failed
+      setAuthError({
+        type: 'profile_save_warning',
+        message: 'Registration successful but profile data could not be saved completely'
+      });
     }
   };
 

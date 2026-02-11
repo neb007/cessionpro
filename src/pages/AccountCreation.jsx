@@ -104,14 +104,20 @@ export default function AccountCreation() {
       // Note: In production, you might want to ask for email instead
       const email = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}@cessionpro.local`.replace(/\s+/g, '');
 
-      // Register with Supabase
-      const result = await register(email, formData.password);
+      // Register with Supabase along with additional profile data
+      const result = await register(email, formData.password, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        company: formData.company,
+        phone: formData.phone,
+        userGoal: formData.userGoal,
+        profileType: formData.profileType,
+        transactionSize: formData.transactionSize,
+        sectors: formData.sectors
+      });
 
       if (result?.user) {
-        // TODO: Save additional profile data to database
-        // This would include: firstName, lastName, company, phone, userGoal, profileType, transactionSize, sectors
-        
-        // For now, navigate to home after successful registration
+        // Navigate to home after successful registration
         setTimeout(() => {
           navigate('/Annonces');
         }, 2000);

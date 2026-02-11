@@ -4,6 +4,7 @@ import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
+import { getProfile, updateBuyerProfile, updateSellerProfile } from '@/services/profileService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,9 +44,9 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [profileData, setProfileData] = useState(null);
   
   const [formData, setFormData] = useState({
-    user_type: 'buyer',
     first_name: '',
     last_name: '',
     company_name: '',
@@ -57,9 +58,15 @@ export default function Profile() {
     budget_min: '',
     budget_max: '',
     experience: '',
+    linkedin_url: '',
+    message_vendeurs: '',
+    show_logo_in_listings: false,
     visible_in_directory: true,
     preferred_language: 'fr',
-    notification_emails_enabled: true
+    notification_emails_enabled: true,
+    is_buyer: false,
+    is_seller: false,
+    user_type: 'buyer'
   });
 
   useEffect(() => {
@@ -73,31 +80,91 @@ export default function Profile() {
     }
 
     try {
+      // Load from Supabase profileService
+      const profile = await getProfile(user.id);
+      setProfileData(profile);
+      
+      // Determine user_type for dropdown based on is_buyer and is_seller
+      let userType = 'buyer';
+      if (profile.is_buyer && profile.is_seller) {
+        userType = 'both';
+      } else if (profile.is_seller) {
+        userType = 'seller';
+      } else {
+        userType = 'buyer';
+      }
+
       setFormData({
-        user_type: user.user_type || 'buyer',
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        company_name: user.company_name || '',
-        phone: user.phone || '',
-        bio: user.bio || '',
-        location: user.location || '',
-        avatar_url: user.avatar_url || '',
-        sectors_interest: user.sectors_interest || [],
-        budget_min: user.budget_min?.toString() || '',
-        budget_max: user.budget_max?.toString() || '',
-        experience: user.experience || '',
-        visible_in_directory: user.visible_in_directory !== false,
-        preferred_language: user.preferred_language || 'fr',
-        notification_emails_enabled: user.notification_emails_enabled !== false
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        company_name: profile.company_name || '',
+        phone: profile.phone || '',
+        bio: profile.aide_vendeur_description || profile.bio || '',
+        location: profile.location || '',
+        avatar_url: profile.avatar_url || '',
+        sectors_interest: Array.isArray(profile.sectors) ? profile.sectors : [],
+        budget_min: profile.budget_min?.toString() || '',
+        budget_max: profile.budget_max?.toString() || '',
+        experience: profile.experience_professionnelle || profile.experience || '',
+        linkedin_url: profile.linkedin_url || '',
+        message_vendeurs: profile.message_vendeurs || '',
+        show_logo_in_listings: profile.show_logo_in_listings || false,
+        visible_in_directory: profile.visible_in_directory !== false,
+        preferred_language: profile.preferred_language || 'fr',
+        notification_emails_enabled: profile.notification_emails_enabled !== false,
+        is_buyer: profile.is_buyer || false,
+        is_seller: profile.is_seller || false,
+        user_type: userType
       });
     } catch (e) {
-      console.error(e);
+      console.error('Error loading profile:', e);
+      // Fallback to base44 if needed
+      try {
+        if (user) {
+          setFormData({
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            company_name: user.company_name || '',
+            phone: user.phone || '',
+            bio: user.bio || '',
+            location: user.location || '',
+            avatar_url: user.avatar_url || '',
+            sectors_interest: user.sectors_interest || [],
+            budget_min: user.budget_min?.toString() || '',
+            budget_max: user.budget_max?.toString() || '',
+            experience: user.experience || '',
+            linkedin_url: user.linkedin_url || '',
+            message_vendeurs: user.message_vendeurs || '',
+            show_logo_in_listings: user.show_logo_in_listings || false,
+            visible_in_directory: user.visible_in_directory !== false,
+            preferred_language: user.preferred_language || 'fr',
+            notification_emails_enabled: user.notification_emails_enabled !== false,
+            is_buyer: true,
+            is_seller: false,
+            user_type: 'buyer'
+          });
+        }
+      } catch (err) {
+        console.error('Fallback error:', err);
+      }
     }
     setLoading(false);
   };
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Special handling for user_type dropdown to set is_buyer and is_seller
+    if (field === 'user_type') {
+      const isBuyer = value === 'buyer' || value === 'both';
+      const isSeller = value === 'seller' || value === 'both';
+      setFormData(prev => ({ 
+        ...prev, 
+        user_type: value,
+        is_buyer: isBuyer,
+        is_seller: isSeller
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     setSaved(false);
   };
 
@@ -126,17 +193,71 @@ export default function Profile() {
     setSaving(true);
     try {
       const data = {
-        ...formData,
-        budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
-        budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
-        role: formData.user_type, // Map user_type to role field
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+        company_name: formData.company_name,
+        sectors: formData.sectors_interest,
+        profile_type: formData.user_type,
+        transaction_size: formData.budget_max,
+        motivation_reprise: formData.bio,
+        experience_professionnelle: formData.experience,
+        linkedin_url: '',
+        aideVendeurDescription: formData.bio
       };
 
-      console.log('Saving profile data:', data);
-      await base44.auth.updateMe(data);
+      // Update based on roles
+      if (formData.is_buyer) {
+        await updateBuyerProfile(user.id, {
+          ...data,
+          firstName: formData.first_name,
+          lastName: formData.last_name,
+          budgetMin: formData.budget_min,
+          budgetMax: formData.budget_max,
+          motivationReprise: formData.bio,
+          experienceProfessionnelle: formData.experience
+        });
+      }
+
+      if (formData.is_seller) {
+        await updateSellerProfile(user.id, {
+          firstName: formData.first_name,
+          lastName: formData.last_name,
+          companyName: formData.company_name,
+          phone: formData.phone,
+          profileType: formData.user_type,
+          transactionSize: formData.budget_max
+        });
+      }
+
+      // Also save via base44 for compatibility
+      const base44Data = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        company_name: formData.company_name,
+        phone: formData.phone,
+        bio: formData.bio,
+        location: formData.location,
+        avatar_url: formData.avatar_url,
+        sectors_interest: formData.sectors_interest,
+        budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
+        budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
+        experience: formData.experience,
+        visible_in_directory: formData.visible_in_directory,
+        preferred_language: formData.preferred_language,
+        notification_emails_enabled: formData.notification_emails_enabled,
+        user_type: formData.user_type,
+        role: formData.user_type
+      };
+
+      await base44.auth.updateMe(base44Data);
+      
       setSaved(true);
       console.log('Profile saved successfully');
       setTimeout(() => setSaved(false), 3000);
+      
+      // Reload profile
+      await loadUser();
     } catch (e) {
       console.error('Error saving profile:', e);
       alert(language === 'fr' ? 'Erreur lors de la sauvegarde du profil' : 'Error saving profile');
@@ -152,7 +273,8 @@ export default function Profile() {
     );
   }
 
-  const isBuyer = formData.user_type === 'buyer' || formData.user_type === 'both';
+  const isBuyer = formData.is_buyer;
+  const isSeller = formData.is_seller;
 
   return (
     <div className="min-h-screen py-8 lg:py-12">
@@ -165,17 +287,22 @@ export default function Profile() {
         </div>
 
         <div className="space-y-6">
-          {/* Avatar & Basic Info */}
+          {/* Logo Entreprise & Basic Info */}
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
-              <div className="flex items-center gap-6 mb-6">
+              <div className="flex items-start gap-6 mb-6">
                 <div className="relative">
-                  <DicebearAvatar 
-                    email={user?.email} 
-                    name={user?.full_name} 
-                    size="xxl"
-                    className="shadow-md"
-                  />
+                  {formData.avatar_url ? (
+                    <img 
+                      src={formData.avatar_url}
+                      alt="Logo"
+                      className="w-24 h-24 rounded-xl object-cover shadow-md bg-gray-100"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-xl bg-gray-200 flex items-center justify-center shadow-md">
+                      <Building2 className="w-10 h-10 text-gray-400" />
+                    </div>
+                  )}
                   <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
                     <Camera className="w-4 h-4 text-gray-600" />
                     <input
@@ -186,25 +313,25 @@ export default function Profile() {
                     />
                   </label>
                 </div>
-                <div>
+                <div className="flex-1">
                   <h2 className="font-display text-xl font-semibold text-gray-900">
-                    {user?.full_name}
+                    {formData.first_name} {formData.last_name}
                   </h2>
-                  <p className="text-gray-500">{user?.email}</p>
+                  <p className="text-gray-600 text-sm font-medium">{formData.company_name}</p>
+                  <p className="text-gray-500 text-sm">{user?.email}</p>
                 </div>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <Label>{language === 'fr' ? 'Type de profil' : 'Profile type'}</Label>
-                  <Select value={formData.user_type} onValueChange={(v) => handleChange('user_type', v)}>
+                  <Select value={formData.user_type || 'buyer'} onValueChange={(v) => handleChange('user_type', v)}>
                     <SelectTrigger className="mt-2">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="buyer">{t('buyer')}</SelectItem>
                       <SelectItem value="seller">{t('seller')}</SelectItem>
-                      <SelectItem value="both">{t('both')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -222,6 +349,16 @@ export default function Profile() {
                   </Select>
                 </div>
               </div>
+
+              <div className="mt-4 pt-4 border-t flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-800 text-sm">{language === 'fr' ? 'Afficher le logo dans les annonces' : 'Display logo in listings'}</p>
+                </div>
+                <Switch
+                  checked={formData.show_logo_in_listings || false}
+                  onCheckedChange={(v) => handleChange('show_logo_in_listings', v)}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -234,6 +371,27 @@ export default function Profile() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>{language === 'fr' ? 'Prénom' : 'First Name'}</Label>
+                  <Input
+                    value={formData.first_name}
+                    onChange={(e) => handleChange('first_name', e.target.value)}
+                    placeholder={language === 'fr' ? 'Jean' : 'John'}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label>{language === 'fr' ? 'Nom' : 'Last Name'}</Label>
+                  <Input
+                    value={formData.last_name}
+                    onChange={(e) => handleChange('last_name', e.target.value)}
+                    placeholder={language === 'fr' ? 'Dupont' : 'Smith'}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <Label>{t('company_name')}</Label>
@@ -293,7 +451,7 @@ export default function Profile() {
               <CardHeader>
                 <CardTitle className="font-display flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-primary" />
-                  {language === 'fr' ? 'Critères de recherche' : 'Search Criteria'}
+                  {language === 'fr' ? 'Critères de recherche Acheteur' : 'Buyer Search Criteria'}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -340,6 +498,29 @@ export default function Profile() {
                   </div>
                 </div>
 
+                <div>
+                  <Label>{language === 'fr' ? 'URL LinkedIn' : 'LinkedIn URL'}</Label>
+                  <Input
+                    type="url"
+                    value={formData.linkedin_url}
+                    onChange={(e) => handleChange('linkedin_url', e.target.value)}
+                    placeholder="https://linkedin.com/in/vous"
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label>{language === 'fr' ? 'Message personnalisé pour vendeurs' : 'Personalized message for sellers'}</Label>
+                  <Textarea
+                    value={formData.message_vendeurs}
+                    onChange={(e) => handleChange('message_vendeurs', e.target.value)}
+                    placeholder={language === 'fr' 
+                      ? 'Laissez un message que les vendeurs verront quand ils consultent votre profil...' 
+                      : 'Leave a message that sellers will see when viewing your profile...'}
+                    className="mt-2 min-h-20"
+                  />
+                </div>
+
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <div>
                     <p className="font-medium text-gray-900">{t('visible_directory')}</p>
@@ -373,8 +554,8 @@ export default function Profile() {
                   </p>
                   <p className="text-sm text-gray-500">
                     {language === 'fr' 
-                      ? 'Recevoir un digest des messages toutes les 10 minutes' 
-                      : 'Receive message digest every 10 minutes'}
+                      ? 'Recevoir une notification par email' 
+                      : 'Receive email notification'}
                   </p>
                 </div>
                 <Switch
