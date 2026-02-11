@@ -243,6 +243,7 @@ export default function Profile() {
         budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
         budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
         experience: formData.experience,
+        show_logo_in_listings: formData.show_logo_in_listings,
         visible_in_directory: formData.visible_in_directory,
         preferred_language: formData.preferred_language,
         notification_emails_enabled: formData.notification_emails_enabled,
@@ -279,13 +280,6 @@ export default function Profile() {
   return (
     <div className="min-h-screen py-8 lg:py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">
-            {t('edit_profile')}
-          </h1>
-        </div>
-
         <div className="space-y-6">
           {/* Logo Entreprise & Basic Info */}
           <Card className="border-0 shadow-sm">
