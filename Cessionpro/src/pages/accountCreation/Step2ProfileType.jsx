@@ -1,14 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { User, Building2, TrendingUp, ChevronDown } from 'lucide-react';
+import { User, Building2, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 const PROFILE_TYPES = [
   {
@@ -29,13 +22,6 @@ const PROFILE_TYPES = [
     description: 'Fonds de capital-investissement',
     icon: TrendingUp,
   },
-];
-
-const TRANSACTION_SIZES = [
-  { value: 'less_1m', label: 'Moins de 1M€' },
-  { value: '1_5m', label: '1M€ - 5M€' },
-  { value: '5_10m', label: '5M€ - 10M€' },
-  { value: 'more_10m', label: 'Plus de 10M€' },
 ];
 
 export default function Step2ProfileType({
@@ -65,11 +51,7 @@ export default function Step2ProfileType({
     setFormData({ ...formData, profileType });
   };
 
-  const handleTransactionSizeChange = (transactionSize) => {
-    setFormData({ ...formData, transactionSize });
-  };
-
-  const isValid = formData.profileType && formData.transactionSize;
+  const isValid = formData.profileType;
 
   return (
     <motion.div
@@ -78,16 +60,6 @@ export default function Step2ProfileType({
       animate="show"
       className="space-y-8"
     >
-      {/* Header */}
-      <motion.div variants={itemVariants} className="space-y-2">
-        <h2 className="font-display text-2xl sm:text-3xl font-bold text-charcoal">
-          Profil et Segmentation
-        </h2>
-        <p className="text-muted-foreground text-sm sm:text-base">
-          Ces informations nous aident à personnaliser votre expérience
-        </p>
-      </motion.div>
-
       {/* Section 1: Profile Type */}
       <motion.div variants={itemVariants} className="space-y-4">
         <div>
@@ -153,51 +125,6 @@ export default function Step2ProfileType({
             );
           })}
         </div>
-      </motion.div>
-
-      {/* Section 2: Transaction Size */}
-      <motion.div variants={itemVariants} className="space-y-4">
-        <div>
-          <label className="font-display text-lg font-semibold text-charcoal block mb-4">
-            Taille habituelle de vos transactions
-          </label>
-          <p className="text-sm text-muted-foreground mb-4">
-            Cette information nous aide à optimiser nos recommandations
-          </p>
-        </div>
-
-        <Select
-          value={formData.transactionSize}
-          onValueChange={handleTransactionSizeChange}
-          disabled={isLoading}
-        >
-          <SelectTrigger className="rounded-lg border-2 border-gray-200 bg-white px-4 py-3 text-charcoal focus:border-primary focus:outline-none transition-colors h-12">
-            <SelectValue placeholder="Sélectionnez une taille de transaction" />
-          </SelectTrigger>
-          <SelectContent>
-            {TRANSACTION_SIZES.map((size) => (
-              <SelectItem key={size.value} value={size.value}>
-                {size.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Transaction Size Badge (Visual Feedback) */}
-        {formData.transactionSize && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-primary/5 border border-primary/20 rounded-lg"
-          >
-            <p className="text-sm text-charcoal">
-              <span className="font-semibold">Sélection :</span>{' '}
-              <span className="text-primary">
-                {TRANSACTION_SIZES.find(s => s.value === formData.transactionSize)?.label}
-              </span>
-            </p>
-          </motion.div>
-        )}
       </motion.div>
 
       {/* Action Buttons */}

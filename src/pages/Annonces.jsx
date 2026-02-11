@@ -9,6 +9,8 @@ import BusinessCard from '@/components/ui/BusinessCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import AutocompleteCountry from '@/components/AutocompleteCountry';
+import AutocompleteDepartment from '@/components/AutocompleteDepartment';
 
 import {
   Select,
@@ -43,6 +45,8 @@ export default function Businesses() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
   const [sortBy, setSortBy] = useState('-created_date');
   const [budgetRange, setBudgetRange] = useState([0, 5000000]);
 
@@ -215,7 +219,7 @@ export default function Businesses() {
           </div>
 
           {/* Filters Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 pt-2 border-t border-gray-100">
             <div>
               <Select value={selectedSector} onValueChange={setSelectedSector}>
                 <SelectTrigger className="h-12 w-full">
@@ -245,25 +249,42 @@ export default function Businesses() {
               </div>
             </div>
 
-            {/* Budget Min Input */}
+            {/* Country Autocomplete */}
             <div>
+              <AutocompleteCountry
+                value={selectedCountry}
+                onChange={setSelectedCountry}
+              />
+            </div>
+
+            {/* Department Autocomplete */}
+            <div>
+              <AutocompleteDepartment
+                value={selectedDepartment}
+                onChange={setSelectedDepartment}
+                country={selectedCountry}
+              />
+            </div>
+
+            {/* Budget Min Input */}
+            <div className="col-span-1">
               <Input
                 type="number"
                 value={budgetRange[0] === 0 ? '' : budgetRange[0]}
                 onChange={(e) => setBudgetRange([Number(e.target.value) || 0, budgetRange[1]])}
-                placeholder={language === 'fr' ? 'Budget Min' : 'Min Budget'}
-                className="h-12 w-full"
+                placeholder={language === 'fr' ? 'Min' : 'Min'}
+                className="h-12 w-24"
               />
             </div>
 
             {/* Budget Max Input */}
-            <div>
+            <div className="col-span-1">
               <Input
                 type="number"
                 value={budgetRange[1] === 5000000 ? '' : budgetRange[1]}
                 onChange={(e) => setBudgetRange([budgetRange[0], Number(e.target.value) || 5000000])}
-                placeholder={language === 'fr' ? 'Budget Max' : 'Max Budget'}
-                className="h-12 w-full"
+                placeholder={language === 'fr' ? 'Max' : 'Max'}
+                className="h-12 w-24"
               />
             </div>
           </div>

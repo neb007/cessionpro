@@ -62,48 +62,50 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
     >
       <Card className="group overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full flex flex-col rounded-2xl">
         {/* Image Section with Category and Views */}
-        <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)}>
-          <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
+        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
+          <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)}>
             <img
               src={imageUrl}
               alt={business.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             />
-            
-            {/* Overlay gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            
-            {/* Views badge on image */}
-            <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium">
-              <Eye className="w-4 h-4" />
-              <span className="font-mono">{business.views_count || 0}</span>
-            </div>
+          </Link>
+          
+          {/* Overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          {/* Views badge on image */}
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium">
+            <Eye className="w-4 h-4" />
+            <span className="font-mono">{business.views_count || 0}</span>
           </div>
-        </Link>
+
+          {/* Favorite Button - Bottom Right */}
+          {onToggleFavorite && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onToggleFavorite(business.id);
+              }}
+              className={`absolute bottom-3 right-3 p-2 rounded-full transition-all duration-300 z-50 ${
+                isFavorite 
+                  ? 'bg-rose-500 text-white' 
+                  : 'bg-black/50 text-white hover:bg-rose-500'
+              }`}
+            >
+              <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
+          )}
+        </div>
         
         <CardContent className="p-4 flex flex-col flex-grow">
-          {/* Nom + Favoris */}
-          <div className="flex items-start justify-between gap-2 mb-2">
+          {/* Titre */}
+          <div className="mb-2">
             <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)} className="flex-1 min-w-0">
               <h3 style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: '16px' }} className="text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2 leading-tight">
                 {business.title}
               </h3>
             </Link>
-            {onToggleFavorite && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  onToggleFavorite(business.id);
-                }}
-                className={`p-2 rounded-full transition-all duration-300 flex-shrink-0 ${
-                  isFavorite 
-                    ? 'bg-rose-50 text-rose-500' 
-                    : 'bg-gray-50 text-gray-400 hover:bg-rose-50 hover:text-rose-500'
-                }`}
-              >
-                <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
-              </button>
-            )}
           </div>
 
           {/* Localisation + Message */}
