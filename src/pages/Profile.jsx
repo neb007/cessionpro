@@ -365,7 +365,7 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="py-10 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -375,8 +375,8 @@ export default function Profile() {
   const isSeller = formData.is_seller;
 
   return (
-    <div className="min-h-screen py-8 lg:py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="py-4 lg:py-6">
+      <div className="max-w-3xl mx-auto px-0 sm:px-2 lg:px-4">
         <div className="space-y-6">
           {/* Logo Entreprise & Basic Info */}
           <Card className="border-0 shadow-sm">

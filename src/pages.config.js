@@ -52,6 +52,7 @@ import AccountCreation from './pages/AccountCreation';
 import AuthCallback from './pages/AuthCallback';
 import BusinessDetails from './pages/BusinessDetails';
 import Annonces from './pages/Annonces';
+import Billing from './pages/Billing';
 import Categories from './pages/Categories';
 import CreateBusiness from './pages/CreateBusiness';
 import Dataroom from './pages/Dataroom';
@@ -67,6 +68,7 @@ import PasswordReset from './pages/PasswordReset';
 import Pricing from './pages/Pricing';
 import Profile from './pages/Profile';
 import Register from './pages/Register';
+import Settings from './pages/Settings';
 import SmartMatching from './pages/SmartMatching';
 import __Layout from './Layout.jsx';
 
@@ -77,6 +79,7 @@ export const PAGES = {
     "AuthCallback": AuthCallback,
     "BusinessDetails": BusinessDetails,
     "Annonces": Annonces,
+    "Billing": Billing,
     "Categories": Categories,
     "CreateBusiness": CreateBusiness,
     "Dataroom": Dataroom,
@@ -92,6 +95,7 @@ export const PAGES = {
     "Pricing": Pricing,
     "Profile": Profile,
     "Register": Register,
+    "Settings": Settings,
     "SmartMatching": SmartMatching,
 }
 

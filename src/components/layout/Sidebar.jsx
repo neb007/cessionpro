@@ -8,55 +8,55 @@ import {
   FileText,
   Heart,
   MessageSquare,
-  CreditCard,
-  User,
-  LogOut,
   X,
-  Globe,
   Zap,
   Lock,
-  Bell
+  Settings,
+  Bell,
+  Globe,
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
 import { useLanguage } from '@/components/i18n/LanguageContext';
-import { useAuth } from '@/lib/AuthContext';
 import { useSidebar } from '@/lib/SidebarContext';
 import { base44 } from '@/api/base44Client';
 import SidebarMenuItem from './SidebarMenuItem';
 import { motion } from 'framer-motion';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Sidebar({ user }) {
   const { language, changeLanguage } = useLanguage();
-  const { logout } = useAuth();
   const { isMobileOpen, closeMobile } = useSidebar();
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Get current page name from path AND query params
   const getCurrentPage = () => {
-    const path = location.pathname.replace('/', '');
+    const path = location.pathname.replace('/', '').toLowerCase();
     const searchParams = new URLSearchParams(location.search);
     const typeParam = searchParams.get('type');
     
     // Return combined identifier
-    if (path === 'Annonces' || path === '') {
-      if (typeParam === 'cession') return 'Annonces-cession';
-      if (typeParam === 'acquisition') return 'Annonces-acquisition';
-      return 'Annonces';
+    if (path === 'annonces' || path === '') {
+      if (typeParam === 'cession') return 'annonces-cession';
+      if (typeParam === 'acquisition') return 'annonces-acquisition';
+      return 'annonces';
     }
-    return path || 'Annonces';
+    return path || 'annonces';
   };
 
   const currentPage = getCurrentPage();
@@ -106,19 +106,19 @@ export default function Sidebar({ user }) {
       label: language === 'fr' ? 'Toutes les annonces' : 'All Listings',
       path: '/Annonces',
       icon: Briefcase,
-      pageKey: 'Annonces'
+      pageKey: 'annonces'
     },
     {
       label: language === 'fr' ? 'Cessions' : 'Sales',
       path: '/Annonces?type=cession',
       icon: ArrowRightFromLine,
-      pageKey: 'Annonces-cession'
+      pageKey: 'annonces-cession'
     },
     {
       label: language === 'fr' ? 'Acquisitions' : 'Acquisitions',
       path: '/Annonces?type=acquisition',
       icon: ArrowLeftFromLine,
-      pageKey: 'Annonces-acquisition'
+      pageKey: 'annonces-acquisition'
     }
   ];
 
@@ -141,10 +141,6 @@ export default function Sidebar({ user }) {
     }
   ];
 
-  const handleLogout = async () => {
-    await logout(true);
-  };
-
   const handleMenuItemClick = () => {
     closeMobile();
   };
@@ -161,7 +157,7 @@ export default function Sidebar({ user }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 w-48 transition-transform duration-300 z-50 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 w-56 transition-transform duration-300 z-50 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ backgroundColor: '#FBFBF9', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -186,175 +182,170 @@ export default function Sidebar({ user }) {
         {/* Sidebar Content */}
         <div className="p-0 flex flex-col h-full font-sans font-normal">
           {/* Logo Section */}
-          <Link to="/" className="flex items-center gap-3 px-3 py-4">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center shadow-lg shadow-[#FF6B4A]/20">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-display font-bold text-lg text-[#3B4759]">
-              CessionPro
-            </span>
-          </Link>
+          <div className="flex items-center justify-between px-4 py-4">
+            <Link to="/" className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center shadow-lg shadow-[#FF6B4A]/20">
+                <Building2 className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-display font-bold text-lg text-[#3B4759]">
+                CessionPro
+              </span>
+            </Link>
+          </div>
 
           <div className="flex-1">
           {/* EXPLORER Section */}
-          <div>
-            <h3 className="flex items-center gap-2 px-3 py-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#3B4759]">
+          <div className="mb-6">
+            <h3 className="flex items-center gap-2 px-4 pt-2 pb-3">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-[#9AA3B2]">
                 {language === 'fr' ? 'Explorer' : 'Explorer'}
               </span>
             </h3>
-            {explorerItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => {
-                  navigate(item.path);
-                  handleMenuItemClick();
-                }}
-                style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
-                className={`w-full flex items-center gap-3 px-3 py-3 transition-all duration-200 text-sm ${
-                  currentPage === item.pageKey
-                    ? 'bg-orange-50 text-[#FF6B4A] font-medium'
-                    : 'text-[#6B7A94] hover:text-[#3B4759]'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </button>
-            ))}
+            <div className="space-y-1">
+              {explorerItems.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    navigate(item.path);
+                    handleMenuItemClick();
+                  }}
+                  style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm ${
+                    currentPage === item.pageKey
+                      ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-medium'
+                      : 'text-[#6B7A94] hover:bg-white/80 hover:text-[#3B4759]'
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Navigation Principale */}
-          <div>
-            {navigationItems.map((item) => (
-              <div key={item.page} className="relative">
-                <SidebarMenuItem
-                  icon={item.icon}
-                  label={item.label}
-                  page={item.page}
-                  isActive={currentPage === item.page}
-                  onClick={handleMenuItemClick}
-                />
-                {/* Unread Message Badge with Tooltip */}
-                {item.page === 'Messages' && unreadCount > 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <motion.div
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                        className="absolute top-2 right-2 bg-[#FF6B4A] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center cursor-help hover:bg-[#FF5530] transition-colors"
-                        >
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </motion.div>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
-                        <p>
-                          {language === 'fr' 
-                            ? `📧 Vous avez ${unreadCount} message${unreadCount > 1 ? 's' : ''} non lu${unreadCount > 1 ? 's' : ''}`
-                            : `📧 You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`
-                          }
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Services Section */}
-          <div>
-            <SidebarMenuItem
-              icon={Zap}
-              label={language === 'fr' ? 'Smart Matching' : 'Smart Matching'}
-              page="SmartMatching"
-              isActive={currentPage === 'SmartMatching'}
-              onClick={handleMenuItemClick}
-            />
-            {/* Dataroom - Disabled with Tooltip */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    disabled
-                    style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
-                    className="w-full flex items-center gap-3 px-3 py-3 text-[#C0C5D4] cursor-not-allowed transition-all duration-200 text-sm"
-                  >
-                    <Lock className="w-5 h-5" />
-                    <span>{language === 'fr' ? 'Dataroom' : 'Dataroom'}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
-                  <p>
-                    {language === 'fr' ? 'Bientôt disponible' : 'Coming Soon'}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <SidebarMenuItem
-              icon={Bell}
-              label={language === 'fr' ? 'Mes alertes' : 'My Alerts'}
-              page="Alerts"
-              isActive={currentPage === 'Alerts'}
-              onClick={handleMenuItemClick}
-            />
-          </div>
-
-          {/* Account Management Section */}
-          <div>
-            <h3 className="flex items-center gap-2 px-3 py-3">
-              <CreditCard className="w-5 h-5 text-[#FF6B4A]" />
-              <span className="text-xs font-bold uppercase tracking-wider text-[#3B4759]">
-                {language === 'fr' ? 'Gestion du compte' : 'Account Management'}
+          <div className="mb-6">
+            <h3 className="flex items-center gap-2 px-4 pt-2 pb-3">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-[#9AA3B2]">
+                {language === 'fr' ? 'Mon espace' : 'My Space'}
               </span>
             </h3>
-
-            <div>
-              {/* Subscription */}
-              <button 
-                onClick={() => {
-                  navigate('/Pricing');
-                  handleMenuItemClick();
-                }}
-                style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
-                className="w-full flex items-center gap-3 px-3 py-3 text-[#6B7A94] hover:bg-gray-50 hover:text-[#3B4759] transition-all duration-200 text-sm">
-                <CreditCard className="w-5 h-5" />
-                <span>{language === 'fr' ? 'Mon abonnement' : 'My Subscription'}</span>
-              </button>
-
-              {/* Profile */}
-              <SidebarMenuItem
-                icon={User}
-                label={language === 'fr' ? 'Mon profil' : 'My Profile'}
-                page="Profile"
-                isActive={currentPage === 'Profile'}
-                onClick={handleMenuItemClick}
-              />
-
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
-                className="w-full flex items-center gap-3 px-3 py-3 text-red-600 hover:bg-red-50 transition-all duration-200 group text-sm"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>{language === 'fr' ? 'Déconnexion' : 'Logout'}</span>
-              </button>
+            <div className="space-y-1">
+              {navigationItems.map((item) => (
+                <div key={item.page} className="relative">
+                  <SidebarMenuItem
+                    icon={item.icon}
+                    label={item.label}
+                    page={item.page}
+                    isActive={currentPage === item.page.toLowerCase()}
+                    onClick={handleMenuItemClick}
+                  />
+                  {/* Unread Message Badge with Tooltip */}
+                    {item.page.toLowerCase() === 'messages' && unreadCount > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                          className="absolute top-2 right-3 bg-[#FF6B4A] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center cursor-help hover:bg-[#FF5530] transition-colors"
+                          >
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </motion.div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
+                          <p>
+                            {language === 'fr' 
+                              ? `📧 Vous avez ${unreadCount} message${unreadCount > 1 ? 's' : ''} non lu${unreadCount > 1 ? 's' : ''}`
+                              : `📧 You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`
+                            }
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
+
+          {/* Tools Section */}
+          <div className="mb-6">
+            <h3 className="flex items-center gap-2 px-4 pt-2 pb-3">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-[#9AA3B2]">
+                {language === 'fr' ? 'Outils' : 'Tools'}
+              </span>
+            </h3>
+            <div className="space-y-1">
+              <SidebarMenuItem
+                icon={Zap}
+                label={language === 'fr' ? 'Smart Matching' : 'Smart Matching'}
+                page="SmartMatching"
+                isActive={currentPage === 'smartmatching'}
+                onClick={handleMenuItemClick}
+              />
+              {/* Dataroom - Disabled with Tooltip */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      disabled
+                      style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#C0C5D4] cursor-not-allowed transition-all duration-200 text-sm"
+                    >
+                      <Lock className="w-5 h-5" />
+                      <span>{language === 'fr' ? 'Dataroom' : 'Dataroom'}</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
+                    <p>
+                      {language === 'fr' ? 'Bientôt disponible' : 'Coming Soon'}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <SidebarMenuItem
+                icon={Bell}
+                label={language === 'fr' ? 'Mes alertes' : 'My Alerts'}
+                page="Alerts"
+                isActive={currentPage === 'alerts'}
+                onClick={handleMenuItemClick}
+              />
+            </div>
           </div>
 
-          {/* Bottom Section - Language & Avatar */}
-          <div>
-            {/* Language Switcher */}
+          {/* Settings Section */}
+          <div className="pb-4">
+            <div className="px-4 pt-2 pb-3">
+              <div className="h-px bg-gray-200" />
+            </div>
+            <div className="space-y-1">
+              <SidebarMenuItem
+                icon={Settings}
+                label={language === 'fr' ? 'Paramètres' : 'Settings'}
+                page="Settings"
+                isActive={currentPage === 'settings'}
+                onClick={handleMenuItemClick}
+              />
+            </div>
+          </div>
+
+          <div className="px-4 pt-2 pb-6 mt-auto">
+            <div className="h-px bg-gray-200 mb-3" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }} className="w-full flex items-center gap-3 px-3 py-3 text-[#6B7A94] hover:bg-gray-50 hover:text-[#3B4759] transition-all duration-200 text-sm">
-                  <Globe className="w-5 h-5" />
-                  <span className="uppercase font-mono text-xs">{language}</span>
+                <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm text-[#6B7A94] hover:bg-white/80 hover:text-[#3B4759] transition-colors">
+                  <span className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    {language === 'fr' ? 'Langue' : 'Language'}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs font-mono uppercase">
+                    {language}
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => changeLanguage('fr')}>
                   🇫🇷 Français
                 </DropdownMenuItem>
@@ -364,20 +355,14 @@ export default function Sidebar({ user }) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* User Avatar */}
-            <div className="flex items-center gap-3 px-3 py-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                {user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-[#3B4759] truncate">
-                  {user?.full_name || user?.email}
-                </p>
-                <p className="text-xs text-[#6B7A94] truncate">
-                  {user?.email}
-                </p>
-              </div>
-            </div>
+            <button
+              onClick={() => logout(false)}
+              className="w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-xl text-sm text-[#6B7A94] hover:bg-white/80 hover:text-[#3B4759] transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              {language === 'fr' ? 'Déconnexion' : 'Logout'}
+            </button>
+          </div>
           </div>
         </div>
       </aside>

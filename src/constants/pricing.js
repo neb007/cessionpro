@@ -1,119 +1,173 @@
 /**
- * Cessionpro Pricing Configuration
+ * Cessionpro Pricing Configuration - M&A Europe
  * Multi-language support for FR & EN
- * Payment integration ready
+ * Pay-as-you-go model
  */
 
 export const PRICING = {
-  contacts: {
-    frenchLabel: 'Packs de Mise en Relation',
-    englishLabel: 'Contact Packages',
-    unit: {
-      quantity: 1,
-      price: 19.99,
-      frenchLabel: 'Contact Unité',
-      englishLabel: 'Single Contact',
-      frenchDescription: '1 mise en relation',
-      englishDescription: '1 contact',
-      savingsPercent: 0
-    },
-    pack5: {
-      quantity: 5,
-      price: 79.00,
-      unitPrice: 15.80,
-      frenchLabel: 'Pack 5 Contacts',
-      englishLabel: 'Pack 5 Contacts',
-      frenchDescription: '5 mises en relation',
-      englishDescription: '5 contacts',
-      savingsPercent: 21,
-      savingsAmount: 20.00
-    },
-    pack8: {
-      quantity: 8,
-      price: 119.00,
-      unitPrice: 14.87,
-      frenchLabel: 'Pack 8 Contacts',
-      englishLabel: 'Pack 8 Contacts',
-      frenchDescription: '8 mises en relation',
-      englishDescription: '8 contacts',
-      savingsPercent: 26,
-      savingsAmount: 40.00
-    },
-    pack10: {
-      quantity: 10,
-      price: 159.00,
-      unitPrice: 15.90,
-      frenchLabel: 'Pack 10 Contacts',
-      englishLabel: 'Pack 10 Contacts',
-      frenchDescription: '10 mises en relation',
-      englishDescription: '10 contacts',
-      savingsPercent: 20,
-      savingsAmount: 39.90
-    }
+  // Free Model
+  free: {
+    photosPerListing: 1,
+    frenchLabel: 'Modèle de Publication (GRATUIT)',
+    englishLabel: 'Free Publication Model',
+    frenchDescription: 'Publication d\'annonces gratuite pour vendeurs et acheteurs',
+    englishDescription: 'Free listing publication for sellers and buyers'
   },
 
+  // Photo Packages
   photos: {
-    frenchLabel: 'Packs Visibilité (Photos Supplémentaires)',
-    englishLabel: 'Visibility Packages (Additional Photos)',
-    frenchNote: 'Rappel : 1 photo est toujours gratuite par annonce',
-    englishNote: 'Reminder: 1 photo is always free per listing',
+    frenchLabel: 'Packs Photos Supplémentaires',
+    englishLabel: 'Additional Photo Packages',
+    frenchSubtitle: 'Complétez votre annonce avec plus de visuels',
+    englishSubtitle: 'Complete your listing with more visuals',
     pack5: {
+      id: 'photos_pack5',
       quantity: 5,
-      price: 9.99,
+      price: 14.99,
       frenchLabel: 'Pack 5 Photos',
       englishLabel: 'Pack 5 Photos',
       frenchDescription: '5 photos supplémentaires par annonce',
       englishDescription: '5 additional photos per listing',
-      ideal: 'TPE / Small Business'
+      icon: 'image'
     },
     pack15: {
+      id: 'photos_pack15',
       quantity: 15,
-      price: 19.99,
+      price: 29.99,
       frenchLabel: 'Pack 15 Photos',
       englishLabel: 'Pack 15 Photos',
       frenchDescription: '15 photos supplémentaires par annonce',
       englishDescription: '15 additional photos per listing',
-      ideal: 'Standard Professional'
+      icon: 'images'
     }
   },
 
-  premium: {
-    frenchLabel: 'Options de Sécurité & Automatisation',
-    englishLabel: 'Security & Automation Options',
-    smartMatching: {
-      price: 29.99,
-      billingCycle: 'monthly',
-      frenchLabel: 'Smart Matching IA',
-      englishLabel: 'Smart Matching AI',
-      frenchDescription: 'Matching automatisé avec IA',
-      englishDescription: 'Automated AI-powered matching',
-      features: ['Automatic matching', 'Lead prioritization', '24/7 updates']
+  // Contact Packages
+  contacts: {
+    frenchLabel: 'Packs de Mise en Relation',
+    englishLabel: 'Contact Packages',
+    frenchSubtitle: 'Contactez les profils en dehors de votre quota',
+    englishSubtitle: 'Contact profiles outside your quota',
+    unit: {
+      id: 'contact_unit',
+      quantity: 1,
+      price: 19.99,
+      frenchLabel: 'Contact à l\'unité',
+      englishLabel: 'Single Contact',
+      frenchDescription: 'Contactez un profil hors quota inclus',
+      englishDescription: 'Contact a profile outside your quota',
+      icon: 'user'
     },
+    pack5: {
+      id: 'contact_pack5',
+      quantity: 5,
+      price: 79.00,
+      frenchLabel: 'Pack 5 Contacts',
+      englishLabel: 'Pack 5 Contacts',
+      frenchDescription: '5 mises en relation',
+      englishDescription: '5 contacts',
+      icon: 'users'
+    },
+    pack8: {
+      id: 'contact_pack8',
+      quantity: 8,
+      price: 119.00,
+      frenchLabel: 'Pack 8 Contacts',
+      englishLabel: 'Pack 8 Contacts',
+      frenchDescription: '8 mises en relation',
+      englishDescription: '8 contacts',
+      icon: 'users'
+    },
+    pack10: {
+      id: 'contact_pack10',
+      quantity: 10,
+      price: 159.00,
+      frenchLabel: 'Pack 10 Contacts',
+      englishLabel: 'Pack 10 Contacts',
+      frenchDescription: '10 mises en relation',
+      englishDescription: '10 contacts',
+      icon: 'users'
+    }
+  },
+
+  // Premium Options
+  premium: {
+    frenchLabel: 'Options à la Carte',
+    englishLabel: 'A La Carte Options',
+    frenchSubtitle: 'Complétez votre plan avec des fonctionnalités avancées',
+    englishSubtitle: 'Enhance your plan with advanced features',
+    
+    smartMatching: {
+      id: 'smart_matching',
+      price: 39.99,
+      billingCycle: 'monthly',
+      frenchLabel: 'Smart Matching Intelligent',
+      englishLabel: 'Smart Matching AI',
+      frenchDescription: 'Veille automatique quotidienne et alertes de nouveaux matchs',
+      englishDescription: 'Daily automatic monitoring and new match alerts',
+      features: {
+        fr: ['Algorithme IA de matching', 'Alertes de compatibilité', 'Score de compatibilité', 'Suggestions personnalisées'],
+        en: ['AI matching algorithm', 'Compatibility alerts', 'Compatibility score', 'Personalized suggestions']
+      },
+      icon: 'zap',
+      popular: true
+    },
+
     dataRoom: {
-      price: 9.99,
-      billingCycle: 'oneTime',
+      id: 'data_room',
+      price: 19.99,
+      billingCycle: 'yearly',
       frenchLabel: 'Data Room Sécurisée',
       englishLabel: 'Secure Data Room',
-      frenchDescription: 'Par annonce - Partage sécurisé de documents',
-      englishDescription: 'Per listing - Secure document sharing',
-      features: ['Secure storage', 'Download tracking', 'Access control']
+      frenchDescription: 'Stockage des documents officiels (Bilans, Bail, etc.)',
+      englishDescription: 'Storage of official documents (Bilans, Lease, etc.)',
+      features: {
+        fr: ['Stockage illimité', 'Accès contrôlé', 'Historique des consultations', 'Contribue au badge "Vérifiée"'],
+        en: ['Unlimited storage', 'Controlled access', 'Consultation history', 'Contributes to "Verified" badge']
+      },
+      icon: 'database',
+      comingSoon: true,
+      frenchTooltip: 'Disponible prochainement',
+      englishTooltip: 'Coming soon'
     },
+
     ndaProtection: {
+      id: 'nda_protection',
       price: 39.99,
       billingCycle: 'oneTime',
-      frenchLabel: 'Protection NDA Juridique',
-      englishLabel: 'Legal NDA Protection',
-      frenchDescription: 'Signature électronique incluse',
-      englishDescription: 'Electronic signature included',
-      features: ['Legal NDA', 'E-signature', 'Document tracking']
+      frenchLabel: 'Protection NDA',
+      englishLabel: 'NDA Protection',
+      frenchDescription: 'Signature électronique obligatoire avant accès aux données sensibles',
+      englishDescription: 'Electronic signature required before accessing sensitive data',
+      features: {
+        fr: ['Modèle NDA personnalisable', 'Signature électronique', 'Suivi juridique', 'Protection des données'],
+        en: ['Customizable NDA template', 'Electronic signature', 'Legal tracking', 'Data protection']
+      },
+      icon: 'shield',
+      comingSoon: true,
+      frenchTooltip: 'Disponible prochainement',
+      englishTooltip: 'Coming soon'
     }
   },
 
-  // Free tier configuration
-  free: {
-    photosPerListing: 1,
-    frenchLabel: '1 photo gratuite par annonce',
-    englishLabel: '1 free photo per listing'
+  // Verified Announcement Badge
+  verifiedBadge: {
+    frenchLabel: 'Badge "Annonce Vérifiée"',
+    englishLabel: '"Verified Announcement" Badge',
+    frenchDescription: 'Obtenez le badge de certification pour augmenter la confiance des acheteurs/vendeurs',
+    englishDescription: 'Get the certification badge to increase buyer/seller confidence',
+    requirements: {
+      fr: [
+        'Data Room avec les 3 derniers bilans',
+        'Profil utilisateur complété à 100%',
+        'Identité certifiée par la plateforme'
+      ],
+      en: [
+        'Data Room with 3 last bilans',
+        'User profile 100% completed',
+        'Identity certified by the platform'
+      ]
+    }
   }
 };
 

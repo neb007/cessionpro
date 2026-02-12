@@ -1,230 +1,309 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+// @ts-nocheck
+import React, { useState } from 'react';
 import { useLanguage } from '@/components/i18n/LanguageContext';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Check, Zap, Image, Images, User, Users, Database, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { PRICING, formatPrice } from '@/constants/pricing';
 
 export default function Pricing() {
-  const { t, language } = useLanguage();
-  const navigate = useNavigate();
+  const { language } = useLanguage();
+  const [hoveredTooltip, setHoveredTooltip] = useState(null);
 
-  const sellerPlans = [
-    {
-      name: language === 'fr' ? 'Gratuit' : 'Free',
-      price: 0,
-      period: language === 'fr' ? '/mois' : '/month',
-      features: [
-        language === 'fr' ? '1 annonce active' : '1 active listing',
-        language === 'fr' ? 'Photos limitées (3 max)' : 'Limited photos (3 max)',
-        language === 'fr' ? 'Messagerie basique' : 'Basic messaging',
-        language === 'fr' ? 'Statistiques basiques' : 'Basic statistics',
-      ],
-      cta: language === 'fr' ? 'Commencer' : 'Get Started',
-      popular: false,
+  const labels = {
+    fr: {
+      photoPackages: 'Packs Photos Supplémentaires',
+      photoSubtitle: 'Complétez votre annonce avec plus de visuels',
+      contactPackages: 'Packs de Mise en Relation',
+      contactSubtitle: 'Contactez les profils en dehors de votre quota',
+      optionsTitle: 'Options à la Carte',
+      optionsSubtitle: 'Complétez votre plan avec des fonctionnalités avancées',
+      verifiedTitle: 'Badge "Annonce Vérifiée"',
+      verifiedDesc: 'Obtenez le badge de certification pour augmenter la confiance des acheteurs/vendeurs',
+      badge: 'Obtenez le badge de certification',
+      requirements: 'Conditions requises :',
+      contactTeam: 'Des questions sur nos tarifs ?',
+      contactButton: 'Contactez notre équipe',
+      activate: 'Activer',
+      comingSoon: 'Disponible prochainement',
+      perMonth: '/mois',
+      perYear: '/an',
+      oneTime: '(paiement unique)',
+      photos: 'photos',
+      contacts: 'contacts',
+      dataRoomWithBilans: 'Data Room avec les 3 derniers bilans',
+      profileComplete: 'Profil utilisateur complété à 100%',
+      identityCertified: 'Identité certifiée par la plateforme'
     },
-    {
-      name: 'Starter',
-      price: 29,
-      period: language === 'fr' ? '/mois' : '/month',
-      features: [
-        language === 'fr' ? '5 annonces actives' : '5 active listings',
-        language === 'fr' ? 'Photos illimitées' : 'Unlimited photos',
-        language === 'fr' ? 'Messagerie avancée' : 'Advanced messaging',
-        language === 'fr' ? 'Statistiques détaillées' : 'Detailed statistics',
-        language === 'fr' ? 'Badge "Vendeur vérifié"' : '"Verified Seller" badge',
-      ],
-      cta: language === 'fr' ? 'Choisir Starter' : 'Choose Starter',
-      popular: false,
-    },
-    {
-      name: 'Pro',
-      price: 79,
-      period: language === 'fr' ? '/mois' : '/month',
-      features: [
-        language === 'fr' ? 'Annonces illimitées' : 'Unlimited listings',
-        language === 'fr' ? 'Mise en avant premium' : 'Premium highlighting',
-        language === 'fr' ? 'Accès annuaire repreneurs' : 'Buyers directory access',
-        language === 'fr' ? 'Support prioritaire' : 'Priority support',
-        language === 'fr' ? 'Analyses avancées' : 'Advanced analytics',
-        language === 'fr' ? 'Badge "Vendeur Pro"' : '"Pro Seller" badge',
-      ],
-      cta: language === 'fr' ? 'Choisir Pro' : 'Choose Pro',
-      popular: true,
-    },
-  ];
+    en: {
+      photoPackages: 'Additional Photo Packages',
+      photoSubtitle: 'Complete your listing with more visuals',
+      contactPackages: 'Contact Packages',
+      contactSubtitle: 'Contact profiles outside your quota',
+      optionsTitle: 'A La Carte Options',
+      optionsSubtitle: 'Enhance your plan with advanced features',
+      verifiedTitle: '"Verified Announcement" Badge',
+      verifiedDesc: 'Get the certification badge to increase buyer/seller confidence',
+      badge: 'Get the certification badge',
+      requirements: 'Required acquisitions:',
+      contactTeam: 'Questions about our pricing?',
+      contactButton: 'Contact our team',
+      activate: 'Activate',
+      comingSoon: 'Coming soon',
+      perMonth: '/month',
+      perYear: '/year',
+      oneTime: '(one-time payment)',
+      photos: 'photos',
+      contacts: 'contacts',
+      dataRoomWithBilans: 'Data Room with 3 last bilans',
+      profileComplete: 'User profile 100% completed',
+      identityCertified: 'Identity certified by platform'
+    }
+  };
 
-  const buyerPlans = [
-    {
-      name: 'Discovery',
-      price: 0,
-      period: language === 'fr' ? '/mois' : '/month',
-      features: [
-        language === 'fr' ? 'Recherche d\'annonces' : 'Search listings',
-        language === 'fr' ? 'Favoris illimités' : 'Unlimited favorites',
-        language === 'fr' ? 'Contact vendeurs' : 'Contact sellers',
-        language === 'fr' ? 'Alertes par email' : 'Email alerts',
-      ],
-      cta: language === 'fr' ? 'Commencer' : 'Get Started',
-      popular: false,
-    },
-    {
-      name: 'Premium',
-      price: 19,
-      period: language === 'fr' ? '/mois' : '/month',
-      features: [
-        language === 'fr' ? 'Tout de Discovery' : 'All Discovery features',
-        language === 'fr' ? 'Accès annonces premium' : 'Premium listings access',
-        language === 'fr' ? 'Profil dans l\'annuaire' : 'Directory profile',
-        language === 'fr' ? 'Alertes avancées' : 'Advanced alerts',
-        language === 'fr' ? 'Matching intelligent' : 'Smart matching',
-      ],
-      cta: language === 'fr' ? 'Choisir Premium' : 'Choose Premium',
-      popular: true,
-    },
-    {
-      name: 'Expert',
-      price: 49,
-      period: language === 'fr' ? '/mois' : '/month',
-      features: [
-        language === 'fr' ? 'Tout de Premium' : 'All Premium features',
-        language === 'fr' ? 'Analyse financière détaillée' : 'Detailed financial analysis',
-        language === 'fr' ? 'Conseiller dédié' : 'Dedicated advisor',
-        language === 'fr' ? 'Accès prioritaire aux nouvelles annonces' : 'Priority access to new listings',
-        language === 'fr' ? 'Rapports de marché' : 'Market reports',
-      ],
-      cta: language === 'fr' ? 'Choisir Expert' : 'Choose Expert',
-      popular: false,
-    },
-  ];
+  const l = labels[language];
+
+  // Generic card component
+  const PricingCard = ({ option, isPopular = false, hasTooltip = false, tooltipText = '' }) => {
+    const Icon = getIconByName(option.icon);
+    const iconBg = isPopular ? 'bg-[#FF6B4A] text-white' : 'bg-gray-100 text-[#3B4759]';
+    const borderColor = isPopular ? 'border-[#FF6B4A]' : 'border-gray-200';
+    const buttonColor = isPopular
+      ? 'bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white'
+      : 'bg-white hover:bg-gray-50 text-[#3B4759]';
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="relative"
+      >
+        <Card
+          className={`h-full border transition-all rounded-xl ${borderColor} ${
+            hasTooltip ? 'opacity-70' : 'hover:shadow-sm'
+          }`}
+        >
+          {/* Popular Badge */}
+          {isPopular && (
+            <div className="absolute -top-3 left-5 z-10">
+              <Badge className="bg-[#FF6B4A] text-white border-0 px-3 py-1 text-xs">
+                {language === 'fr' ? 'Populaire' : 'Popular'}
+              </Badge>
+            </div>
+          )}
+
+          {/* Coming Soon Icon */}
+          {hasTooltip && (
+            <div className="absolute top-4 right-4 z-20">
+              <div
+                className="relative inline-block"
+                onMouseEnter={() => setHoveredTooltip(option.id)}
+                onMouseLeave={() => setHoveredTooltip(null)}
+              >
+                <AlertCircle className="w-5 h-5 text-amber-500 cursor-help" />
+                {hoveredTooltip === option.id && (
+                  <div className="absolute top-full right-0 mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-lg">
+                    {tooltipText}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <CardHeader className={`pb-2 ${isPopular ? 'pt-6' : 'pt-4'}`}>
+            <div className="flex items-start gap-3">
+              <div className={`p-2.5 rounded-lg ${iconBg} flex-shrink-0`}>
+                {Icon && <Icon className="w-4 h-4" />}
+              </div>
+              <div className="flex-1">
+                <CardTitle className={`text-base font-semibold ${isPopular ? 'text-[#FF6B4A]' : 'text-[#3B4759]'}`}>
+                  {language === 'fr' ? option.frenchLabel : option.englishLabel}
+                </CardTitle>
+                <p className="text-xs text-[#6B7A94] mt-0.5 leading-relaxed">
+                  {language === 'fr' ? option.frenchDescription : option.englishDescription}
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="space-y-3">
+              {/* Price */}
+              <div className="border-t border-gray-100 pt-2.5">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-[#FF6B4A]">
+                    {formatPrice(option.price, language)}
+                  </span>
+                  <span className={`text-xs ${isPopular ? 'text-[#FF6B4A]' : 'text-[#6B7A94]'}`}>
+                    {option.billingCycle === 'monthly'
+                      ? l.perMonth
+                      : option.billingCycle === 'yearly'
+                      ? l.perYear
+                      : l.oneTime}
+                  </span>
+                </div>
+              </div>
+
+              {/* Features */}
+              {option.features && (
+                <div className="space-y-1">
+                  {(option.features[language] || option.features.fr).map((feature, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <Check className="w-4 h-4 text-[#FF6B4A] flex-shrink-0 mt-0.5" />
+                      <span className="text-[#6B7A94]">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Quantity for packages */}
+              {option.quantity && !option.features && (
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#FF6B4A]" />
+                  <span className="text-xs font-medium text-[#3B4759]">
+                    {option.quantity} {option.quantity === 1 ? (option.icon === 'user' ? l.contacts.slice(0, -1) : l.photos.slice(0, -1)) : (option.icon === 'user' ? l.contacts : l.photos)}
+                  </span>
+                </div>
+              )}
+
+              {/* Button */}
+              <Button
+                disabled={hasTooltip}
+                className={`w-full rounded-lg font-medium text-xs ${buttonColor} border border-gray-200 ${hasTooltip ? 'cursor-not-allowed' : ''}`}
+              >
+                {l.activate}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
+
+  // Get icon
+  const getIconByName = (iconName) => {
+    const icons = {
+      zap: Zap,
+      image: Image,
+      images: Images,
+      user: User,
+      users: Users,
+      database: Database,
+      shield: Shield,
+    };
+    return icons[iconName];
+  };
+
+  // Section title
+  const SectionTitle = ({ title, subtitle }) => (
+    <div className="text-center mb-6">
+      <h2 className="font-display text-lg font-bold text-[#3B4759] mb-1">
+        {title}
+      </h2>
+      <p className="text-[#6B7A94] text-xs">
+        {subtitle}
+      </p>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-[#3B4759] mb-4">
-            {language === 'fr' ? 'Tarifs simples et transparents' : 'Simple and transparent pricing'}
-          </h1>
-          <p className="text-lg text-[#6B7A94] max-w-2xl mx-auto">
-            {language === 'fr'
-              ? 'Choisissez le plan qui correspond à vos besoins'
-              : 'Choose the plan that fits your needs'}
-          </p>
-        </div>
+    <div className="py-4 px-0">
+      <div className="max-w-5xl mx-auto">
+        {/* PREMIUM OPTIONS SECTION */}
+        <section className="mb-10">
+          <SectionTitle title={l.optionsTitle} subtitle={l.optionsSubtitle} />
 
-        {/* Seller Plans */}
-        <div className="mb-20">
-          <h2 className="font-display text-3xl font-bold text-[#3B4759] mb-8 text-center">
-            {language === 'fr' ? 'Plans Vendeurs' : 'Seller Plans'}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {sellerPlans.map((plan, index) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className={`relative h-full border-0 ${plan.popular ? 'shadow-2xl ring-2 ring-[#FF6B4A]' : 'shadow-lg'}`}>
-                  {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6D] text-white border-0 px-4 py-1">
-                        <Sparkles className="w-3 h-3 mr-1" />
-                        {language === 'fr' ? 'Populaire' : 'Popular'}
-                      </Badge>
-                    </div>
-                  )}
-                  <CardHeader className="pb-8 pt-8">
-                    <CardTitle className="font-display text-2xl text-[#3B4759]">{plan.name}</CardTitle>
-                    <div className="mt-4">
-                      <span className="font-display text-5xl font-bold text-[#3B4759]">{plan.price}€</span>
-                      <span className="text-[#6B7A94] ml-2">{plan.period}</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-8">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                          <Check className="w-5 h-5 text-[#FF6B4A] mt-0.5 flex-shrink-0" />
-                          <span className="text-[#6B7A94]">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      onClick={() => navigate(createPageUrl('CreateBusiness'))}
-                      className={`w-full ${
-                        plan.popular
-                          ? 'bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6D] hover:from-[#FF5A3A] hover:to-[#FF7F5D] text-white shadow-lg shadow-[#FF6B4A]/25'
-                          : 'bg-[#3B4759] hover:bg-[#2C3544] text-white'
-                      }`}
-                    >
-                      {plan.cta}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <PricingCard 
+              option={PRICING.premium.smartMatching} 
+              isPopular={true}
+            />
+            <PricingCard 
+              option={PRICING.premium.dataRoom}
+              hasTooltip={true}
+              tooltipText={language === 'fr' ? 'Disponible prochainement' : 'Coming soon'}
+            />
+            <PricingCard 
+              option={PRICING.premium.ndaProtection}
+              hasTooltip={true}
+              tooltipText={language === 'fr' ? 'Disponible prochainement' : 'Coming soon'}
+            />
           </div>
-        </div>
+        </section>
 
-        {/* Buyer Plans */}
-        <div>
-          <h2 className="font-display text-3xl font-bold text-[#3B4759] mb-8 text-center">
-            {language === 'fr' ? 'Plans Repreneurs' : 'Buyer Plans'}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {buyerPlans.map((plan, index) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className={`relative h-full border-0 ${plan.popular ? 'shadow-2xl ring-2 ring-[#FF6B4A]' : 'shadow-lg'}`}>
-                  {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6D] text-white border-0 px-4 py-1">
-                        <Sparkles className="w-3 h-3 mr-1" />
-                        {language === 'fr' ? 'Populaire' : 'Popular'}
-                      </Badge>
-                    </div>
-                  )}
-                  <CardHeader className="pb-8 pt-8">
-                    <CardTitle className="font-display text-2xl text-[#3B4759]">{plan.name}</CardTitle>
-                    <div className="mt-4">
-                      <span className="font-display text-5xl font-bold text-[#3B4759]">{plan.price}€</span>
-                      <span className="text-[#6B7A94] ml-2">{plan.period}</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-8">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                          <Check className="w-5 h-5 text-[#FF6B4A] mt-0.5 flex-shrink-0" />
-                          <span className="text-[#6B7A94]">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      onClick={() => navigate(createPageUrl('Businesses'))}
-                      className={`w-full ${
-                        plan.popular
-                          ? 'bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6D] hover:from-[#FF5A3A] hover:to-[#FF7F5D] text-white shadow-lg shadow-[#FF6B4A]/25'
-                          : 'bg-[#3B4759] hover:bg-[#2C3544] text-white'
-                      }`}
-                    >
-                      {plan.cta}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+        {/* PHOTO PACKAGES SECTION */}
+        <section className="mb-10">
+          <SectionTitle title={l.photoPackages} subtitle={l.photoSubtitle} />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <PricingCard option={PRICING.photos.pack5} />
+            <PricingCard option={PRICING.photos.pack15} />
           </div>
-        </div>
+        </section>
+
+        {/* CONTACT PACKAGES SECTION */}
+        <section className="mb-10">
+          <SectionTitle title={l.contactPackages} subtitle={l.contactSubtitle} />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <PricingCard option={PRICING.contacts.unit} />
+            <PricingCard option={PRICING.contacts.pack5} />
+            <PricingCard option={PRICING.contacts.pack8} />
+            <PricingCard option={PRICING.contacts.pack10} />
+          </div>
+        </section>
+
+        {/* VERIFIED BADGE SECTION */}
+        <section className="mb-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white border border-gray-200 rounded-lg p-5"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-2 bg-green-100 rounded-full flex-shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display text-base font-bold text-[#3B4759] mb-1.5">
+                  {l.verifiedTitle}
+                </h3>
+                <p className="text-[#6B7A94] text-xs mb-3">
+                  {l.verifiedDesc}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[l.dataRoomWithBilans, l.profileComplete, l.identityCertified].map((req, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-md">
+                      <Check className="w-3.5 h-3.5 text-green-600" />
+                      <span className="text-xs text-[#3B4759]">{req}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* CTA SECTION */}
+        <section className="text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white border border-gray-200 rounded-lg p-6"
+          >
+            <p className="text-[#6B7A94] text-xs mb-3">
+              {l.contactTeam}
+            </p>
+            <Button className="bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white px-6 py-2 rounded-lg text-xs">
+              {l.contactButton}
+            </Button>
+          </motion.div>
+        </section>
       </div>
     </div>
   );

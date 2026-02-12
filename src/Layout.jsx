@@ -1,46 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
 import { LanguageProvider, useLanguage } from '@/components/i18n/LanguageContext';
-import { SidebarProvider, useSidebar } from '@/lib/SidebarContext';
+import { SidebarProvider } from '@/lib/SidebarContext';
 import { useAuth } from '@/lib/AuthContext';
-import { 
-  Building2, 
-  MessageSquare, 
-  Heart, 
-  Users, 
-  Menu, 
-  X, 
-  LogOut, 
-  User,
-  Globe,
-  Plus,
-  ChevronDown
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { motion, AnimatePresence } from 'framer-motion';
+  Building2
+} from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
 
 function LayoutContent({ children, currentPageName }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t, language, changeLanguage } = useLanguage();
-  const { toggleMobile } = useSidebar();
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout(false);
   };
-
-  const isActive = (page) => currentPageName === page;
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
@@ -85,7 +60,9 @@ function LayoutContent({ children, currentPageName }) {
       {/* Main Content */}
       <div className="flex min-h-screen">
         {user && currentPageName !== 'Home' && <Sidebar user={user} />}
-        <main className="flex-1 w-full px-0 sm:px-0 md:px-0 lg:px-0 ml-0">{children}</main>
+        <div className="flex-1 w-full">
+          <main className="flex-1 w-full px-0 sm:px-0 md:px-0 lg:px-0 ml-0">{children}</main>
+        </div>
       </div>
 
       {/* Footer */}
