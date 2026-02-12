@@ -212,7 +212,8 @@ export const updateBuyerProfile = async (userId, buyerData) => {
       motivation_reprise: buyerData.motivationReprise,
       experience_professionnelle: buyerData.experienceProfessionnelle,
       linkedin_url: buyerData.linkedinUrl,
-      aide_vendeur_description: buyerData.aideVendeurDescription
+      aide_vendeur_description: buyerData.aideVendeurDescription,
+      is_buyer: true
     };
 
     return updateProfile(userId, profileData);
@@ -244,7 +245,8 @@ export const updateSellerProfile = async (userId, sellerData) => {
       company_name: sellerData.companyName,
       phone: sellerData.phone,
       profile_type: sellerData.profileType,
-      transaction_size: sellerData.transactionSize
+      transaction_size: sellerData.transactionSize,
+      is_seller: true
     };
 
     return updateProfile(userId, profileData);

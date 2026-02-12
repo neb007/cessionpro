@@ -1,131 +1,183 @@
 /**
- * Smart Matching Engine  
- * Moteur de scoring intelligent pour le matching buyer/listings
+ * Smart Matching Engine - Scoring Simple Sans NLP
+ * Matching bidirectionnel: Acheteur ↔ Vendeur
  */
 
-export function calculateSmartMatchScore(listing, criteria) {
-  let totalScore = 0;
-  let totalWeight = 0;
-  let breakdown = {};
-  let explanation = [];
+/**
+ * Calcule le score de compatibilité entre deux annonces
+ * @param {Object} listing1 - Annonce 1 (acheteur ou vendeur)
+ * @param {Object} listing2 - Annonce 2 (vendeur ou acheteur)
+ * @returns {Object} { score: 0-100, explanation: string, criteriaMatched: number }
+ */
+export const calculateSmartMatchScore = (listing1, listing2) => {
+  let score = 0;
   let criteriaMatched = 0;
+  const explanations = [];
 
-  const selectedCriteria = criteria.criteria_selected || [];
+  // ===== 1. BUDGET (40 points max) =====
+  if (listing1.asking_price && listing2.asking_price) {
+    const priceDiff = Math.abs(listing1.asking_price - listing2.asking_price);
+    const priceMatch = (priceDiff / Math.max(listing1.asking_price, listing2.asking_price)) * 100;
+    
+    if (priceMatch <= 10) {
+      score += 40;
+      criteriaMatched++;
+      explanations.push("💰 Budget parfaitement aligné");
+    } else if (priceMatch <= 25) {
+      score += 25;
+      criteriaMatched++;
+      explanations.push("💰 Budget très proche");
+    } else if (priceMatch <= 50) {
+      score += 15;
+      criteriaMatched++;
+      explanations.push("💰 Budget acceptable");
+    }
+  }
 
-  if (selectedCriteria.includes('budget')) {
-    const weight = 3;
-    if (criteria.budget_min && criteria.budget_max) {
-      const score = scoreNumericRange(
-        listing.asking_price || 0,
-        criteria.budget_min,
-        criteria.budget_max,
-        0.15
-      );
-      breakdown.budget = score;
-      totalScore += score * weight;
-      totalWeight += weight;
+  // ===== 2. SECTEUR D'ACTIVITÉ (30 points max) =====
+  if (listing1.sector && listing2.sector) {
+    const sector1 = (listing1.sector || "").toLowerCase().trim();
+    const sector2 = (listing2.sector || "").toLowerCase().trim();
+    
+    if (sector1 === sector2) {
+      score += 30;
+      criteriaMatched++;
+      explanations.push(`🏢 Même secteur: ${listing1.sector}`);
+    } else {
+      // Vérifier si secteur compatible (ex: "café" et "restauration")
+      const compatibleSectors = {
+        "restauration": ["café", "pizzeria", "boulangerie", "restaurant"],
+        "commerce": ["retail", "boutique", "ecommerce"],
+        "services": ["consulting", "conseils", "agence"],
+      };
       
-      if (score >= 70) {
-        explanation.push('✅ Budget OK');
+      let isCompatible = false;
+      for (const [key, compatible] of Object.entries(compatibleSectors)) {
+        if (sector1.includes(key) && compatible.some(s => sector2.includes(s))) {
+          isCompatible = true;
+          break;
+        }
+        if (sector2.includes(key) && compatible.some(s => sector1.includes(s))) {
+          isCompatible = true;
+          break;
+        }
+      }
+      
+      if (isCompatible) {
+        score += 15;
         criteriaMatched++;
-      } else if (score >= 50) {
-        explanation.push('⚠️ Budget partiel');
-      } else {
-        explanation.push('❌ Budget inadapté');
+        explanations.push("🏢 Secteurs compatibles");
       }
     }
   }
 
-  if (selectedCriteria.includes('sector')) {
-    const weight = 3;
-    const sectors = criteria.sectors || [];
-    if (sectors.length > 0) {
-      const score = sectors.includes(listing.sector) ? 100 : 0;
-      breakdown.sector = score;
-      totalScore += score * weight;
-      totalWeight += weight;
-      
-      if (score >= 70) {
-        explanation.push('✅ Secteur OK');
-        criteriaMatched++;
-      } else {
-        explanation.push('❌ Secteur différent');
-      }
+  // ===== 3. LOCALISATION (20 points max) =====
+  if (listing1.location && listing2.location) {
+    const loc1 = (listing1.location || "").toLowerCase().trim();
+    const loc2 = (listing2.location || "").toLowerCase().trim();
+    
+    if (loc1 === loc2) {
+      score += 20;
+      criteriaMatched++;
+      explanations.push(`📍 Même localisation: ${listing1.location}`);
+    } else if (listing1.region && listing2.region && listing1.region === listing2.region) {
+      score += 12;
+      criteriaMatched++;
+      explanations.push(`📍 Même région: ${listing1.region}`);
+    } else if (listing1.country && listing2.country && listing1.country === listing2.country) {
+      score += 8;
+      criteriaMatched++;
+      explanations.push(`📍 Même pays`);
     }
   }
 
-  if (selectedCriteria.includes('location')) {
-    const weight = 2;
-    if (criteria.location) {
-      const score = scoreLocation(listing.location || '', criteria.location);
-      breakdown.location = score;
-      totalScore += score * weight;
-      totalWeight += weight;
-      
-      if (score >= 70) {
-        explanation.push('✅ Localisation OK');
-        criteriaMatched++;
-      } else if (score >= 50) {
-        explanation.push('⚠️ Localisation partielle');
-      } else {
-        explanation.push('❌ Localisation inadaptée');
-      }
+  // ===== 4. EFFECTIFS (5 points max) =====
+  if (listing1.employees && listing2.employees) {
+    const empDiff = Math.abs(listing1.employees - listing2.employees);
+    if (empDiff <= 3) {
+      score += 5;
+      criteriaMatched++;
+      explanations.push(`👥 Effectifs similaires: ~${listing1.employees} employés`);
     }
   }
 
-  if (selectedCriteria.includes('growth_potential')) {
-    const weight = 2;
-    if (criteria.growth_potential) {
-      const score = criteria.growth_potential === listing.growth_potential ? 100 : 70;
-      breakdown.growth_potential = score;
-      totalScore += score * weight;
-      totalWeight += weight;
-      
-      if (score >= 70) {
-        explanation.push('✅ Potentiel OK');
-        criteriaMatched++;
-      }
+  // ===== 5. REVENU ANNUEL / EBITDA (5 points bonus) =====
+  if (listing1.annual_revenue && listing2.annual_revenue) {
+    const revenueDiff = Math.abs(listing1.annual_revenue - listing2.annual_revenue);
+    const revenueMatch = (revenueDiff / Math.max(listing1.annual_revenue, listing2.annual_revenue)) * 100;
+    
+    if (revenueMatch <= 20) {
+      score += 5;
+      criteriaMatched++;
+      explanations.push("💵 Chiffre d'affaires compatible");
     }
   }
 
-  const finalScore = totalWeight > 0 ? Math.round((totalScore / totalWeight) * 100) / 100 : 0;
-
-  if (explanation.length === 0) {
-    explanation.push('📊 Match à évaluer');
-  }
+  // Cap le score à 100
+  score = Math.min(score, 100);
 
   return {
-    score: Math.min(100, Math.max(0, finalScore)),
-    breakdown,
-    explanation,
-    criteriaMatched,
+    score: Math.round(score),
+    explanation: explanations.length > 0 
+      ? explanations.join(" • ") 
+      : "Profils complémentaires",
+    criteriaMatched: criteriaMatched,
   };
-}
+};
 
-function scoreNumericRange(value, min, max, penaltyFactor = 0.15) {
-  if (min === null && max === null) return 100;
-  if (min === null) return value <= max ? 100 : Math.max(30, 100 - (value - max) * penaltyFactor);
-  if (max === null) return value >= min ? 100 : Math.max(30, 100 - (min - value) * penaltyFactor);
-
-  if (value >= min && value <= max) {
-    return 100;
+/**
+ * Récupère tous les matches pour une annonce donnée
+ * @param {Object} selectedListing - L'annonce de l'utilisateur
+ * @param {Array} allListings - Toutes les autres annonces
+ * @returns {Array} Matches triés par score décroissant
+ */
+export const findMatches = (selectedListing, allListings) => {
+  if (!selectedListing || !allListings || allListings.length === 0) {
+    return [];
   }
 
-  if (value < min) {
-    return Math.max(30, 100 - (min - value) * penaltyFactor);
-  }
+  const matches = allListings
+    .filter(listing => listing.id !== selectedListing.id) // Exclure sa propre annonce
+    .map(listing => ({
+      ...listing,
+      smartMatchScore: calculateSmartMatchScore(selectedListing, listing),
+    }))
+    .sort((a, b) => b.smartMatchScore.score - a.smartMatchScore.score); // Tri décroissant
 
-  return Math.max(30, 100 - (value - max) * penaltyFactor);
-}
+  return matches;
+};
 
-function scoreLocation(listingLocation, criteriaLocation) {
-  const listing = (listingLocation || '').toLowerCase().trim();
-  const criteria = (criteriaLocation || '').toLowerCase().trim();
+/**
+ * Filtre les matches selon les critères de l'utilisateur
+ * @param {Array} matches - Les matches calculés
+ * @param {Object} filters - Filtres appliqués
+ * @returns {Array} Matches filtrés
+ */
+export const filterMatches = (matches, filters = {}) => {
+  return matches.filter(match => {
+    // Filtre par score minimum
+    if (filters.minScore && match.smartMatchScore.score < filters.minScore) {
+      return false;
+    }
 
-  if (!listing || !criteria) return 0;
-  if (listing === criteria) return 100;
-  if (listing.includes(criteria) || criteria.includes(listing)) return 85;
-  if (listing.substring(0, 3) === criteria.substring(0, 3)) return 70;
+    // Filtre par secteur
+    if (filters.sector && match.sector?.toLowerCase() !== filters.sector.toLowerCase()) {
+      return false;
+    }
 
-  return 40;
-}
+    // Filtre par localisation
+    if (filters.location && !match.location?.toLowerCase().includes(filters.location.toLowerCase())) {
+      return false;
+    }
+
+    // Filtre par budget
+    if (filters.minBudget && match.asking_price < filters.minBudget) {
+      return false;
+    }
+    if (filters.maxBudget && match.asking_price > filters.maxBudget) {
+      return false;
+    }
+
+    return true;
+  });
+};

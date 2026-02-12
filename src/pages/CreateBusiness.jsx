@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
@@ -10,7 +11,10 @@ import CompletionChecklist from '@/components/CompletionChecklist';
 import SellerForm from '@/components/SellerForm';
 import BuyerForm from '@/components/BuyerForm';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { generateReferenceNumber } from '@/utils/referenceGenerator';
+import { normalizeImageArray } from '@/utils/imageHelpers';
+import { generateUniqueReference } from '@/utils/referenceGenerator';
+
+const BUSINESS_FIELDS_SUPPORTED = true;
 
 export default function CreateBusiness() {
   const { t, language } = useLanguage();
@@ -32,6 +36,7 @@ export default function CreateBusiness() {
     employees: '',
     location: '',
     country: 'france',
+    department: '',
     region: '',
     year_founded: '',
     reason_for_sale: '',
@@ -80,7 +85,7 @@ export default function CreateBusiness() {
       // Check for edit mode
       const urlParams = new URLSearchParams(window.location.search);
       const editId = urlParams.get('edit');
-      if (editId && user) {
+        if (editId && user) {
         const businesses = await base44.entities.Business.filter({ id: editId });
         if (businesses && businesses.length > 0) {
           const business = businesses[0];
@@ -99,6 +104,7 @@ export default function CreateBusiness() {
               employees: business.employees?.toString() || '',
               location: business.location || '',
               country: business.country || 'france',
+              department: business.department || '',
               region: business.region || '',
               year_founded: business.year_founded?.toString() || '',
               reason_for_sale: business.reason_for_sale || '',
@@ -160,42 +166,33 @@ export default function CreateBusiness() {
       }
     }
 
-    // CRITICAL LOGGING - Debug image persistence
-    console.log('=== CREATEBUSINESS SUBMIT DEBUG ===');
-    console.log('ENTIRE formData:', formData);
-    console.log('formData.images RAW:', formData.images);
-    console.log('formData.images TYPE:', typeof formData.images);
-    console.log('formData.images LENGTH:', Array.isArray(formData.images) ? formData.images.length : 'NOT ARRAY');
-    console.log('formData.images STRINGIFIED:', JSON.stringify(formData.images));
-
     setSaving(true);
     try {
-      // Generate reference number if creating new business
-      let referenceNumber = formData.reference_number;
-      if (!editingId && !referenceNumber) {
-        referenceNumber = generateReferenceNumber();
-      }
-
-      // Ensure images is an array (handle JSON string from database)
-      let imagesArray = formData.images;
-      if (typeof imagesArray === 'string') {
+      // Fetch user profile to get logo data
+      let userLogo = null;
+      let userShowLogo = false;
+      if (user?.id) {
         try {
-          imagesArray = JSON.parse(imagesArray);
-        } catch (e) {
-          console.warn('Failed to parse images string:', e);
-          imagesArray = [];
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('logo_url, show_logo_in_listings')
+            .eq('id', user.id)
+            .single();
+          
+          if (profileData) {
+            userLogo = profileData.logo_url;
+            userShowLogo = profileData.show_logo_in_listings || false;
+          }
+        } catch (error) {
+          console.log('No profile logo found:', error);
         }
       }
-      if (!Array.isArray(imagesArray)) {
-        // If it's a single object, wrap it in an array
-        imagesArray = imagesArray && typeof imagesArray === 'object' ? [imagesArray] : [];
-      }
-      
-      console.log('imagesArray AFTER PROCESSING:', imagesArray);
-      console.log('imagesArray will be saved as:', JSON.stringify(imagesArray));
 
       // Only include seller/business fields, filter out buyer-specific fields
-      const data = {
+      const isSaleAnnouncement = announcementType === 'sale';
+      const referenceNumber = formData.reference_number || generateUniqueReference();
+
+      const baseData = {
         title: formData.title,
         description: formData.description,
         sector: formData.sector,
@@ -205,12 +202,13 @@ export default function CreateBusiness() {
         employees: formData.employees ? parseInt(formData.employees) : null,
         location: formData.location,
         country: formData.country,
+        department: formData.department,
         region: formData.region,
         year_founded: formData.year_founded ? parseInt(formData.year_founded) : null,
         reason_for_sale: formData.reason_for_sale,
         confidential: formData.confidential,
         assets_included: formData.assets_included,
-        images: imagesArray,
+        images: normalizeImageArray(formData.images),
         legal_structure: formData.legal_structure,
         registration_number: formData.registration_number,
         lease_info: formData.lease_info,
@@ -220,14 +218,18 @@ export default function CreateBusiness() {
         competitive_advantages: formData.competitive_advantages,
         growth_opportunities: formData.growth_opportunities,
         customer_base: formData.customer_base,
-        business_type: formData.business_type,
-        reference_number: referenceNumber,
-        type: announcementType === 'sale' ? 'cession' : 'acquisition',
         seller_id: user?.id,  // Use user ID instead of email
-        status,
+        status
+      };
+
+      const data = {
+        ...baseData,
+        business_type: formData.business_type || null,
+        reference_number: referenceNumber,
+        type: isSaleAnnouncement ? 'cession' : 'acquisition',
         // Add buyer-specific fields if this is an acquisition announcement
         ...(
-          announcementType !== 'sale' && {
+          !isSaleAnnouncement && {
             buyer_budget_min: formData.buyer_budget_min ? parseFloat(formData.buyer_budget_min) : null,
             buyer_budget_max: formData.buyer_budget_max ? parseFloat(formData.buyer_budget_max) : null,
             buyer_sectors_interested: formData.buyer_sectors_interested || [],
@@ -239,6 +241,7 @@ export default function CreateBusiness() {
             buyer_investment_available: formData.buyer_investment_available ? parseFloat(formData.buyer_investment_available) : null,
             buyer_profile_type: formData.buyer_profile_type || null,
             buyer_notes: formData.buyer_notes || '',
+            business_type_sought: formData.business_type_sought || null,
           }
         ),
       };
@@ -252,6 +255,22 @@ export default function CreateBusiness() {
         console.log('Creating new business');
         const result = await base44.entities.Business.create(data);
         console.log('Business created successfully:', result);
+        
+        // Save logo info to Supabase business_logos table
+        if (result?.id && userLogo) {
+          try {
+            const { supabase } = await import('@/api/supabaseClient');
+            await supabase.from('business_logos').insert({
+              business_id: result.id,
+              seller_id: user.id,
+              logo_url: userLogo,
+              show_logo_in_listings: userShowLogo
+            });
+            console.log('Logo saved to business_logos table');
+          } catch (logoError) {
+            console.log('Could not save logo to business_logos:', logoError);
+          }
+        }
       }
 
       // Add a small delay to ensure data is persisted
@@ -290,6 +309,58 @@ export default function CreateBusiness() {
           <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">
             {editingId ? t('edit_listing') : t('create_listing')}
           </h1>
+          
+          {/* Display badges when editing */}
+          {editingId && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              <span 
+                style={{ 
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: 'white',
+                  backgroundColor: '#f47e50',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  display: 'inline-block'
+                }}
+              >
+                {announcementType === 'sale' ? (language === 'fr' ? 'Cession' : 'Sale') : (language === 'fr' ? 'Acquisition' : 'Acquisition')}
+              </span>
+              {formData.business_type && (
+                <span 
+                  style={{ 
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: 'white',
+                    backgroundColor: '#f47e50',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    display: 'inline-block'
+                  }}
+                >
+                  {t(formData.business_type)}
+                </span>
+              )}
+              {formData.reference_number && (
+                <span 
+                  style={{ 
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: 'white',
+                    backgroundColor: '#f47e50',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    display: 'inline-block'
+                  }}
+                >
+                  {formData.reference_number}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Announcement Type Radio */}
@@ -297,6 +368,8 @@ export default function CreateBusiness() {
           announcementType={announcementType}
           onChange={setAnnouncementType}
           language={language}
+          disabled={!!editingId}
+          hideOption={null}
         />
 
         {/* Conditional Form Rendering */}
@@ -309,6 +382,7 @@ export default function CreateBusiness() {
             language={language}
             t={t}
             user={user}
+            editingId={editingId}
           />
         ) : (
           <BuyerForm
@@ -318,6 +392,8 @@ export default function CreateBusiness() {
             saving={saving}
             language={language}
             t={t}
+            user={user}
+            editingId={editingId}
           />
         )}
 

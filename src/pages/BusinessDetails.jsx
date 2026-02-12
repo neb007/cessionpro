@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
+import { sendBusinessMessage } from '@/services/businessMessagingService';
+import { recordPageView, getUniqueViewCount } from '@/services/pageViewService';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +37,8 @@ import {
 import { motion } from 'framer-motion';
 import FinancialChart from '@/components/Financial/FinancialChart';
 import BentoPhotoGallery from '@/components/BentoPhotoGallery';
+import { getBusinessImageList, getPrimaryImageUrl } from '@/utils/imageHelpers';
+import LogoCard from '@/components/ui/LogoCard';
 
 const sectorColors = {
   technology: 'bg-violet-100 text-violet-700',
@@ -61,10 +66,41 @@ export default function BusinessDetails() {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [messageSent, setMessageSent] = useState(false);
+  const [viewCount, setViewCount] = useState(0);
+  const [businessLogo, setBusinessLogo] = useState(null);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (business?.id) {
+      loadBusinessLogo();
+    }
+  }, [business?.id]);
+
+  const loadBusinessLogo = async () => {
+    try {
+      console.log('Loading logo for business:', business.id);
+      const { data, error } = await supabase
+        .from('business_logos')
+        .select('logo_url, show_logo_in_listings')
+        .eq('business_id', business.id)
+        .maybeSingle();
+
+      if (error) {
+        console.log('Logo not found or error:', error.message);
+        return;
+      }
+
+      if (data) {
+        console.log('Logo found:', data);
+        setBusinessLogo(data);
+      }
+    } catch (error) {
+      console.error('Error loading business logo:', error);
+    }
+  };
 
   const loadData = async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -84,17 +120,17 @@ export default function BusinessDetails() {
       
       setBusiness(businessData[0]);
       
-      // Increment views
-      await base44.entities.Business.update(businessData[0].id, {
-        views_count: (businessData[0].views_count || 0) + 1
-      });
+      // Record page view and get unique count
+      await recordPageView(businessData[0].id, null, businessData[0].seller_email);
+      const uniqueViews = await getUniqueViewCount(businessData[0].id);
+      setViewCount(uniqueViews);
 
       try {
         const userData = await base44.auth.me();
         setUser(userData);
         
         const favs = await base44.entities.Favorite.filter({ 
-          user_email: userData.email,
+          user_id: userData.id,
           business_id: id 
         });
         setIsFavorite(favs.length > 0);
@@ -113,21 +149,25 @@ export default function BusinessDetails() {
       return;
     }
 
-    if (isFavorite) {
-      const favs = await base44.entities.Favorite.filter({ 
-        user_email: user.email, 
-        business_id: business.id 
-      });
-      if (favs[0]) {
-        await base44.entities.Favorite.delete(favs[0].id);
-        setIsFavorite(false);
+    try {
+      if (isFavorite) {
+        const favs = await base44.entities.Favorite.filter({ 
+          user_id: user.id, 
+          business_id: business.id 
+        });
+        if (favs[0]) {
+          await base44.entities.Favorite.delete(favs[0].id);
+          setIsFavorite(false);
+        }
+      } else {
+        await base44.entities.Favorite.create({ 
+          user_id: user.id, 
+          business_id: business.id 
+        });
+        setIsFavorite(true);
       }
-    } else {
-      await base44.entities.Favorite.create({ 
-        user_email: user.email, 
-        business_id: business.id 
-      });
-      setIsFavorite(true);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
     }
   };
 
@@ -141,69 +181,14 @@ export default function BusinessDetails() {
 
   const sendMessage = async () => {
     if (!message.trim()) return;
-    
     setSending(true);
     try {
-      // Check if conversation exists
-      const conversations = await base44.entities.Conversation.list();
-      let conversation = conversations.find(c => 
-        c.business_id === business.id &&
-        c.participant_emails?.includes(user.email) &&
-        c.participant_emails?.includes(business.seller_email)
-      );
-
-      const conversationId = conversation?.id || `${business.id}_${user.email}_${business.seller_email}`;
-
-      if (!conversation) {
-        conversation = await base44.entities.Conversation.create({
-          participant_emails: [user.email, business.seller_email],
-          business_id: business.id,
-          business_title: business.title,
-          last_message: message,
-          last_message_date: new Date().toISOString(),
-          unread_count: { [business.seller_email]: 1 }
-        });
-      } else {
-        await base44.entities.Conversation.update(conversation.id, {
-          last_message: message,
-          last_message_date: new Date().toISOString(),
-          unread_count: {
-            ...conversation.unread_count,
-            [business.seller_email]: (conversation.unread_count?.[business.seller_email] || 0) + 1
-          }
-        });
-      }
-
-      await base44.entities.Message.create({
-        conversation_id: conversation.id,
-        sender_email: user.email,
-        receiver_email: business.seller_email,
-        content: message,
-        business_id: business.id,
-        read: false
+      await sendBusinessMessage({
+        business,
+        buyerEmail: user.email,
+        buyerName: user.full_name,
+        message,
       });
-
-      // Create or update lead
-      const existingLeads = await base44.entities.Lead.filter({
-        business_id: business.id,
-        buyer_email: user.email
-      });
-
-      if (existingLeads.length === 0) {
-        await base44.entities.Lead.create({
-          business_id: business.id,
-          buyer_email: user.email,
-          buyer_name: user.full_name || user.email,
-          status: 'new',
-          source: 'message',
-          last_contact_date: new Date().toISOString()
-        });
-      } else {
-        await base44.entities.Lead.update(existingLeads[0].id, {
-          last_contact_date: new Date().toISOString(),
-          status: 'contacted'
-        });
-      }
 
       setMessageSent(true);
       setMessage('');
@@ -224,35 +209,6 @@ export default function BusinessDetails() {
       currency: 'EUR',
       maximumFractionDigits: 0,
     }).format(price);
-  };
-
-  const getImagesList = () => {
-    let imagesArray = business.images;
-    
-    // Handle if images is a JSON string from database
-    if (typeof imagesArray === 'string') {
-      try {
-        imagesArray = JSON.parse(imagesArray);
-      } catch (e) {
-        imagesArray = [];
-      }
-    }
-    
-    // Ensure it's an array
-    if (!Array.isArray(imagesArray)) {
-      imagesArray = imagesArray && typeof imagesArray === 'object' ? [imagesArray] : [];
-    }
-    
-    // Extract URLs from objects
-    return imagesArray.map(img => {
-      if (typeof img === 'object' && img.url) {
-        return img.url;
-      }
-      if (typeof img === 'string') {
-        return img;
-      }
-      return null;
-    }).filter(url => url !== null);
   };
 
   if (loading) {
@@ -277,8 +233,6 @@ export default function BusinessDetails() {
 
   if (!business) return null;
 
-  const images = getImagesList();
-
   return (
     <div className="min-h-screen py-8 lg:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -291,8 +245,16 @@ export default function BusinessDetails() {
           {t('businesses')}
         </button>
 
-        {/* Bento Photo Gallery */}
+        {/* Image Gallery - Bento Style */}
         <div className="mb-8">
+          {business.confidential && (
+            <div className="absolute top-4 left-4 z-10">
+              <Badge className="bg-gray-900/80 text-white border-0">
+                <Lock className="w-3 h-3 mr-1" />
+                {t('confidential')}
+              </Badge>
+            </div>
+          )}
           <BentoPhotoGallery business={business} language={language} />
         </div>
 
@@ -304,6 +266,76 @@ export default function BusinessDetails() {
               <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
                 {business.title}
               </h1>
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex flex-wrap items-center gap-2 text-xs flex-1">
+                  <span 
+                    style={{ 
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontWeight: 500,
+                      fontSize: '14px',
+                      color: 'white',
+                      backgroundColor: '#f47e50',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      display: 'inline-block'
+                    }}
+                  >
+                    {business.type === 'acquisition' ? (language === 'fr' ? 'Acquisition' : 'Acquisition') : (language === 'fr' ? 'Cession' : 'Sale')}
+                  </span>
+                  {business.business_type && (
+                    <span 
+                      style={{ 
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontWeight: 500,
+                        fontSize: '14px',
+                        color: 'white',
+                        backgroundColor: '#f47e50',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {t(business.business_type)}
+                    </span>
+                  )}
+                  {business.reference_number && (
+                    <span 
+                      style={{ 
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontWeight: 500,
+                        fontSize: '14px',
+                        color: 'white',
+                        backgroundColor: '#f47e50',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {business.reference_number}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-gray-50 text-sm text-gray-600 whitespace-nowrap">
+                  <Eye className="w-4 h-4" />
+                  <span className="font-mono font-semibold">{business.views_count || 0}</span>
+                  <span className="text-xs">{t('views')}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mb-4 text-xs hidden">
+                <Badge className="bg-blue-50 text-blue-700 border-0">
+                  {business.type === 'acquisition' ? (language === 'fr' ? 'Acquisition' : 'Acquisition') : (language === 'fr' ? 'Cession' : 'Sale')}
+                </Badge>
+                {business.business_type && (
+                  <Badge variant="secondary" className="bg-gray-100 text-gray-600">
+                    {t(business.business_type)}
+                  </Badge>
+                )}
+                {business.reference_number && (
+                  <Badge variant="secondary" className="bg-gray-900 text-white font-mono">
+                    {business.reference_number}
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-4 text-gray-500">
                 <div className="flex items-center gap-1.5">
                   <MapPin className="w-4 h-4" />
@@ -318,22 +350,43 @@ export default function BusinessDetails() {
               </div>
             </div>
 
-            {/* Key Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                { label: t('asking_price'), value: formatPrice(business.asking_price), color: 'from-primary/10 to-blue-50' },
-                { label: t('annual_revenue'), value: formatPrice(business.annual_revenue), color: 'from-green-50 to-emerald-50' },
-                { label: t('ebitda'), value: formatPrice(business.ebitda), color: 'from-violet-50 to-purple-50' },
-                { label: t('employees'), value: business.employees || '-', color: 'from-orange-50 to-amber-50' },
-              ].map((metric, idx) => (
-                <Card key={idx} className="border-0 shadow-sm overflow-hidden">
-                  <CardContent className={`p-4 bg-gradient-to-br ${metric.color}`}>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{metric.label}</p>
-                    <p className="font-mono text-xl font-bold text-gray-900">{metric.value}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {/* Key Metrics - CESSION */}
+            {business.type === 'cession' && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: t('asking_price'), value: formatPrice(business.asking_price), color: 'from-primary/10 to-blue-50' },
+                  { label: t('annual_revenue'), value: formatPrice(business.annual_revenue), color: 'from-green-50 to-emerald-50' },
+                  { label: t('ebitda'), value: formatPrice(business.ebitda), color: 'from-violet-50 to-purple-50' },
+                  { label: t('employees'), value: business.employees || '-', color: 'from-orange-50 to-amber-50' },
+                ].map((metric, idx) => (
+                  <Card key={idx} className="border-0 shadow-sm overflow-hidden">
+                    <CardContent className={`p-4 bg-gradient-to-br ${metric.color}`}>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{metric.label}</p>
+                      <p className="font-mono text-xl font-bold text-gray-900">{metric.value}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Key Metrics - ACQUISITION */}
+            {business.type === 'acquisition' && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: language === 'fr' ? 'Budget Min' : 'Min Budget', value: formatPrice(business.buyer_budget_min), color: 'from-primary/10 to-blue-50' },
+                  { label: language === 'fr' ? 'Budget Max' : 'Max Budget', value: formatPrice(business.buyer_budget_max), color: 'from-green-50 to-emerald-50' },
+                  { label: language === 'fr' ? 'Financement' : 'Investment', value: formatPrice(business.buyer_investment_available), color: 'from-violet-50 to-purple-50' },
+                  { label: language === 'fr' ? 'Secteurs' : 'Sectors', value: business.buyer_sectors_interested?.length || 0, color: 'from-orange-50 to-amber-50' },
+                ].map((metric, idx) => (
+                  <Card key={idx} className="border-0 shadow-sm overflow-hidden">
+                    <CardContent className={`p-4 bg-gradient-to-br ${metric.color}`}>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{metric.label}</p>
+                      <p className="font-mono text-xl font-bold text-gray-900">{metric.value}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             {/* Description */}
             <Card className="border-0 shadow-sm">
@@ -365,10 +418,10 @@ export default function BusinessDetails() {
                       <p className="text-sm text-gray-500 mb-2">{t('assets_included')}</p>
                       <div className="flex flex-wrap gap-2">
                         {business.assets_included.map((asset, idx) => (
-                          <Badge key={idx} variant="secondary" className="bg-gray-100">
-                            <CheckCircle2 className="w-3 h-3 mr-1 text-green-500" />
-                            {asset}
-                          </Badge>
+                          <div key={idx} className="flex items-center gap-1 text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 500, fontSize: '16px' }}>
+                            <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            <span>{asset}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -420,8 +473,8 @@ export default function BusinessDetails() {
               </Card>
             )}
 
-            {/* Market & Strategic Info */}
-            {(business.market_position || business.competitive_advantages || business.growth_opportunities || business.customer_base) && (
+            {/* Market & Strategic Info - CESSION */}
+            {business.type === 'cession' && (business.market_position || business.competitive_advantages || business.growth_opportunities || business.customer_base) && (
               <Card className="border-0 shadow-sm">
                 <CardContent className="p-6">
                   <h2 className="font-display text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -457,6 +510,140 @@ export default function BusinessDetails() {
                 </CardContent>
               </Card>
             )}
+
+            {/* ACQUISITION CRITERIA - Full Display */}
+            {business.type === 'acquisition' && (
+              <>
+                {/* Budget & Financing */}
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-6">
+                    <h2 className="font-display text-xl font-semibold text-gray-900 mb-4">
+                      {language === 'fr' ? 'Budget & Financement' : 'Budget & Financing'}
+                    </h2>
+                    <div className="grid sm:grid-cols-3 gap-6">
+                      {business.buyer_budget_min && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Budget Minimum' : 'Minimum Budget'}</p>
+                          <p className="font-mono text-lg font-bold text-gray-900">{formatPrice(business.buyer_budget_min)}</p>
+                        </div>
+                      )}
+                      {business.buyer_budget_max && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Budget Maximum' : 'Maximum Budget'}</p>
+                          <p className="font-mono text-lg font-bold text-gray-900">{formatPrice(business.buyer_budget_max)}</p>
+                        </div>
+                      )}
+                      {business.buyer_investment_available && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Financement Disponible' : 'Available Investment'}</p>
+                          <p className="font-mono text-lg font-bold text-gray-900">{formatPrice(business.buyer_investment_available)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Search Criteria */}
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-6">
+                    <h2 className="font-display text-xl font-semibold text-gray-900 mb-4">
+                      {language === 'fr' ? 'Critères de Recherche' : 'Search Criteria'}
+                    </h2>
+                    <div className="space-y-6">
+                      {business.buyer_sectors_interested?.length > 0 && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-3">{language === 'fr' ? 'Secteurs d\'intérêt' : 'Interested Sectors'}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {business.buyer_sectors_interested.map((sector, idx) => (
+                              <Badge key={idx} className="bg-primary/10 text-primary border-0">
+                                {t(sector)}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {business.business_type_sought && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Type de Cession Recherché' : 'Business Type Sought'}</p>
+                          <p className="font-medium text-gray-900">
+                            {business.business_type_sought === 'entreprise' ? (language === 'fr' ? 'Entreprise' : 'Company') :
+                             business.business_type_sought === 'fond_de_commerce' ? (language === 'fr' ? 'Fond de Commerce' : 'Business Fund') :
+                             (language === 'fr' ? 'Franchise' : 'Franchise')}
+                          </p>
+                        </div>
+                      )}
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {business.buyer_revenue_min && (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'CA Minimum (€)' : 'Minimum Revenue (€)'}</p>
+                            <p className="font-mono font-medium text-gray-900">{formatPrice(business.buyer_revenue_min)}</p>
+                          </div>
+                        )}
+                        {business.buyer_revenue_max && (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'CA Maximum (€)' : 'Maximum Revenue (€)'}</p>
+                            <p className="font-mono font-medium text-gray-900">{formatPrice(business.buyer_revenue_max)}</p>
+                          </div>
+                        )}
+                        {business.buyer_employees_min && (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Employés Min' : 'Minimum Employees'}</p>
+                            <p className="font-mono font-medium text-gray-900">{business.buyer_employees_min}</p>
+                          </div>
+                        )}
+                        {business.buyer_employees_max && (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Employés Max' : 'Maximum Employees'}</p>
+                            <p className="font-mono font-medium text-gray-900">{business.buyer_employees_max}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Buyer Profile */}
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-6">
+                    <h2 className="font-display text-xl font-semibold text-gray-900 mb-4">
+                      {language === 'fr' ? 'Profil de l\'Acheteur' : 'Buyer Profile'}
+                    </h2>
+                    <div className="space-y-6">
+                      {business.buyer_profile_type && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Type de Profil' : 'Profile Type'}</p>
+                          <p className="font-medium text-gray-900">
+                            {business.buyer_profile_type === 'individual' ? (language === 'fr' ? 'Reprise personnelle' : 'Individual Buyout') :
+                             business.buyer_profile_type === 'investor' ? (language === 'fr' ? 'Investisseur' : 'Investor') :
+                             business.buyer_profile_type === 'pe_fund' ? (language === 'fr' ? 'Fonds de capital-investissement' : 'PE Fund') :
+                             business.buyer_profile_type === 'company' ? (language === 'fr' ? 'Entreprise' : 'Company') :
+                             (language === 'fr' ? 'Autre' : 'Other')}
+                          </p>
+                        </div>
+                      )}
+                      {business.buyer_locations?.length > 0 && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-3">{language === 'fr' ? 'Lieux d\'intérêt' : 'Interested Locations'}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {business.buyer_locations.map((location, idx) => (
+                              <Badge key={idx} className="bg-primary/10 text-primary border-0">
+                                {location}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {business.buyer_notes && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Notes et Critères Additionnels' : 'Additional Notes & Criteria'}</p>
+                          <p className="text-gray-700 whitespace-pre-wrap">{business.buyer_notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -477,7 +664,9 @@ export default function BusinessDetails() {
                     className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white py-6 text-lg shadow-lg shadow-primary/25"
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
-                    {t('contact_seller')}
+                    {business.type === 'cession' 
+                      ? t('contact_seller') 
+                      : (language === 'fr' ? 'Contacter l\'acheteur' : 'Contact buyer')}
                   </Button>
                   
                   <div className="flex gap-3">
@@ -494,6 +683,22 @@ export default function BusinessDetails() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Vendor Info Section */}
+                {businessLogo?.show_logo_in_listings && businessLogo?.logo_url && (
+                  <>
+                    <div className="border-t border-gray-200 my-6" />
+                    <div className="flex items-center gap-3">
+                      <LogoCard
+                        logoUrl={businessLogo.logo_url}
+                        context="detail"
+                        altText="Vendor logo"
+                        rounded
+                        shadow
+                      />
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

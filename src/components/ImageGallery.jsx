@@ -8,7 +8,7 @@ export default function ImageGallery({
   images,
   onImagesChange,
   defaultImage,
-  maxPhotos = 5,
+  maxPhotos = 3,
   sectorLabel = '',
   userEmail = '',
   language = 'fr',

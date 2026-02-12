@@ -53,17 +53,6 @@ CREATE TABLE businesses (
   competitive_advantages TEXT,
   growth_opportunities TEXT,
   customer_base TEXT,
-  buyer_budget_min DECIMAL(15, 2),
-  buyer_budget_max DECIMAL(15, 2),
-  buyer_sectors_interested TEXT[] DEFAULT ARRAY[]::TEXT[],
-  buyer_locations TEXT[] DEFAULT ARRAY[]::TEXT[],
-  buyer_employees_min INTEGER,
-  buyer_employees_max INTEGER,
-  buyer_revenue_min DECIMAL(15, 2),
-  buyer_revenue_max DECIMAL(15, 2),
-  buyer_investment_available DECIMAL(15, 2),
-  buyer_profile_type TEXT,
-  buyer_notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

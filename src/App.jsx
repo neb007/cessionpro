@@ -14,7 +14,7 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // Pages that are public (no authentication required)
-const PUBLIC_PAGES = ['Home', 'Login', 'Register', 'AccountCreation', 'PasswordReset', 'AuthCallback', 'SmartMatching'];
+const PUBLIC_PAGES = ['Home', 'Login', 'Register', 'AccountCreation', 'PasswordReset', 'AuthCallback'];
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -103,3 +103,4 @@ function App() {
 }
 
 export default App
+

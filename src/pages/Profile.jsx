@@ -1,415 +1,624 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
+import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
-import { 
-  getProfile, 
-  updateBuyerProfile, 
-  updateSellerProfile,
-  uploadProfileDocument, 
-  deleteProfileDocument,
-  enableBuyerRole,
-  enableSellerRole,
-  disableBuyerRole,
-  disableSellerRole
-} from '@/services/profileService';
+import { getProfile, updateProfile, updateBuyerProfile, updateSellerProfile } from '@/services/profileService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, Loader2, Download, X, Upload, Toggle2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { 
+  User, 
+  Building2, 
+  Phone, 
+  MapPin,
+  Save,
+  Loader2,
+  X,
+  Plus,
+  Camera,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { DicebearAvatar } from '@/components/messages/DicebearAvatar';
+import { resizeLogo, validateLogoFile, createPreviewUrl, revokePreviewUrl } from '@/utils/logoResizer';
 
-const SECTORS = [
-  'Technology', 'Industrie', 'Santé', 'Construction', 'Retail',
-  'Logistique', 'Services', 'Hospitality', 'Manufacturing', 'Agriculture'
-];
-
-const TRANSACTION_SIZES = [
-  { value: 'less_1m', label: 'Moins d\'1M€' },
-  { value: '1_5m', label: '1M€ - 5M€' },
-  { value: '5_10m', label: '5M€ - 10M€' },
-  { value: 'more_10m', label: 'Plus de 10M€' }
-];
+const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
 
 export default function Profile() {
+  const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [uploading, setUploading] = useState({});
-
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [profileData, setProfileData] = useState(null);
+  
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
+    company_name: '',
     phone: '',
-    companyName: '',
-    sectors: [],
-    profileType: '',
-    transactionSize: '',
-    motivationReprise: '',
-    experienceProfessionnelle: '',
-    linkedinUrl: '',
-    aideVendeurDescription: ''
+    bio: '',
+    location: '',
+    avatar_url: '',
+    sectors_interest: [],
+    budget_min: '',
+    budget_max: '',
+    experience: '',
+    linkedin_url: '',
+    message_vendeurs: '',
+    show_logo_in_listings: false,
+    visible_in_directory: true,
+    preferred_language: 'fr',
+    notification_emails_enabled: true,
+    is_buyer: false,
+    is_seller: false,
+    user_type: 'buyer'
   });
 
   useEffect(() => {
-    if (user?.id) {
-      loadProfile();
-    }
-  }, [user?.id]);
+    loadUser();
+  }, [user]);
 
-  const loadProfile = async () => {
+  const loadUser = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      setIsLoading(true);
-      setError('');
-      if (!user?.id) {
-        setError('Utilisateur non authentifié');
-        return;
+      // Load from Supabase profileService
+      const profile = await getProfile(user.id);
+      setProfileData(profile);
+      
+      // Determine user_type for dropdown based on is_buyer and is_seller
+      let userType = 'buyer';
+      if (profile.is_buyer && profile.is_seller) {
+        userType = 'both';
+      } else if (profile.is_seller) {
+        userType = 'seller';
+      } else {
+        userType = 'buyer';
       }
-      
-      const data = await getProfile(user.id);
-      console.log('Profile loaded:', data); // Debug log
-      
-      if (!data) {
-        setError('Profil non trouvé');
-        setIsLoading(false);
-        return;
-      }
-      
-      setProfile(data);
+
       setFormData({
-        firstName: data.first_name || '',
-        lastName: data.last_name || '',
-        phone: data.phone || '',
-        companyName: data.company_name || '',
-        sectors: Array.isArray(data.sectors) ? data.sectors : [],
-        profileType: data.profile_type || '',
-        transactionSize: data.transaction_size || '',
-        motivationReprise: data.motivation_reprise || '',
-        experienceProfessionnelle: data.experience_professionnelle || '',
-        linkedinUrl: data.linkedin_url || '',
-        aideVendeurDescription: data.aide_vendeur_description || ''
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        company_name: profile.company_name || '',
+        phone: profile.phone || '',
+        bio: profile.aide_vendeur_description || profile.bio || '',
+        location: profile.location || '',
+        avatar_url: profile.avatar_url || '',
+        sectors_interest: Array.isArray(profile.sectors) ? profile.sectors : [],
+        budget_min: profile.budget_min?.toString() || '',
+        budget_max: profile.budget_max?.toString() || '',
+        experience: profile.experience_professionnelle || profile.experience || '',
+        linkedin_url: profile.linkedin_url || '',
+        message_vendeurs: profile.message_vendeurs || '',
+        show_logo_in_listings: profile.show_logo_in_listings || false,
+        visible_in_directory: profile.visible_in_directory !== false,
+        preferred_language: profile.preferred_language || 'fr',
+        notification_emails_enabled: profile.notification_emails_enabled !== false,
+        is_buyer: profile.is_buyer || false,
+        is_seller: profile.is_seller || false,
+        user_type: userType
       });
-    } catch (err) {
-      console.error('Error loading profile:', err);
-      setError(err.message || 'Erreur lors du chargement du profil');
-      setProfile(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      setError('');
-      setSuccess('');
-      setIsLoading(true);
-
-      if (profile.is_buyer) {
-        await updateBuyerProfile(user.id, formData);
+    } catch (e) {
+      console.error('Error loading profile:', e);
+      // Fallback to base44 if needed
+      try {
+        if (user) {
+          setFormData({
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            company_name: user.company_name || '',
+            phone: user.phone || '',
+            bio: user.bio || '',
+            location: user.location || '',
+            avatar_url: user.avatar_url || '',
+            sectors_interest: user.sectors_interest || [],
+            budget_min: user.budget_min?.toString() || '',
+            budget_max: user.budget_max?.toString() || '',
+            experience: user.experience || '',
+            linkedin_url: user.linkedin_url || '',
+            message_vendeurs: user.message_vendeurs || '',
+            show_logo_in_listings: user.show_logo_in_listings || false,
+            visible_in_directory: user.visible_in_directory !== false,
+            preferred_language: user.preferred_language || 'fr',
+            notification_emails_enabled: user.notification_emails_enabled !== false,
+            is_buyer: true,
+            is_seller: false,
+            user_type: 'buyer'
+          });
+        }
+      } catch (err) {
+        console.error('Fallback error:', err);
       }
-      if (profile.is_seller) {
-        await updateSellerProfile(user.id, formData);
+    }
+    setLoading(false);
+  };
+
+  const handleChange = (field, value) => {
+    // Special handling for user_type dropdown to set is_buyer and is_seller
+    if (field === 'user_type') {
+      const isBuyer = value === 'buyer' || value === 'both';
+      const isSeller = value === 'seller' || value === 'both';
+      setFormData(prev => ({ 
+        ...prev, 
+        user_type: value,
+        is_buyer: isBuyer,
+        is_seller: isSeller
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
+    setSaved(false);
+  };
+
+  const toggleSector = (sector) => {
+    const current = formData.sectors_interest;
+    if (current.includes(sector)) {
+      handleChange('sectors_interest', current.filter(s => s !== sector));
+    } else {
+      handleChange('sectors_interest', [...current, sector]);
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      handleChange('avatar_url', file_url);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      // First, save the profile with all fields including show_logo_in_listings
+      // Only include fields that exist in the profiles table
+      const profileUpdateData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        company_name: formData.company_name,
+        phone: formData.phone,
+        bio: formData.bio,
+        location: formData.location,
+        avatar_url: formData.avatar_url,
+        sectors: formData.sectors_interest,
+        show_logo_in_listings: formData.show_logo_in_listings,
+        budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
+        budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
+        experience_professionnelle: formData.experience,
+        linkedin_url: formData.linkedin_url,
+        aide_vendeur_description: formData.bio,
+        is_buyer: formData.is_buyer,
+        is_seller: formData.is_seller
+      };
+
+      // Update via Supabase profileService (handles show_logo_in_listings)
+      await updateProfile(user.id, profileUpdateData);
+      console.log('Updating profile: ', profileUpdateData);
+
+      const data = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+        company_name: formData.company_name,
+        sectors: formData.sectors_interest,
+        profile_type: formData.user_type,
+        transaction_size: formData.budget_max,
+        motivation_reprise: formData.bio,
+        experience_professionnelle: formData.experience,
+        linkedin_url: '',
+        aideVendeurDescription: formData.bio
+      };
+
+      // Update based on roles
+      if (formData.is_buyer) {
+        await updateBuyerProfile(user.id, {
+          ...data,
+          firstName: formData.first_name,
+          lastName: formData.last_name,
+          budgetMin: formData.budget_min,
+          budgetMax: formData.budget_max,
+          motivationReprise: formData.bio,
+          experienceProfessionnelle: formData.experience
+        });
       }
 
-      await loadProfile();
-      setIsEditing(false);
-      setSuccess('Profil mis à jour avec succès !');
-    } catch (err) {
-      setError(err.message || 'Erreur lors de la mise à jour');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleToggleBuyerRole = async () => {
-    try {
-      if (profile.is_buyer && !profile.is_seller) {
-        setError('Impossible désactiver le rôle acheteur');
-        return;
+      if (formData.is_seller) {
+        await updateSellerProfile(user.id, {
+          firstName: formData.first_name,
+          lastName: formData.last_name,
+          companyName: formData.company_name,
+          phone: formData.phone,
+          profileType: formData.user_type,
+          transactionSize: formData.budget_max
+        });
       }
-      profile.is_buyer ? await disableBuyerRole(user.id) : await enableBuyerRole(user.id);
-      await loadProfile();
-      setSuccess(`Rôle acheteur ${profile.is_buyer ? 'désactivé' : 'activé'}`);
-    } catch (err) {
-      setError(err.message);
+
+      // Also save via base44 for compatibility
+      const base44Data = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        company_name: formData.company_name,
+        phone: formData.phone,
+        bio: formData.bio,
+        location: formData.location,
+        avatar_url: formData.avatar_url,
+        sectors_interest: formData.sectors_interest,
+        budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
+        budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
+        experience: formData.experience,
+        show_logo_in_listings: formData.show_logo_in_listings,
+        visible_in_directory: formData.visible_in_directory,
+        preferred_language: formData.preferred_language,
+        notification_emails_enabled: formData.notification_emails_enabled,
+        user_type: formData.user_type,
+        role: formData.user_type
+      };
+
+      await base44.auth.updateMe(base44Data);
+      
+      setSaved(true);
+      console.log('Profile saved successfully');
+      setTimeout(() => setSaved(false), 3000);
+      
+      // Reload profile
+      await loadUser();
+    } catch (e) {
+      console.error('Error saving profile:', e);
+      alert(language === 'fr' ? 'Erreur lors de la sauvegarde du profil' : 'Error saving profile');
     }
+    setSaving(false);
   };
 
-  const handleToggleSellerRole = async () => {
-    try {
-      if (profile.is_seller && !profile.is_buyer) {
-        setError('Impossible désactiver le rôle vendeur');
-        return;
-      }
-      profile.is_seller ? await disableSellerRole(user.id) : await enableSellerRole(user.id);
-      await loadProfile();
-      setSuccess(`Rôle vendeur ${profile.is_seller ? 'désactivé' : 'activé'}`);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleDocumentUpload = async (e, docType) => {
-    try {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setError('');
-      setSuccess('');
-      setUploading(prev => ({ ...prev, [docType]: true }));
-      await uploadProfileDocument(user.id, docType, file);
-      await loadProfile();
-      setSuccess(`${docType === 'cv' ? 'CV' : 'Document'} téléchargé !`);
-    } catch (err) {
-      setError(err.message || 'Erreur lors du téléchargement');
-    } finally {
-      setUploading(prev => ({ ...prev, [docType]: false }));
-    }
-  };
-
-  const handleDeleteDocument = async (docType) => {
-    if (!confirm('Supprimer ce document ?')) return;
-    try {
-      setError('');
-      setSuccess('');
-      await deleteProfileDocument(user.id, docType);
-      await loadProfile();
-      setSuccess('Document supprimé !');
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  if (isLoading || !profile) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
+  const isBuyer = formData.is_buyer;
+  const isSeller = formData.is_seller;
+
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-charcoal">Mon Profil</h1>
-          <p className="text-gray-600 mt-1">
-            {profile.is_buyer && profile.is_seller ? 'Acheteur & Vendeur' : profile.is_buyer ? 'Acheteur' : 'Vendeur'}
-          </p>
-        </div>
-        <Button
-          onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-          disabled={isLoading}
-          className="w-32"
-        >
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          {isEditing ? 'Enregistrer' : 'Modifier'}
-        </Button>
-      </div>
-
-      {/* Alerts */}
-      {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
-      {success && <Alert className="border-green-200 bg-green-50"><CheckCircle2 className="h-4 w-4 text-green-600" /><AlertDescription className="text-green-700">{success}</AlertDescription></Alert>}
-
-      {/* Role Toggle */}
-      {isEditing && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-4">
-          <Button 
-            variant={profile.is_buyer ? "default" : "outline"}
-            onClick={handleToggleBuyerRole}
-            size="sm"
-          >
-            <Toggle2 className="w-4 h-4 mr-2" />
-            {profile.is_buyer ? 'Acheteur ✓' : 'Activer Acheteur'}
-          </Button>
-          <Button 
-            variant={profile.is_seller ? "default" : "outline"}
-            onClick={handleToggleSellerRole}
-            size="sm"
-          >
-            <Toggle2 className="w-4 h-4 mr-2" />
-            {profile.is_seller ? 'Vendeur ✓' : 'Activer Vendeur'}
-          </Button>
-        </div>
-      )}
-
-      {/* Infos Perso */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-xl font-semibold">Informations Personnelles</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <Label>Prénom</Label>
-            {isEditing ? <Input value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} placeholder="Prénom" /> : <p className="text-gray-700 p-2">{profile?.first_name || '-'}</p>}
-          </div>
-          <div>
-            <Label>Nom</Label>
-            {isEditing ? <Input value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} placeholder="Nom" /> : <p className="text-gray-700 p-2">{profile?.last_name || '-'}</p>}
-          </div>
-          <div className="md:col-span-2">
-            <Label>Téléphone</Label>
-            {isEditing ? <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="Téléphone" type="tel" /> : <p className="text-gray-700 p-2">{profile?.phone || '-'}</p>}
-          </div>
-        </div>
-      </motion.div>
-
-      {/* BUYER SECTION */}
-      {profile.is_buyer && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-blue-50 rounded-lg border-2 border-blue-200 p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-blue-900">👤 Mon Profil Acheteur</h2>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label>Type de Profil</Label>
-              {isEditing ? (
-                <select value={formData.profileType} onChange={e => setFormData({ ...formData, profileType: e.target.value })} className="w-full p-2 border rounded">
-                  <option value="">Sélectionner</option>
-                  <option value="professional">Professionnel</option>
-                  <option value="consulting">Consulting</option>
-                  <option value="investment_fund">Fonds</option>
-                </select>
-              ) : (
-                <p className="text-gray-700 p-2">{profile?.profile_type || '-'}</p>
-              )}
-            </div>
-            <div>
-              <Label>Taille Transaction</Label>
-              {isEditing ? (
-                <select value={formData.transactionSize} onChange={e => setFormData({ ...formData, transactionSize: e.target.value })} className="w-full p-2 border rounded">
-                  <option value="">Sélectionner</option>
-                  {TRANSACTION_SIZES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              ) : (
-                <p className="text-gray-700 p-2">{TRANSACTION_SIZES.find(s => s.value === profile?.transaction_size)?.label || '-'}</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label>Secteurs</Label>
-            {isEditing ? (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {SECTORS.map(sector => (
-                  <button key={sector} onClick={() => { const newSectors = formData.sectors.includes(sector) ? formData.sectors.filter(s => s !== sector) : [...formData.sectors.slice(0, 2), sector].slice(0, 3); setFormData({ ...formData, sectors: newSectors }); }} className={`px-4 py-2 rounded-full text-sm ${formData.sectors.includes(sector) ? 'bg-primary text-white' : 'bg-gray-100'}`}>{sector}</button>
-                ))}
+    <div className="min-h-screen py-8 lg:py-12">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          {/* Logo Entreprise & Basic Info */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-6 mb-6">
+                <div className="relative">
+                  {formData.avatar_url ? (
+                    <img 
+                      src={formData.avatar_url}
+                      alt="Logo"
+                      className="w-24 h-24 rounded-xl object-cover shadow-md bg-gray-100"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-xl bg-gray-200 flex items-center justify-center shadow-md">
+                      <Building2 className="w-10 h-10 text-gray-400" />
+                    </div>
+                  )}
+                  <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Camera className="w-4 h-4 text-gray-600" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <div className="flex-1">
+                  <h2 className="font-display text-xl font-semibold text-gray-900">
+                    {formData.first_name} {formData.last_name}
+                  </h2>
+                  <p className="text-gray-600 text-sm font-medium">{formData.company_name}</p>
+                  <p className="text-gray-500 text-sm">{user?.email}</p>
+                </div>
               </div>
-            ) : (
-              <p className="text-gray-700 p-2">{profile?.sectors?.length > 0 ? profile.sectors.join(', ') : '-'}</p>
-            )}
-          </div>
 
-          <div>
-            <Label>Motivation pour la Reprise</Label>
-            {isEditing ? <textarea value={formData.motivationReprise} onChange={e => setFormData({ ...formData, motivationReprise: e.target.value })} placeholder="..." className="w-full p-3 border rounded h-20" /> : <p className="text-gray-700 p-2 whitespace-pre-wrap">{profile?.motivation_reprise || '-'}</p>}
-          </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>{language === 'fr' ? 'Type de profil' : 'Profile type'}</Label>
+                  <Select value={formData.user_type || 'buyer'} onValueChange={(v) => handleChange('user_type', v)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="buyer">{t('buyer')}</SelectItem>
+                      <SelectItem value="seller">{t('seller')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div>
-            <Label>Expérience Professionnelle</Label>
-            {isEditing ? <textarea value={formData.experienceProfessionnelle} onChange={e => setFormData({ ...formData, experienceProfessionnelle: e.target.value })} placeholder="..." className="w-full p-3 border rounded h-20" /> : <p className="text-gray-700 p-2 whitespace-pre-wrap">{profile?.experience_professionnelle || '-'}</p>}
-          </div>
+                <div>
+                  <Label>{language === 'fr' ? 'Langue préférée' : 'Preferred language'}</Label>
+                  <Select value={formData.preferred_language} onValueChange={(v) => handleChange('preferred_language', v)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                      <SelectItem value="en">🇬🇧 English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-          <div>
-            <Label>LinkedIn</Label>
-            {isEditing ? <Input value={formData.linkedinUrl} onChange={e => setFormData({ ...formData, linkedinUrl: e.target.value })} placeholder="https://linkedin.com/in/..." type="url" /> : <a href={profile?.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{profile?.linkedin_url || '-'}</a>}
-          </div>
+              <div className="mt-4 pt-4 border-t flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-800 text-sm">{language === 'fr' ? 'Afficher le logo dans les annonces' : 'Display logo in listings'}</p>
+                </div>
+                <Switch
+                  checked={formData.show_logo_in_listings || false}
+                  onCheckedChange={(v) => handleChange('show_logo_in_listings', v)}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <div>
-            <Label>Message pour Vendeurs</Label>
-            {isEditing ? <textarea value={formData.aideVendeurDescription} onChange={e => setFormData({ ...formData, aideVendeurDescription: e.target.value })} placeholder="..." className="w-full p-3 border rounded h-20" /> : <p className="text-gray-700 p-2 whitespace-pre-wrap">{profile?.aide_vendeur_description || '-'}</p>}
-          </div>
+          {/* Contact Info */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                <User className="w-5 h-5 text-primary" />
+                {language === 'fr' ? 'Informations de contact' : 'Contact Information'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>{language === 'fr' ? 'Prénom' : 'First Name'}</Label>
+                  <Input
+                    value={formData.first_name}
+                    onChange={(e) => handleChange('first_name', e.target.value)}
+                    placeholder={language === 'fr' ? 'Jean' : 'John'}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label>{language === 'fr' ? 'Nom' : 'Last Name'}</Label>
+                  <Input
+                    value={formData.last_name}
+                    onChange={(e) => handleChange('last_name', e.target.value)}
+                    placeholder={language === 'fr' ? 'Dupont' : 'Smith'}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
 
-          {/* Documents */}
-          <div className="space-y-3 border-t pt-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg">CV</Label>
-              {profile?.cv_document_url && isEditing && <button onClick={() => handleDeleteDocument('cv')} className="text-red-500"><X className="w-4 h-4" /></button>}
-            </div>
-            {profile?.cv_document_url ? (
-              <a href={profile.cv_document_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline">
-                <Download className="w-4 h-4" />{profile.cv_document_name}
-              </a>
-            ) : (
-              <p className="text-gray-500">Aucun CV</p>
-            )}
-            {isEditing && (
-              <label className="flex items-center gap-2 cursor-pointer text-primary">
-                <Upload className="w-4 h-4" /><span>Upload CV</span>
-                <input type="file" accept=".pdf,.doc,.docx" onChange={e => handleDocumentUpload(e, 'cv')} disabled={uploading.cv} className="hidden" />
-              </label>
-            )}
-          </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>{t('company_name')}</Label>
+                  <Input
+                    value={formData.company_name}
+                    onChange={(e) => handleChange('company_name', e.target.value)}
+                    placeholder={language === 'fr' ? 'Nom de votre société' : 'Your company name'}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label>{t('phone')}</Label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => handleChange('phone', e.target.value)}
+                    placeholder="+33 6 12 34 56 78"
+                    className="mt-2"
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg">Document Financement</Label>
-              {profile?.financing_document_url && isEditing && <button onClick={() => handleDeleteDocument('financing')} className="text-red-500"><X className="w-4 h-4" /></button>}
-            </div>
-            {profile?.financing_document_url ? (
-              <a href={profile.financing_document_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline">
-                <Download className="w-4 h-4" />{profile.financing_document_name}
-              </a>
-            ) : (
-              <p className="text-gray-500">Aucun document</p>
-            )}
-            {isEditing && (
-              <label className="flex items-center gap-2 cursor-pointer text-primary">
-                <Upload className="w-4 h-4" /><span>Upload Document</span>
-                <input type="file" accept=".pdf,.doc,.docx" onChange={e => handleDocumentUpload(e, 'financing')} disabled={uploading.financing} className="hidden" />
-              </label>
-            )}
-          </div>
-        </motion.div>
-      )}
+              <div>
+                <Label>{t('location')}</Label>
+                <Input
+                  value={formData.location}
+                  onChange={(e) => handleChange('location', e.target.value)}
+                  placeholder={language === 'fr' ? 'Ville, Région' : 'City, Region'}
+                  className="mt-2"
+                />
+              </div>
 
-      {/* SELLER SECTION */}
-      {profile.is_seller && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-green-50 rounded-lg border-2 border-green-200 p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-green-900">🏢 Mon Profil Vendeur</h2>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <Label>Entreprise</Label>
-              {isEditing ? <Input value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} placeholder="Nom entreprise" /> : <p className="text-gray-700 p-2">{profile?.company_name || '-'}</p>}
-            </div>
-            <div>
-              <Label>Type Profil</Label>
-              {isEditing ? (
-                <select value={formData.profileType} onChange={e => setFormData({ ...formData, profileType: e.target.value })} className="w-full p-2 border rounded">
-                  <option value="">Sélectionner</option>
-                  <option value="professional">Professionnel</option>
-                  <option value="consulting">Consulting</option>
-                  <option value="investment_fund">Fonds</option>
-                </select>
-              ) : (
-                <p className="text-gray-700 p-2">{profile?.profile_type || '-'}</p>
+              <div>
+                <Label>{t('bio')}</Label>
+                <Textarea
+                  value={formData.bio}
+                  onChange={(e) => handleChange('bio', e.target.value)}
+                  placeholder={language === 'fr' ? 'Présentez-vous en quelques mots...' : 'Tell us about yourself...'}
+                  className="mt-2 min-h-24"
+                />
+              </div>
+
+              <div>
+                <Label>{t('experience')}</Label>
+                <Textarea
+                  value={formData.experience}
+                  onChange={(e) => handleChange('experience', e.target.value)}
+                  placeholder={language === 'fr' ? 'Décrivez votre expérience professionnelle...' : 'Describe your professional experience...'}
+                  className="mt-2 min-h-24"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Buyer Preferences */}
+          {isBuyer && (
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="font-display flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-primary" />
+                  {language === 'fr' ? 'Critères de recherche Acheteur' : 'Buyer Search Criteria'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label>{t('budget_range')} (€)</Label>
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div>
+                      <Input
+                        type="number"
+                        value={formData.budget_min}
+                        onChange={(e) => handleChange('budget_min', e.target.value)}
+                        placeholder="Min"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        value={formData.budget_max}
+                        onChange={(e) => handleChange('budget_max', e.target.value)}
+                        placeholder="Max"
+                        className="font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="mb-3 block">{t('sectors_interest')}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {SECTORS.map(sector => (
+                      <button
+                        key={sector}
+                        onClick={() => toggleSector(sector)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                          formData.sectors_interest.includes(sector)
+                            ? 'bg-primary text-white shadow-md'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {t(sector)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>{language === 'fr' ? 'URL LinkedIn' : 'LinkedIn URL'}</Label>
+                  <Input
+                    type="url"
+                    value={formData.linkedin_url}
+                    onChange={(e) => handleChange('linkedin_url', e.target.value)}
+                    placeholder="https://linkedin.com/in/vous"
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label>{language === 'fr' ? 'Message personnalisé pour vendeurs' : 'Personalized message for sellers'}</Label>
+                  <Textarea
+                    value={formData.message_vendeurs}
+                    onChange={(e) => handleChange('message_vendeurs', e.target.value)}
+                    placeholder={language === 'fr' 
+                      ? 'Laissez un message que les vendeurs verront quand ils consultent votre profil...' 
+                      : 'Leave a message that sellers will see when viewing your profile...'}
+                    className="mt-2 min-h-20"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div>
+                    <p className="font-medium text-gray-900">{t('visible_directory')}</p>
+                    <p className="text-sm text-gray-500">
+                      {language === 'fr' 
+                        ? "Votre profil sera visible dans l'annuaire des repreneurs" 
+                        : 'Your profile will be visible in the buyers directory'}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.visible_in_directory}
+                    onCheckedChange={(v) => handleChange('visible_in_directory', v)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Messaging Settings */}
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-transparent">
+            <CardHeader>
+              <CardTitle className="font-display flex items-center gap-2">
+                📧 {language === 'fr' ? 'Paramètres Messagerie' : 'Messaging Settings'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl backdrop-blur-sm">
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {language === 'fr' ? 'Notifications par Email' : 'Email Notifications'}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {language === 'fr' 
+                      ? 'Recevoir une notification par email' 
+                      : 'Receive email notification'}
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.notification_emails_enabled}
+                  onCheckedChange={(v) => handleChange('notification_emails_enabled', v)}
+                />
+              </div>
+              {!formData.notification_emails_enabled && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800"
+                >
+                  {language === 'fr' 
+                    ? '🔕 Les notifications email sont désactivées' 
+                    : '🔕 Email notifications are disabled'}
+                </motion.div>
               )}
-            </div>
-            <div>
-              <Label>Taille Transaction</Label>
-              {isEditing ? (
-                <select value={formData.transactionSize} onChange={e => setFormData({ ...formData, transactionSize: e.target.value })} className="w-full p-2 border rounded">
-                  <option value="">Sélectionner</option>
-                  {TRANSACTION_SIZES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              ) : (
-                <p className="text-gray-700 p-2">{TRANSACTION_SIZES.find(s => s.value === profile?.transaction_size)?.label || '-'}</p>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      )}
+            </CardContent>
+          </Card>
 
-      {/* Save Buttons */}
-      {isEditing && (
-        <div className="flex gap-4">
-          <Button onClick={handleSave} disabled={isLoading} className="flex-1">
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-            Enregistrer
-          </Button>
-          <Button onClick={() => setIsEditing(false)} variant="secondary" className="flex-1">Annuler</Button>
+          {/* Save Button */}
+          <div className="flex justify-end gap-4">
+            <Button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 min-w-40"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : saved ? (
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {saved 
+                ? (language === 'fr' ? 'Enregistré !' : 'Saved!') 
+                : t('save')}
+            </Button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

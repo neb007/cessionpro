@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateUniqueReference } from '@/utils/referenceGenerator';
+import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 
 const statusConfig = {
   active: { label: 'active', color: 'bg-green-100 text-green-700', icon: CheckCircle },
@@ -209,34 +210,6 @@ export default function MyListings() {
   const totalViews = myListings.reduce((sum, l) => sum + (l.views_count || 0), 0);
   const activeListings = myListings.filter(l => l.status === 'active').length;
 
-  const getImageUrl = (listing) => {
-    let imagesArray = listing.images;
-    
-    // Handle if images is a JSON string from database
-    if (typeof imagesArray === 'string') {
-      try {
-        imagesArray = JSON.parse(imagesArray);
-      } catch (e) {
-        imagesArray = [];
-      }
-    }
-    
-    // Ensure it's an array
-    if (!Array.isArray(imagesArray)) {
-      imagesArray = imagesArray && typeof imagesArray === 'object' ? [imagesArray] : [];
-    }
-    
-    if (imagesArray.length > 0) {
-      if (typeof imagesArray[0] === 'object' && imagesArray[0].url) {
-        return imagesArray[0].url;
-      }
-      if (typeof imagesArray[0] === 'string') {
-        return imagesArray[0];
-      }
-    }
-    return 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop';
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -320,7 +293,7 @@ export default function MyListings() {
                       {/* Image Section */}
                       <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
                         <img 
-                          src={getImageUrl(listing)} 
+                          src={getPrimaryImageUrl(listing)} 
                           alt={listing.title} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
@@ -342,14 +315,22 @@ export default function MyListings() {
 
                       <CardContent className="p-4 flex flex-col flex-grow">
                         {/* Reference & Verified */}
-                        <div className="flex items-center gap-2 mb-2 text-xs">
+                        <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
+                          <Badge className="bg-blue-50 text-blue-700 border-0 text-[10px]">
+                            {listing.type === 'acquisition' ? (language === 'fr' ? 'Acquisition' : 'Acquisition') : (language === 'fr' ? 'Cession' : 'Sale')}
+                          </Badge>
+                          {listing.business_type && (
+                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-[10px]">
+                              {t(listing.business_type)}
+                            </Badge>
+                          )}
                           {listing.reference_number && (
-                            <span className="font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                            <Badge variant="secondary" className="bg-gray-900 text-white font-mono text-[10px]">
                               {listing.reference_number}
-                            </span>
+                            </Badge>
                           )}
                           {listing.verified && (
-                            <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                            <Badge className="bg-green-100 text-green-700 border-0 text-[10px]">
                               ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
                             </Badge>
                           )}

@@ -35,7 +35,7 @@ export default function BentoPhotoGallery({ business, language = 'fr' }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="w-full rounded-3xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50"
-        style={{ height: '250px' }}
+        style={{ height: '300px' }}
       >
         <div className="w-full h-full flex items-center justify-center">
           <div className="text-center">
@@ -58,7 +58,7 @@ export default function BentoPhotoGallery({ business, language = 'fr' }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="w-full rounded-3xl overflow-hidden bg-gray-100 cursor-pointer group"
-        style={{ height: '250px' }}
+        style={{ height: '300px' }}
         onClick={() => {
           setLightboxStartIndex(0);
           setLightboxOpen(true);
@@ -91,14 +91,14 @@ export default function BentoPhotoGallery({ business, language = 'fr' }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="w-full rounded-3xl overflow-hidden"
-        style={{ height: '250px' }}
+        style={{ height: '300px' }}
       >
         {/* Main container with gap */}
         <div className="w-full h-full flex gap-2">
           {/* Left side - Main image (50%) */}
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="flex-1 rounded-2xl overflow-hidden bg-gray-100 cursor-pointer group"
+            className="flex-1 overflow-hidden bg-gray-100 cursor-pointer group"
             onClick={() => {
               setLightboxStartIndex(0);
               setLightboxOpen(true);
@@ -122,7 +122,7 @@ export default function BentoPhotoGallery({ business, language = 'fr' }) {
                 <motion.div
                   key={idx}
                   whileHover={{ scale: 1.02 }}
-                  className="relative rounded-2xl overflow-hidden bg-gray-100 cursor-pointer group"
+                  className="relative overflow-hidden bg-gray-100 cursor-pointer group"
                   onClick={() => {
                     setLightboxStartIndex(imageIndex);
                     setLightboxOpen(true);
@@ -179,13 +179,13 @@ export default function BentoPhotoGallery({ business, language = 'fr' }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="w-full rounded-3xl overflow-hidden"
-      style={{ height: '250px' }}
+      style={{ height: '300px' }}
     >
       <div className="w-full h-full flex gap-2">
         {/* Main image */}
         <motion.div
           whileHover={{ scale: 1.02 }}
-          className="flex-1 rounded-2xl overflow-hidden bg-gray-100 cursor-pointer group"
+          className="flex-1 overflow-hidden bg-gray-100 cursor-pointer group"
           onClick={() => {
             setLightboxStartIndex(0);
             setLightboxOpen(true);
@@ -204,7 +204,7 @@ export default function BentoPhotoGallery({ business, language = 'fr' }) {
             <motion.div
               key={idx}
               whileHover={{ scale: 1.02 }}
-              className="flex-1 rounded-2xl overflow-hidden bg-gray-100 cursor-pointer group"
+              className="flex-1 overflow-hidden bg-gray-100 cursor-pointer group"
               onClick={() => {
                 setLightboxStartIndex(idx + 1);
                 setLightboxOpen(true);

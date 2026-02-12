@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { MapPin, Heart, MessageCircle, CheckCircle2, Eye, TrendingUp } from 'lucide-react';
@@ -10,9 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 import { calculateGrowthPercentage } from '@/utils/growthCalculator';
+import { getProfile } from '@/services/profileService';
+import LogoCard from '@/components/ui/LogoCard';
 
 const sectorColors = {
   technology: 'bg-primary-light text-primary',
@@ -34,6 +37,29 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
   const [sending, setSending] = useState(false);
   const [messageSent, setMessageSent] = useState(false);
   const [user, setUser] = useState(null);
+  const [sellerProfile, setSellerProfile] = useState(null);
+
+  useEffect(() => {
+    loadBusinessLogo();
+  }, [business?.id]);
+
+  const loadBusinessLogo = async () => {
+    try {
+      if (business?.id) {
+        const { data, error } = await supabase
+          .from('business_logos')
+          .select('logo_url, show_logo_in_listings')
+          .eq('business_id', business.id)
+          .maybeSingle();
+
+        if (data && !error) {
+          setSellerProfile(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading business logo:', error);
+    }
+  };
   
   const formatPrice = (price) => {
     if (!price) return '-';
@@ -80,6 +106,25 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
             <span className="font-mono">{business.views_count || 0}</span>
           </div>
 
+          {/* Message Button - Bottom Left */}
+          <button
+            onClick={async (e) => {
+              e.preventDefault();
+              try {
+                const currentUser = user || await base44.auth.me();
+                setUser(currentUser);
+                setShowMessageModal(true);
+              } catch (error) {
+                base44.auth.redirectToLogin();
+              }
+            }}
+            className="absolute bottom-3 left-3 p-2 rounded-full bg-black/50 text-white hover:bg-primary transition-colors z-50"
+            aria-label={language === 'fr' ? 'Envoyer un message' : 'Send message'}
+            title={language === 'fr' ? 'Envoyer un message' : 'Send message'}
+          >
+            <MessageCircle className="w-5 h-5" />
+          </button>
+
           {/* Favorite Button - Bottom Right */}
           {onToggleFavorite && (
             <button
@@ -108,71 +153,100 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
             </Link>
           </div>
 
-          {/* Localisation + Message */}
-          <div className="flex items-start justify-between gap-2 mb-3">
+          {/* Localisation + Logo */}
+          <div className="flex items-center justify-between gap-2 mb-3">
             <div style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500 }} className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
               <MapPin className="w-4 h-4 mr-1.5 text-gray-400 flex-shrink-0" />
               <span className="truncate">{business.location}</span>
             </div>
-            <button
-              onClick={async (e) => {
-                e.preventDefault();
-                try {
-                  const currentUser = user || await base44.auth.me();
-                  setUser(currentUser);
-                  setShowMessageModal(true);
-                } catch (error) {
-                  base44.auth.redirectToLogin();
-                }
-              }}
-              className="p-2 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-primary transition-colors"
-              aria-label={language === 'fr' ? 'Envoyer un message' : 'Send message'}
-              title={language === 'fr' ? 'Envoyer un message' : 'Send message'}
-            >
-              <MessageCircle className="w-4 h-4" />
-            </button>
+            {sellerProfile?.show_logo_in_listings && sellerProfile?.logo_url && (
+              <LogoCard
+                logoUrl={sellerProfile.logo_url}
+                context="card"
+                altText="Seller logo"
+                rounded
+                shadow
+              />
+            )}
           </div>
 
-          {/* Détails financiers */}
-          <div className="pt-3 border-t border-gray-100 mt-auto space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">CA</p>
-                <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-[#3B4759]">
-                  {formatPrice(business.annual_revenue)}
-                </p>
-              </div>
-              <div>
-                <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">
-                  CROISSANCE
-                </p>
-                <div className="flex items-center justify-start gap-1">
-                  <TrendingUp className="w-3 h-3 text-green-600 flex-shrink-0" />
-                  <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-green-600">
-                    {growthPercentage > 0 ? '+' : ''}{growthPercentage || 0}%
+          {/* Détails financiers - CESSION */}
+          {business.type === 'cession' && (
+            <div className="pt-3 border-t border-gray-100 mt-auto space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">CA</p>
+                  <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-[#3B4759]">
+                    {formatPrice(business.annual_revenue)}
                   </p>
+                </div>
+                <div>
+                  <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">
+                    CROISSANCE
+                  </p>
+                  <div className="flex items-center justify-start gap-1">
+                    <TrendingUp className="w-3 h-3 text-green-600 flex-shrink-0" />
+                    <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-green-600">
+                      {growthPercentage > 0 ? '+' : ''}{growthPercentage || 0}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-gray-100">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="flex-1">
+                    <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider mb-1">
+                      {language === 'fr' ? 'Prix Demandé' : 'Asking Price'}
+                    </p>
+                    <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '22px' }} className="text-[#FF6B4A] leading-none">
+                      {formatPrice(business.asking_price)}
+                    </p>
+                  </div>
+                  {business.verified && (
+                    <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 text-[11px] whitespace-nowrap">
+                      ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
+          )}
 
-            <div className="pt-2 border-t border-gray-100">
-              <div className="flex items-end justify-between gap-3">
+          {/* Critères Acheteur - ACQUISITION */}
+          {business.type === 'acquisition' && (
+            <div className="pt-3 border-t border-gray-100 mt-auto space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">
+                    {language === 'fr' ? 'Budget' : 'Budget'}
+                  </p>
+                  <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-[#3B4759]">
+                    {formatPrice(business.buyer_budget_min)} - {formatPrice(business.buyer_budget_max)}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">
+                    {language === 'fr' ? 'Secteurs' : 'Sectors'}
+                  </p>
+                  <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '14px' }} className="text-[#3B4759]">
+                    {business.buyer_sectors_interested?.length || 0}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-gray-100">
                 <div className="flex-1">
                   <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider mb-1">
-                    {language === 'fr' ? 'Prix Demandé' : 'Asking Price'}
+                    {language === 'fr' ? 'Financement Disponible' : 'Available Investment'}
                   </p>
                   <p style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: '22px' }} className="text-[#FF6B4A] leading-none">
-                    {formatPrice(business.asking_price)}
+                    {formatPrice(business.buyer_investment_available)}
                   </p>
                 </div>
-                {business.verified && (
-                  <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 text-[11px] whitespace-nowrap">
-                    ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
-                  </Badge>
-                )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Badge Cession/Acquisition + Référence */}
           <div className="mt-3 flex items-center justify-between gap-2">
@@ -196,7 +270,9 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {language === 'fr' ? 'Contacter le vendeur' : 'Contact seller'}
+              {business.type === 'cession'
+                ? (language === 'fr' ? 'Contacter le vendeur' : 'Contact seller')
+                : (language === 'fr' ? 'Contacter l\'acheteur' : 'Contact buyer')}
             </DialogTitle>
           </DialogHeader>
 

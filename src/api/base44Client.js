@@ -7,29 +7,6 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Sanitize filename by removing special characters, accents, and spaces
- * @param {string} name - Original filename
- * @returns {string} - Sanitized filename
- */
-function sanitizeFileName(name) {
-  // Split filename and extension
-  const lastDotIndex = name.lastIndexOf('.');
-  const nameWithoutExt = lastDotIndex > 0 ? name.substring(0, lastDotIndex) : name;
-  const extension = lastDotIndex > 0 ? name.substring(lastDotIndex) : '';
-
-  // Remove accents and special characters, replace spaces with hyphens
-  const sanitized = nameWithoutExt
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-    .toLowerCase();
-
-  return sanitized + extension;
-}
-
-/**
  * Creates a simple axios-like client for making HTTP requests
  * @param {Object} config - Configuration object
  * @param {string} config.baseURL - Base URL for the client
@@ -336,12 +313,12 @@ const base44 = {
     },
 
     Lead: {
-      list: async (sortBy = 'created_date') => {
+      list: async (sortBy = 'created_at') => {
         try {
           const { data, error } = await supabase
             .from('leads')
             .select('*')
-            .order(sortBy || 'created_date', { ascending: false });
+            .order(sortBy || 'created_at', { ascending: false });
 
           if (error) throw error;
           return data || [];
@@ -365,7 +342,7 @@ const base44 = {
             query = query.eq('status', filters.status);
           }
 
-          query = query.order('created_date', { ascending: false });
+          query = query.order('created_at', { ascending: false });
 
           const { data, error } = await query;
           if (error) throw error;
@@ -382,8 +359,7 @@ const base44 = {
             .from('leads')
             .insert([{
               ...data,
-              status: data.status || 'new',
-              created_date: new Date().toISOString()
+              status: data.status || 'new'
             }])
             .select();
 
@@ -400,8 +376,7 @@ const base44 = {
           const { data: leadData, error } = await supabase
             .from('leads')
             .update({
-              ...data,
-              updated_date: new Date().toISOString()
+              ...data
             })
             .eq('id', id)
             .select();
@@ -479,7 +454,7 @@ const base44 = {
             .from('favorites')
             .insert([{
               ...data,
-              created_date: new Date().toISOString()
+              created_at: new Date().toISOString()
             }])
             .select();
 
@@ -543,9 +518,7 @@ const base44 = {
           const { data: convData, error } = await supabase
             .from('conversations')
             .insert([{
-              ...data,
-              created_date: new Date().toISOString(),
-              updated_date: new Date().toISOString()
+              ...data
             }])
             .select();
 
@@ -562,8 +535,7 @@ const base44 = {
           const { data: convData, error } = await supabase
             .from('conversations')
             .update({
-              ...data,
-              updated_date: new Date().toISOString()
+              ...data
             })
             .eq('id', id)
             .select();
@@ -617,8 +589,7 @@ const base44 = {
           const { data: msgData, error } = await supabase
             .from('messages')
             .insert([{
-              ...data,
-              created_date: new Date().toISOString()
+              ...data
             }])
             .select();
 
@@ -665,10 +636,7 @@ const base44 = {
     Core: {
       UploadFile: async ({ file }) => {
         try {
-          // Sanitize filename to remove special characters and accents
-          const sanitizedFileName = sanitizeFileName(file.name);
-          const fileName = `${Date.now()}_${sanitizedFileName}`;
-
+          const fileName = `${Date.now()}_${file.name}`;
           const { data, error } = await supabase.storage
             .from('Cession')
             .upload(fileName, file);

@@ -7,7 +7,7 @@ export default defineConfig({
   logLevel: 'error', // Suppress warnings, only show errors
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './Cessionpro/src'),
+      '@': path.resolve(__dirname, './src'),
     },
   },
   plugins: [
