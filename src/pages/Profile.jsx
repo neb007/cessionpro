@@ -35,6 +35,12 @@ import {
 import { motion } from 'framer-motion';
 import { DicebearAvatar } from '@/components/messages/DicebearAvatar';
 import { resizeLogo, validateLogoFile, createPreviewUrl, revokePreviewUrl } from '@/utils/logoResizer';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
 
@@ -47,6 +53,12 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [profileData, setProfileData] = useState(null);
+  
+  // Logo processing states
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [showLogoModal, setShowLogoModal] = useState(false);
+  const [logoError, setLogoError] = useState(null);
+  const [processingLogo, setProcessingLogo] = useState(false);
   
   const [formData, setFormData] = useState({
     first_name: '',
@@ -183,11 +195,69 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    setLogoError(null);
+    setProcessingLogo(true);
+    
     try {
+      // Validate file
+      const validation = validateLogoFile(file);
+      if (!validation.valid) {
+        setLogoError(validation.error);
+        setProcessingLogo(false);
+        return;
+      }
+      
+      // Resize logo
+      const resizeResult = await resizeLogo(file);
+      
+      // Create preview URL from blob
+      const previewUrl = createPreviewUrl(resizeResult.blob);
+      
+      // Store preview for modal
+      setLogoPreview({
+        url: previewUrl,
+        blob: resizeResult.blob,
+        width: resizeResult.width,
+        height: resizeResult.height
+      });
+      
+      // Show modal
+      setShowLogoModal(true);
+      setProcessingLogo(false);
+      
+    } catch (error) {
+      console.error('Error processing logo:', error);
+      setLogoError(language === 'fr' 
+        ? 'Erreur lors du traitement de l\'image' 
+        : 'Error processing image');
+      setProcessingLogo(false);
+    }
+  };
+
+  const uploadResizedLogo = async () => {
+    if (!logoPreview) return;
+    
+    setProcessingLogo(true);
+    try {
+      // Create a proper File from blob
+      const file = new File([logoPreview.blob], 'logo.webp', { type: 'image/webp' });
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      
       handleChange('avatar_url', file_url);
-    } catch (e) {
-      console.error(e);
+      
+      // Clean up
+      revokePreviewUrl(logoPreview.url);
+      setLogoPreview(null);
+      setShowLogoModal(false);
+      setLogoError(null);
+      
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      setLogoError(language === 'fr' 
+        ? 'Erreur lors de l\'upload' 
+        : 'Error uploading image');
+    } finally {
+      setProcessingLogo(false);
     }
   };
 
@@ -617,8 +687,68 @@ export default function Profile() {
                 : t('save')}
             </Button>
           </div>
+
+          {/* Error Message */}
+          {logoError && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2"
+            >
+              <AlertCircle className="w-5 h-5" />
+              {logoError}
+            </motion.div>
+          )}
         </div>
       </div>
+
+      {/* Logo Preview Modal */}
+      <Dialog open={showLogoModal} onOpenChange={setShowLogoModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              {language === 'fr' ? 'Aperçu du logo' : 'Logo Preview'}
+            </DialogTitle>
+          </DialogHeader>
+
+          {logoPreview && (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <motion.img
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  src={logoPreview.url}
+                  alt="Logo preview"
+                  className="max-h-64 max-w-full rounded-lg shadow-md"
+                />
+              </div>
+              
+              <div className="text-center text-sm text-gray-500">
+                <p>{logoPreview.width}x{logoPreview.height}px</p>
+              </div>
+
+              <Button
+                onClick={uploadResizedLogo}
+                disabled={processingLogo}
+                className="w-full bg-gradient-to-r from-primary to-blue-600"
+              >
+                {processingLogo ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {language === 'fr' ? 'Upload...' : 'Uploading...'}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    {language === 'fr' ? 'Confirmer' : 'Confirm'}
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

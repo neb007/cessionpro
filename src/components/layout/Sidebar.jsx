@@ -271,13 +271,26 @@ export default function Sidebar({ user }) {
               isActive={currentPage === 'SmartMatching'}
               onClick={handleMenuItemClick}
             />
-            <SidebarMenuItem
-              icon={Lock}
-              label={language === 'fr' ? 'Dataroom' : 'Dataroom'}
-              page="Dataroom"
-              isActive={currentPage === 'Dataroom'}
-              onClick={handleMenuItemClick}
-            />
+            {/* Dataroom - Disabled with Tooltip */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    disabled
+                    style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                    className="w-full flex items-center gap-3 px-3 py-3 text-[#C0C5D4] cursor-not-allowed transition-all duration-200 text-sm"
+                  >
+                    <Lock className="w-5 h-5" />
+                    <span>{language === 'fr' ? 'Dataroom' : 'Dataroom'}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
+                  <p>
+                    {language === 'fr' ? 'Bientôt disponible' : 'Coming Soon'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <SidebarMenuItem
               icon={Bell}
               label={language === 'fr' ? 'Mes alertes' : 'My Alerts'}
