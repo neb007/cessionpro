@@ -157,7 +157,7 @@ export default function Sidebar({ user }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 w-56 transition-transform duration-300 z-50 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 w-56 border-r border-gray-200 transition-transform duration-300 z-50 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ backgroundColor: '#FBFBF9', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}

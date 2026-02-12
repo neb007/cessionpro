@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { mockBusinesses } from '@/components/data/mockData';
@@ -156,6 +156,7 @@ const DEPARTMENTS = [
 export default function Businesses() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated } = useAuth();
   
   const [businesses, setBusinesses] = useState([]);
@@ -172,16 +173,6 @@ export default function Businesses() {
   const [budgetRange, setBudgetRange] = useState([0, 5000000]);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const search = urlParams.get('search');
-    if (search) setSearchQuery(search);
-    
-    // Get type filter from query params
-    const type = urlParams.get('type');
-    if (type && (type === 'cession' || type === 'acquisition')) {
-      setListingType(type);
-    }
-    
     loadData();
     
     // Set up interval to refresh data periodically
@@ -191,6 +182,19 @@ export default function Businesses() {
     
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const search = urlParams.get('search') || '';
+    setSearchQuery(search);
+
+    const type = urlParams.get('type');
+    if (type && (type === 'cession' || type === 'acquisition')) {
+      setListingType(type);
+    } else {
+      setListingType('all');
+    }
+  }, [location.search]);
 
   const loadData = async () => {
     try {
@@ -297,7 +301,7 @@ export default function Businesses() {
 
   return (
     <div className="min-h-screen py-6 lg:py-8 bg-[#FAF9F7]">
-      <div className="w-full px-6">
+      <div className="w-full px-5">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
