@@ -34,6 +34,7 @@ import { businessService } from '@/services/businessService';
 export default function Messages() {
   const { t, language } = useLanguage();
   const messagesEndRef = useRef(null);
+  const HIDDEN_CONTACT_ID = '8c14c80a-75d2-41b1-ab33-7fbabffec252';
   const MAX_MESSAGE_LENGTH = 2000;
   const MESSAGES_PAGE_SIZE = 30;
   const NOTIFICATIONS_ENABLED = true;
@@ -66,6 +67,8 @@ export default function Messages() {
   const [selectedBusiness, setSelectedBusiness] = useState(null);
   const [showInbox, setShowInbox] = useState(true);
   const [conversationFilter, setConversationFilter] = useState('all');
+  const [archivingConversationId, setArchivingConversationId] = useState(null);
+  const [blockingConversationId, setBlockingConversationId] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -379,8 +382,96 @@ export default function Messages() {
         setConversations((prev) => prev.map((conv) => conv.id === updated.id ? { ...conv, ...updated } : conv));
       }
     } catch (error) {
+      if (error?.code === 'PGRST204') {
+        try {
+          const updated = await conversationService.updateConversation(selectedConversation.id, {
+            contact_status: 'accepted'
+          });
+          if (updated) {
+            setSelectedConversation(updated);
+            setConversations((prev) => prev.map((conv) => conv.id === updated.id ? { ...conv, ...updated } : conv));
+          }
+          return;
+        } catch (fallbackError) {
+          console.error('Failed to accept conversation (fallback):', fallbackError);
+          return;
+        }
+      }
       console.error('Failed to accept conversation:', error);
     }
+  };
+
+  const isConversationArchived = (conv) => {
+    if (!conv || !user?.id) return false;
+    const archivedBy = Array.isArray(conv.archived_by) ? conv.archived_by : [];
+    return archivedBy.includes(user.id);
+  };
+
+  const isConversationBlocked = (conv) => {
+    if (!conv || !user?.id) return false;
+    const blockedBy = Array.isArray(conv.blocked_by) ? conv.blocked_by : [];
+    return blockedBy.includes(user.id);
+  };
+
+  const handleArchiveConversation = async (conv) => {
+    if (!conv?.id || !user?.id) return;
+    setArchivingConversationId(conv.id);
+    try {
+      const archivedBy = Array.isArray(conv.archived_by) ? conv.archived_by : [];
+      if (!archivedBy.includes(user.id)) {
+        const updated = await conversationService.updateConversation(conv.id, {
+          archived_by: [...archivedBy, user.id]
+        });
+        if (updated) {
+          setConversations((prev) => prev.map((item) => item.id === updated.id ? {
+            ...item,
+            ...updated,
+            archived_by: Array.isArray(updated.archived_by) ? updated.archived_by : archivedBy.concat(user.id)
+          } : item));
+          if (selectedConversation?.id === updated.id) {
+            setSelectedConversation({
+              ...selectedConversation,
+              ...updated,
+              archived_by: Array.isArray(updated.archived_by) ? updated.archived_by : archivedBy.concat(user.id)
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to archive conversation:', error);
+    }
+    setArchivingConversationId(null);
+  };
+
+  const handleBlockConversation = async (conv) => {
+    if (!conv?.id || !user?.id) return;
+    setBlockingConversationId(conv.id);
+    try {
+      const blockedBy = Array.isArray(conv.blocked_by) ? conv.blocked_by : [];
+      if (!blockedBy.includes(user.id)) {
+        const updated = await conversationService.updateConversation(conv.id, {
+          blocked_by: [...blockedBy, user.id]
+        });
+        if (updated) {
+          setConversations((prev) => prev.map((item) => item.id === updated.id ? {
+            ...item,
+            ...updated,
+            blocked_by: Array.isArray(updated.blocked_by) ? updated.blocked_by : blockedBy.concat(user.id)
+          } : item));
+          if (selectedConversation?.id === updated.id) {
+            setSelectedConversation({
+              ...selectedConversation,
+              ...updated,
+              blocked_by: Array.isArray(updated.blocked_by) ? updated.blocked_by : blockedBy.concat(user.id)
+            });
+          }
+          setShowInbox(true);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to block conversation:', error);
+    }
+    setBlockingConversationId(null);
   };
 
   const handleMessageChange = (e) => {
@@ -430,6 +521,7 @@ export default function Messages() {
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
+    if (isSelectedConversationBlocked) return;
     if (newMessage.length > MAX_MESSAGE_LENGTH) {
       setMessageError(
         language === 'fr'
@@ -585,21 +677,40 @@ export default function Messages() {
 
   const getParticipantLabel = (participantId) => {
     const profile = participantProfiles?.[participantId];
-    if (!profile) return participantId || '';
+    if (!profile) return language === 'fr' ? 'Contact inconnu' : 'Unknown contact';
     if (profile.full_name) return profile.full_name;
     const firstName = profile.first_name || '';
     const lastName = profile.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim();
-    return fullName || profile.email || participantId || '';
+    return fullName || profile.email || (language === 'fr' ? 'Contact inconnu' : 'Unknown contact');
+  };
+
+  const getParticipantFullName = (participantId) => {
+    const profile = participantProfiles?.[participantId];
+    if (!profile) return '';
+    const firstName = profile.first_name || '';
+    const lastName = profile.last_name || '';
+    return `${firstName} ${lastName}`.trim();
+  };
+
+  const getParticipantCompany = (participantId) => {
+    const profile = participantProfiles?.[participantId];
+    return profile?.company_name || '';
   };
 
   const filteredConversations = conversations.filter((conv) => {
-    const title = getConversationTitle(conv).toLowerCase();
     const otherId = getOtherParticipantId(conv);
+    if (otherId === HIDDEN_CONTACT_ID) return false;
+    if (isConversationBlocked(conv)) return false;
+    const title = getConversationTitle(conv).toLowerCase();
     const otherLabel = getParticipantLabel(otherId).toLowerCase();
     const query = searchQuery.toLowerCase();
     const matchesSearch = title.includes(query) || otherLabel.includes(query);
     if (!matchesSearch) return false;
+    if (conversationFilter === 'archived') {
+      return isConversationArchived(conv);
+    }
+    if (isConversationArchived(conv)) return false;
     if (conversationFilter === 'unread') {
       return (conv.unread_count?.[user?.id] || 0) > 0;
     }
@@ -628,13 +739,24 @@ export default function Messages() {
   const isConversationAccepted = selectedConversation?.contact_status === 'accepted';
   const shouldShowProfile = isConversationAccepted;
   const isConversationView = Boolean(selectedConversation) && !showInbox;
+  const isSelectedConversationBlocked = isConversationBlocked(selectedConversation);
+
+  if (isConversationView && getOtherParticipantId(selectedConversation) === HIDDEN_CONTACT_ID) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          {language === 'fr' ? 'Conversation indisponible.' : 'Conversation unavailable.'}
+        </div>
+      </div>
+    );
+  }
 
   if (isConversationView) {
     return (
       <div className="h-[calc(100vh-80px)] flex bg-background">
         <div className="flex-1 flex flex-col bg-background">
           {/* Chat Header */}
-          <div className="bg-card border-b border-border p-4 flex items-center gap-4">
+          <div className="bg-card border-b border-border px-4 py-3 sm:p-4 flex items-center gap-3 sm:gap-4 sticky top-0 z-10">
             <button
               onClick={() => {
                 setShowInbox(true);
@@ -644,7 +766,7 @@ export default function Messages() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-white font-medium">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-white font-medium">
               {getConversationTitle(selectedConversation)?.[0]?.toUpperCase() || 'M'}
             </div>
             <div className="flex-1 min-w-0">
@@ -656,11 +778,36 @@ export default function Messages() {
               </Link>
               <p className="text-sm text-muted-foreground truncate">
                 {shouldShowProfile
-                  ? getParticipantLabel(getOtherParticipantId(selectedConversation))
+                  ? [
+                    getParticipantLabel(getOtherParticipantId(selectedConversation)),
+                    getParticipantCompany(getOtherParticipantId(selectedConversation))
+                  ].filter(Boolean).join(' • ')
                   : (language === 'fr' ? 'Profil en attente d’acceptation' : 'Profile awaiting acceptance')}
               </p>
             </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={blockingConversationId === selectedConversation?.id}
+                onClick={() => handleBlockConversation(selectedConversation)}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                {language === 'fr' ? 'Bloquer' : 'Block'}
+              </Button>
+            </div>
           </div>
+
+          {isSelectedConversationBlocked && (
+            <div className="bg-red-50 border-b border-red-100 px-4 py-3">
+              <p className="text-sm text-red-600">
+                {language === 'fr'
+                  ? 'Vous avez bloqué ce contact. Les messages sont désactivés.'
+                  : 'You blocked this contact. Messaging is disabled.'}
+              </p>
+            </div>
+          )}
 
           {!isConversationAccepted && selectedConversation?.participant_2_id === user?.id && (
             <div className="bg-warning/10 border-b border-warning/20 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -684,8 +831,8 @@ export default function Messages() {
 
           {/* Messages */}
           <div className="flex-1 flex">
-            <ScrollArea className="flex-1 p-4 bg-background">
-              <div className="max-w-3xl mx-auto space-y-4">
+            <ScrollArea className="flex-1 px-4 py-4 sm:p-4 bg-background">
+              <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5">
               {hasMoreMessages && (
                 <div className="flex justify-center">
                   <Button
@@ -716,7 +863,7 @@ export default function Messages() {
                       initial={{ opacity: 0, y: 20, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ type: "spring", stiffness: 100 }}
-                      className={`flex gap-3 group ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                      className={`flex gap-2 sm:gap-3 group ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                     >
                       {/* Avatar */}
                       <motion.div 
@@ -727,17 +874,17 @@ export default function Messages() {
                         <DicebearAvatar 
                           email={senderId} 
                           name={senderLabel}
-                          size="lg"
+                          size="md"
                           showBorder={false}
                           className="group-hover:shadow-lg"
                         />
                       </motion.div>
 
-                      <div className={`max-w-[70%]`}>
+                      <div className={`max-w-[78%] sm:max-w-[70%]`}>
                         <motion.div
                           whileHover={{ scale: 1.02 }}
                           transition={{ duration: 0.2 }}
-                          className={`rounded-2xl px-4 py-3 cursor-pointer ${
+                          className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 cursor-pointer text-sm sm:text-base ${
                             isOwn
                               ? 'bg-primary text-white rounded-br-md'
                               : 'bg-card text-foreground shadow-sm rounded-bl-md'
@@ -745,7 +892,7 @@ export default function Messages() {
                         >
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                         </motion.div>
-                        <div className={`flex items-center gap-1 mt-1 text-xs text-muted-foreground ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`flex items-center gap-1 mt-1 text-[11px] sm:text-xs text-muted-foreground ${isOwn ? 'justify-end' : 'justify-start'}`}>
                           <span>{formatMessageTime(msg.created_at)}</span>
                           {isOwn && (
                             msg.read ? (
@@ -772,7 +919,7 @@ export default function Messages() {
                       <DicebearAvatar 
                         email={getOtherParticipantId(selectedConversation)} 
                         name={getParticipantLabel(getOtherParticipantId(selectedConversation))}
-                        size="lg"
+                        size="md"
                         showBorder={false}
                       />
                     </div>
@@ -780,7 +927,7 @@ export default function Messages() {
                       <motion.div
                         animate={{ scale: [0.95, 1.05, 0.95] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
-                        className="bg-muted text-muted-foreground rounded-2xl rounded-bl-md px-4 py-3 flex gap-2"
+                        className="bg-muted text-muted-foreground rounded-2xl rounded-bl-md px-3 py-2 sm:px-4 sm:py-3 flex gap-2 text-xs sm:text-sm"
                       >
                         <span className="text-xs">
                           {typingLabel
@@ -862,6 +1009,9 @@ export default function Messages() {
                       <p className="font-medium">
                         {getParticipantLabel(getOtherParticipantId(selectedConversation))}
                       </p>
+                      {getParticipantCompany(getOtherParticipantId(selectedConversation)) && (
+                        <p>{getParticipantCompany(getOtherParticipantId(selectedConversation))}</p>
+                      )}
                       <p>{participantProfiles?.[getOtherParticipantId(selectedConversation)]?.email || '-'}</p>
                       <p>{participantProfiles?.[getOtherParticipantId(selectedConversation)]?.phone || '-'}</p>
                     </div>
@@ -890,7 +1040,7 @@ export default function Messages() {
           </div>
 
           {/* Input */}
-          <div className="bg-card border-t border-border p-4">
+          <div className="bg-card border-t border-border px-4 py-3 sm:p-4 sticky bottom-0 z-10">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -904,9 +1054,9 @@ export default function Messages() {
                   onChange={handleMessageChange}
                   placeholder={t('type_message')}
                   className="flex-1"
-                  disabled={sending || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
+                  disabled={sending || isSelectedConversationBlocked || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
                 />
-                <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between mt-1 text-[11px] sm:text-xs text-muted-foreground">
                   <span>
                     {newMessage.length}/{MAX_MESSAGE_LENGTH}
                   </span>
@@ -918,7 +1068,7 @@ export default function Messages() {
                   )}
                 </div>
                 {sendError && !messageError && (
-                  <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  <div className="text-[11px] sm:text-xs text-red-500 mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {sendError}
                   </div>
@@ -926,7 +1076,7 @@ export default function Messages() {
               </div>
               <Button
                 type="submit"
-                disabled={!newMessage.trim() || sending || !!messageError || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
+                disabled={!newMessage.trim() || sending || !!messageError || isSelectedConversationBlocked || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
                 className="bg-primary hover:bg-primary/90"
               >
                 {sending ? (
@@ -946,8 +1096,8 @@ export default function Messages() {
     <div className="h-[calc(100vh-80px)] flex bg-background">
       {/* Conversations List */}
       <div className="w-full bg-card border-r border-border flex flex-col">
-        <div className="px-6 py-5 border-b border-border bg-card">
-          <div className="flex items-center justify-between gap-4">
+        <div className="px-4 sm:px-6 py-5 border-b border-border bg-card">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="font-heading text-2xl font-bold text-foreground">
                 Messages
@@ -956,7 +1106,7 @@ export default function Messages() {
                 {filteredConversations.length}/{conversations.length} {language === 'fr' ? 'prises de contact' : 'contacts'}
               </p>
             </div>
-            <div className="relative w-full max-w-[220px]">
+            <div className="relative w-full sm:max-w-[260px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 value={searchQuery}
@@ -966,21 +1116,21 @@ export default function Messages() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-6 mt-4 text-sm font-medium">
-            {['all', 'unread', 'pending'].map((filterKey) => (
+          <div className="flex items-center gap-3 sm:gap-6 mt-4 text-sm font-medium overflow-x-auto pb-1">
+            {['all', 'unread', 'pending', 'archived'].map((filterKey) => (
               <button
                 key={filterKey}
                 type="button"
                 onClick={() => setConversationFilter(filterKey)}
-                className={`pb-2 border-b-2 transition ${
+                className={`pb-2 border-b-2 transition whitespace-nowrap ${
                   conversationFilter === filterKey
                     ? 'border-primary text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {language === 'fr'
-                  ? ({ all: 'Tous les messages', unread: 'Non lus', pending: 'Archivés' }[filterKey])
-                  : ({ all: 'All messages', unread: 'Unread', pending: 'Archived' }[filterKey])}
+                  ? ({ all: 'Tous les messages', unread: 'Non lus', pending: 'En attente', archived: 'Archivés' }[filterKey])
+                  : ({ all: 'All messages', unread: 'Unread', pending: 'Pending', archived: 'Archived' }[filterKey])}
               </button>
             ))}
           </div>
@@ -994,7 +1144,7 @@ export default function Messages() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              <div className="hidden lg:grid grid-cols-[110px_150px_180px_1fr_110px_80px_90px] gap-4 px-6 py-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+              <div className="hidden lg:grid grid-cols-[110px_160px_180px_1fr_110px_80px_90px_120px] gap-4 px-6 py-3 text-[11px] uppercase tracking-widest text-muted-foreground">
                 <span>{language === 'fr' ? 'Date' : 'Date'}</span>
                 <span>{language === 'fr' ? 'Demandeur' : 'Requester'}</span>
                 <span>{language === 'fr' ? 'Sujet' : 'Subject'}</span>
@@ -1002,24 +1152,25 @@ export default function Messages() {
                 <span>{language === 'fr' ? 'Type' : 'Type'}</span>
                 <span className="text-center">{language === 'fr' ? 'Non lus' : 'Unread'}</span>
                 <span className="text-center">{language === 'fr' ? 'Répondu' : 'Replied'}</span>
+                <span className="text-center">{language === 'fr' ? 'Actions' : 'Actions'}</span>
               </div>
               {filteredConversations.map((conv) => {
                 const isActive = selectedConversation?.id === conv.id;
                 const unread = conv.unread_count?.[user?.id] || 0;
                 const otherParticipantId = getOtherParticipantId(conv);
                 const otherLabel = getParticipantLabel(otherParticipantId);
+                const requesterName = getParticipantFullName(otherParticipantId) || otherLabel;
+                const requesterCompany = getParticipantCompany(otherParticipantId);
                 const statusLabel = conv.contact_status === 'pending'
                   ? (language === 'fr' ? 'En attente' : 'Pending')
-                  : (language === 'fr' ? 'Actif' : 'Active');
+                  : '';
                 const replied = unread === 0 && Boolean(conv.last_message);
                 const subjectPreview = conv.last_message || (language === 'fr' ? 'Nouveau message' : 'New message');
                 const businessTitle = conv.business_title || conv.subject || (language === 'fr' ? 'Annonce' : 'Listing');
                 const typeLabel = conv.business_type === 'acquisition'
                   ? (language === 'fr' ? 'Acquisition' : 'Acquisition')
                   : (language === 'fr' ? 'Cession' : 'Sale');
-                const statusTone = conv.contact_status === 'pending'
-                  ? 'bg-warning/10 text-warning'
-                  : 'bg-success/10 text-success';
+                const statusTone = 'bg-warning/10 text-warning';
                 
                 return (
                   <button
@@ -1033,38 +1184,71 @@ export default function Messages() {
                       isActive ? 'bg-primary/10' : 'hover:bg-muted/40'
                     }`}
                   >
-                    <div className="lg:hidden px-6 py-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                    <div className="lg:hidden px-4 sm:px-6 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
                           <DicebearAvatar email={otherParticipantId} name={otherLabel} size="md" />
-                          <div>
-                            <p className="font-semibold text-foreground">{otherLabel}</p>
-                            <p className="text-xs text-muted-foreground">{subjectPreview}</p>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground truncate">{requesterName}</p>
+                            {requesterCompany && (
+                              <p className="text-xs text-muted-foreground truncate">{requesterCompany}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground truncate">{subjectPreview}</p>
                           </div>
                         </div>
-                        {unread > 0 && (
-                          <Badge className="bg-primary text-white text-xs">{unread}</Badge>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-xs text-muted-foreground">
+                            {formatConversationDate(conv.last_message_date || conv.updated_at)}
+                          </span>
+                          {unread > 0 && (
+                            <Badge className="bg-primary text-white text-xs">{unread}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="truncate max-w-[60%]">{businessTitle}</span>
+                        {statusLabel && (
+                          <span className={`px-2 py-1 rounded-full text-[10px] ${statusTone}`}>
+                            {statusLabel}
+                          </span>
                         )}
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{formatConversationDate(conv.last_message_date || conv.updated_at)}</span>
-                        <span className="truncate">{businessTitle}</span>
+                      <div className="mt-3 flex items-center justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={archivingConversationId === conv.id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleArchiveConversation(conv);
+                          }}
+                        >
+                          {language === 'fr' ? 'Archiver' : 'Archive'}
+                        </Button>
                       </div>
                     </div>
 
-                    <div className="hidden lg:grid grid-cols-[110px_150px_180px_1fr_110px_80px_90px] gap-4 items-center px-6 py-4">
+                    <div className="hidden lg:grid grid-cols-[110px_160px_180px_1fr_110px_80px_90px_120px] gap-4 items-center px-6 py-4">
                       <span className="text-sm text-muted-foreground">
                         {formatConversationDate(conv.last_message_date || conv.updated_at)}
                       </span>
                       <div className="flex items-center gap-2">
                         <DicebearAvatar email={otherParticipantId} name={otherLabel} size="sm" />
-                        <span className="text-sm font-medium text-foreground truncate">{otherLabel}</span>
+                        <div className="min-w-0">
+                          <span className="text-sm font-medium text-foreground truncate block">{requesterName}</span>
+                          {requesterCompany && (
+                            <span className="text-xs text-muted-foreground truncate block">{requesterCompany}</span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-foreground truncate">{subjectPreview}</p>
-                        <span className={`text-xs px-2 py-1 rounded-full ${statusTone}`}>
-                          {statusLabel}
-                        </span>
+                        {statusLabel && (
+                          <span className={`text-xs px-2 py-1 rounded-full ${statusTone}`}>
+                            {statusLabel}
+                          </span>
+                        )}
                       </div>
                       <span className="text-sm text-muted-foreground truncate">{businessTitle}</span>
                       <Badge variant="secondary" className="text-xs w-fit">
@@ -1081,6 +1265,20 @@ export default function Messages() {
                         <span className={`text-xs px-2 py-1 rounded-full ${replied ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
                           {replied ? (language === 'fr' ? 'Oui' : 'Yes') : (language === 'fr' ? 'Non' : 'No')}
                         </span>
+                      </div>
+                      <div className="flex justify-center">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={archivingConversationId === conv.id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleArchiveConversation(conv);
+                          }}
+                        >
+                          {language === 'fr' ? 'Archiver' : 'Archive'}
+                        </Button>
                       </div>
                     </div>
                   </button>

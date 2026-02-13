@@ -13,9 +13,10 @@ export const getProfile = async (userId) => {
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) return null;
     return data;
   } catch (error) {
     console.error('Error fetching profile:', error);
@@ -73,7 +74,7 @@ const validateFile = (file) => {
  * @param {string} userId - User ID
  * @param {string} documentType - 'cv' or 'financing'
  * @param {File} file - File to upload
- * @returns {Promise<{url: string, name: string}>}
+ * @returns {Promise<{url: string, name: string, path: string}>}
  */
 export const uploadProfileDocument = async (userId, documentType, file) => {
   try {

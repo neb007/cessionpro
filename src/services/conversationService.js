@@ -6,6 +6,19 @@ import { supabase } from '@/api/supabaseClient';
  */
 
 export const conversationService = {
+  _normalizeUserIdArray(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (!value) return [];
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+    return [];
+  },
   // Get all conversations for current user
   async listConversations() {
     try {
@@ -18,7 +31,11 @@ export const conversationService = {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map((conversation) => ({
+        ...conversation,
+        archived_by: this._normalizeUserIdArray(conversation.archived_by),
+        blocked_by: this._normalizeUserIdArray(conversation.blocked_by)
+      }));
     } catch (error) {
       console.error('Error listing conversations:', error);
       throw error;
@@ -64,7 +81,11 @@ export const conversationService = {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        archived_by: this._normalizeUserIdArray(data.archived_by),
+        blocked_by: this._normalizeUserIdArray(data.blocked_by)
+      };
     } catch (error) {
       console.error('Error getting conversation:', error);
       throw error;

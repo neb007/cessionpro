@@ -13,6 +13,8 @@ create table if not exists public.conversations (
   last_message text,
   last_message_date timestamptz,
   unread_count jsonb default '{}'::jsonb,
+  archived_by jsonb default '[]'::jsonb,
+  blocked_by jsonb default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint unique_conversation_pair_business unique (participant_1_id, participant_2_id, business_id)
@@ -37,6 +39,8 @@ alter table public.messages add column if not exists content text;
 alter table public.messages add column if not exists read boolean default false;
 alter table public.messages add column if not exists created_at timestamptz not null default now();
 alter table public.messages add column if not exists updated_at timestamptz;
+alter table public.conversations add column if not exists archived_by jsonb default '[]'::jsonb;
+alter table public.conversations add column if not exists blocked_by jsonb default '[]'::jsonb;
 
 -- Indexes
 create index if not exists idx_conversations_updated_at on public.conversations (updated_at desc);
@@ -44,6 +48,8 @@ create index if not exists idx_conversations_participants on public.conversation
 create index if not exists idx_messages_conversation_id on public.messages (conversation_id);
 create index if not exists idx_messages_receiver_id on public.messages (receiver_id);
 create index if not exists idx_messages_created_at on public.messages (created_at desc);
+create index if not exists idx_conversations_archived_by on public.conversations using gin (archived_by);
+create index if not exists idx_conversations_blocked_by on public.conversations using gin (blocked_by);
 
 -- Enable Row Level Security
 alter table public.conversations enable row level security;
