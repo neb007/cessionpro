@@ -39,6 +39,8 @@ import FinancialChart from '@/components/Financial/FinancialChart';
 import BentoPhotoGallery from '@/components/BentoPhotoGallery';
 import { getBusinessImageList, getPrimaryImageUrl } from '@/utils/imageHelpers';
 import LogoCard from '@/components/ui/LogoCard';
+import { FRENCH_DEPARTMENTS } from '@/utils/frenchDepartmentsData';
+import { EUROPEAN_COUNTRIES } from '@/utils/europeanCountries';
 
 const sectorColors = {
   technology: 'bg-violet-100 text-violet-700',
@@ -51,6 +53,14 @@ const sectorColors = {
   transport: 'bg-cyan-100 text-cyan-700',
   agriculture: 'bg-lime-100 text-lime-700',
   other: 'bg-gray-100 text-gray-700',
+};
+
+const getLocationLabel = (value, language) => {
+  const department = FRENCH_DEPARTMENTS.find((dept) => dept.value === value);
+  if (department) return department.label;
+  const country = EUROPEAN_COUNTRIES.find((item) => item.value === value);
+  if (country) return country.label;
+  return value;
 };
 
 export default function BusinessDetails() {
@@ -68,6 +78,9 @@ export default function BusinessDetails() {
   const [messageSent, setMessageSent] = useState(false);
   const [viewCount, setViewCount] = useState(0);
   const [businessLogo, setBusinessLogo] = useState(null);
+  const [sellerFallbackLogo, setSellerFallbackLogo] = useState(null);
+  const shouldShowLogo = Boolean(businessLogo?.logo_url || sellerFallbackLogo);
+  const displayLogoUrl = businessLogo?.logo_url || sellerFallbackLogo;
 
   useEffect(() => {
     loadData();
@@ -84,18 +97,30 @@ export default function BusinessDetails() {
       console.log('Loading logo for business:', business.id);
       const { data, error } = await supabase
         .from('business_logos')
-        .select('logo_url, show_logo_in_listings')
+        .select('logo_url')
         .eq('business_id', business.id)
         .maybeSingle();
 
       if (error) {
         console.log('Logo not found or error:', error.message);
-        return;
       }
 
       if (data) {
         console.log('Logo found:', data);
         setBusinessLogo(data);
+        return;
+      }
+
+      if (business?.seller_id) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('logo_url, avatar_url')
+          .eq('id', business.seller_id)
+          .maybeSingle();
+
+        if (profileData) {
+          setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url || null);
+        }
       }
     } catch (error) {
       console.error('Error loading business logo:', error);
@@ -337,10 +362,12 @@ export default function BusinessDetails() {
                 )}
               </div>
               <div className="flex items-center gap-4 text-gray-500">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4" />
-                  {business.location}, {t(business.country)}
-                </div>
+                {!business.hide_location && (
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4" />
+                    {business.location}, {t(business.country)}
+                  </div>
+                )}
                 {business.year_founded && (
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
@@ -400,35 +427,37 @@ export default function BusinessDetails() {
               </CardContent>
             </Card>
 
-            {/* Details */}
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-6">
-                <h2 className="font-display text-xl font-semibold text-gray-900 mb-4">
-                  {language === 'fr' ? 'Détails' : 'Details'}
-                </h2>
-                <div className="grid sm:grid-cols-2 gap-6">
-                  {business.reason_for_sale && (
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">{t('reason_sale')}</p>
-                      <p className="font-medium text-gray-900">{t(business.reason_for_sale)}</p>
-                    </div>
-                  )}
-                  {business.assets_included?.length > 0 && (
-                    <div>
-                      <p className="text-sm text-gray-500 mb-2">{t('assets_included')}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {business.assets_included.map((asset, idx) => (
-                          <div key={idx} className="flex items-center gap-1 text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 500, fontSize: '16px' }}>
-                            <CheckCircle2 className="w-3 h-3 text-green-500" />
-                            <span>{asset}</span>
-                          </div>
-                        ))}
+            {/* Details - CESSION only */}
+            {business.type === 'cession' && (business.reason_for_sale || business.assets_included?.length > 0) && (
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-6">
+                  <h2 className="font-display text-xl font-semibold text-gray-900 mb-4">
+                    {language === 'fr' ? 'Détails' : 'Details'}
+                  </h2>
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {business.reason_for_sale && (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">{t('reason_sale')}</p>
+                        <p className="font-medium text-gray-900">{t(business.reason_for_sale)}</p>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    )}
+                    {business.assets_included?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-2">{t('assets_included')}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {business.assets_included.map((asset, idx) => (
+                            <div key={idx} className="flex items-center gap-1 text-gray-900" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 500, fontSize: '16px' }}>
+                              <CheckCircle2 className="w-3 h-3 text-green-500" />
+                              <span>{asset}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Financial History */}
             {business.financial_years?.length > 0 && (
@@ -627,10 +656,26 @@ export default function BusinessDetails() {
                           <div className="flex flex-wrap gap-2">
                             {business.buyer_locations.map((location, idx) => (
                               <Badge key={idx} className="bg-primary/10 text-primary border-0">
-                                {location}
+                                {getLocationLabel(location, language)}
                               </Badge>
                             ))}
                           </div>
+                        </div>
+                      )}
+                      {business.buyer_document_url && (
+                        <div>
+                          <p className="text-sm text-gray-500 mb-3">{language === 'fr' ? 'Document joint' : 'Attached Document'}</p>
+                          <a
+                            href={business.buyer_document_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-primary hover:underline"
+                          >
+                            <FileText className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                              {business.buyer_document_name || (language === 'fr' ? 'Voir le document' : 'View document')}
+                            </span>
+                          </a>
                         </div>
                       )}
                       {business.buyer_notes && (
@@ -669,33 +714,32 @@ export default function BusinessDetails() {
                       : (language === 'fr' ? 'Contacter l\'acheteur' : 'Contact buyer')}
                   </Button>
                   
-                  <div className="flex gap-3">
+                  <div className="flex justify-center">
                     <Button
                       variant="outline"
                       onClick={toggleFavorite}
-                      className={`flex-1 py-6 ${isFavorite ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100' : ''}`}
+                      className={`w-full py-6 ${isFavorite ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100' : ''}`}
                     >
                       <Heart className={`w-5 h-5 mr-2 ${isFavorite ? 'fill-current' : ''}`} />
                       {isFavorite ? t('remove_favorite') : t('add_favorite')}
-                    </Button>
-                    <Button variant="outline" className="py-6">
-                      <Share2 className="w-5 h-5" />
                     </Button>
                   </div>
                 </div>
 
                 {/* Vendor Info Section */}
-                {businessLogo?.show_logo_in_listings && businessLogo?.logo_url && (
+                {shouldShowLogo && (
                   <>
-                    <div className="border-t border-gray-200 my-6" />
-                    <div className="flex items-center gap-3">
+                    <div className="border-t border-gray-200 my-3" />
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-px w-full bg-gray-100" />
                       <LogoCard
-                        logoUrl={businessLogo.logo_url}
+                        logoUrl={displayLogoUrl}
                         context="detail"
                         altText="Vendor logo"
                         rounded
                         shadow
                       />
+                      <div className="h-px w-full bg-gray-100" />
                     </div>
                   </>
                 )}

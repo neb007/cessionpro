@@ -25,7 +25,6 @@ export const mockBusinesses = [
     seller_email: "marie@restaurant.fr",
     created_date: "2024-01-15T10:00:00Z",
     views_count: 245,
-    show_logo_in_listings: false,
     logo_url: null
   },
   {
@@ -51,7 +50,6 @@ export const mockBusinesses = [
     seller_email: "contact@ecommerce.fr",
     created_date: "2024-01-20T14:00:00Z",
     views_count: 189,
-    show_logo_in_listings: false,
     logo_url: null
   },
   {
@@ -99,7 +97,6 @@ export const mockBusinesses = [
     seller_email: "boulangerie@artisan.fr",
     created_date: "2024-01-28T11:00:00Z",
     views_count: 203,
-    show_logo_in_listings: false,
     logo_url: null
   },
   {
@@ -174,7 +171,6 @@ export const mockBusinesses = [
     seller_email: "agnes.real@immobilier.fr",
     created_date: "2024-02-02T09:00:00Z",
     views_count: 178,
-    show_logo_in_listings: false,
     logo_url: null
   },
   {
@@ -250,7 +246,6 @@ export const mockBusinesses = [
     seller_email: "fitness@gym.fr",
     created_date: "2024-02-05T10:00:00Z",
     views_count: 145,
-    show_logo_in_listings: false,
     logo_url: null
   },
   {

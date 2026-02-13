@@ -41,6 +41,7 @@ export default function CreateBusiness() {
     year_founded: '',
     reason_for_sale: '',
     confidential: false,
+    hide_location: false,
     assets_included: [],
     images: [],
     status: 'active',
@@ -67,7 +68,9 @@ export default function CreateBusiness() {
     buyer_investment_available: '',
     buyer_profile_type: '',
     buyer_notes: '',
-    business_type_sought: ''
+    business_type_sought: '',
+    buyer_document_url: '',
+    buyer_document_name: ''
   });
   
   const [announcementType, setAnnouncementType] = useState('sale');
@@ -93,6 +96,11 @@ export default function CreateBusiness() {
           if (business.seller_id === user.id) {
             setEditingId(editId);
             setAnnouncementType(business.type === 'acquisition' ? 'search' : 'sale');
+            const normalizedImages = normalizeImageArray(business.images || []).map((url) => ({
+              url,
+              isDefault: false
+            }));
+
             setFormData({
               // Seller fields
               title: business.title || '',
@@ -109,8 +117,9 @@ export default function CreateBusiness() {
               year_founded: business.year_founded?.toString() || '',
               reason_for_sale: business.reason_for_sale || '',
               confidential: business.confidential || false,
+              hide_location: business.hide_location || false,
               assets_included: business.assets_included || [],
-              images: business.images || [],
+              images: normalizedImages,
               status: business.status || 'active',
               legal_structure: business.legal_structure || '',
               registration_number: business.registration_number || '',
@@ -120,7 +129,10 @@ export default function CreateBusiness() {
               market_position: business.market_position || '',
               competitive_advantages: business.competitive_advantages || '',
               growth_opportunities: business.growth_opportunities || '',
-              customer_base: business.customer_base || '',
+              buyer_image: normalizeImageArray(business.buyer_image || []).map((url) => ({
+                url,
+                isDefault: false
+              })),
               business_type: business.business_type || '',
               reference_number: business.reference_number || '',
               // Buyer fields
@@ -135,7 +147,9 @@ export default function CreateBusiness() {
               buyer_investment_available: business.buyer_investment_available?.toString() || '',
               buyer_profile_type: business.buyer_profile_type || '',
               buyer_notes: business.buyer_notes || '',
-              business_type_sought: business.business_type_sought || ''
+              business_type_sought: business.business_type_sought || '',
+              buyer_document_url: business.buyer_document_url || '',
+              buyer_document_name: business.buyer_document_name || ''
             });
           } else {
             console.error('User is not the owner of this business');
@@ -170,18 +184,16 @@ export default function CreateBusiness() {
     try {
       // Fetch user profile to get logo data
       let userLogo = null;
-      let userShowLogo = false;
       if (user?.id) {
         try {
           const { data: profileData } = await supabase
-            .from('profiles')
-            .select('logo_url, show_logo_in_listings')
+          .from('profiles')
+          .select('logo_url, avatar_url')
             .eq('id', user.id)
             .single();
           
           if (profileData) {
-            userLogo = profileData.logo_url;
-            userShowLogo = profileData.show_logo_in_listings || false;
+            userLogo = profileData.logo_url || profileData.avatar_url;
           }
         } catch (error) {
           console.log('No profile logo found:', error);
@@ -207,6 +219,7 @@ export default function CreateBusiness() {
         year_founded: formData.year_founded ? parseInt(formData.year_founded) : null,
         reason_for_sale: formData.reason_for_sale,
         confidential: formData.confidential,
+        hide_location: formData.hide_location,
         assets_included: formData.assets_included,
         images: normalizeImageArray(formData.images),
         legal_structure: formData.legal_structure,
@@ -242,6 +255,8 @@ export default function CreateBusiness() {
             buyer_profile_type: formData.buyer_profile_type || null,
             buyer_notes: formData.buyer_notes || '',
             business_type_sought: formData.business_type_sought || null,
+            buyer_document_url: formData.buyer_document_url || null,
+            buyer_document_name: formData.buyer_document_name || null,
           }
         ),
       };
@@ -263,8 +278,7 @@ export default function CreateBusiness() {
             await supabase.from('business_logos').insert({
               business_id: result.id,
               seller_id: user.id,
-              logo_url: userLogo,
-              show_logo_in_listings: userShowLogo
+              logo_url: userLogo
             });
             console.log('Logo saved to business_logos table');
           } catch (logoError) {

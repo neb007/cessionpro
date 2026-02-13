@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { getProfile, updateProfile, updateBuyerProfile, updateSellerProfile } from '@/services/profileService';
@@ -61,6 +62,7 @@ export default function Profile() {
   const [processingLogo, setProcessingLogo] = useState(false);
   
   const [formData, setFormData] = useState({
+    email: '',
     first_name: '',
     last_name: '',
     company_name: '',
@@ -68,13 +70,13 @@ export default function Profile() {
     bio: '',
     location: '',
     avatar_url: '',
+    logo_url: '',
     sectors_interest: [],
     budget_min: '',
     budget_max: '',
     experience: '',
     linkedin_url: '',
     message_vendeurs: '',
-    show_logo_in_listings: false,
     visible_in_directory: true,
     preferred_language: 'fr',
     notification_emails_enabled: true,
@@ -109,6 +111,7 @@ export default function Profile() {
       }
 
       setFormData({
+        email: profile.email || user?.email || '',
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
         company_name: profile.company_name || '',
@@ -116,13 +119,13 @@ export default function Profile() {
         bio: profile.aide_vendeur_description || profile.bio || '',
         location: profile.location || '',
         avatar_url: profile.avatar_url || '',
+        logo_url: profile.logo_url || profile.avatar_url || '',
         sectors_interest: Array.isArray(profile.sectors) ? profile.sectors : [],
         budget_min: profile.budget_min?.toString() || '',
         budget_max: profile.budget_max?.toString() || '',
         experience: profile.experience_professionnelle || profile.experience || '',
         linkedin_url: profile.linkedin_url || '',
         message_vendeurs: profile.message_vendeurs || '',
-        show_logo_in_listings: profile.show_logo_in_listings || false,
         visible_in_directory: profile.visible_in_directory !== false,
         preferred_language: profile.preferred_language || 'fr',
         notification_emails_enabled: profile.notification_emails_enabled !== false,
@@ -136,6 +139,7 @@ export default function Profile() {
       try {
         if (user) {
           setFormData({
+            email: user.email || '',
             first_name: user.first_name || '',
             last_name: user.last_name || '',
             company_name: user.company_name || '',
@@ -143,13 +147,13 @@ export default function Profile() {
             bio: user.bio || '',
             location: user.location || '',
             avatar_url: user.avatar_url || '',
+            logo_url: user.avatar_url || '',
             sectors_interest: user.sectors_interest || [],
             budget_min: user.budget_min?.toString() || '',
             budget_max: user.budget_max?.toString() || '',
             experience: user.experience || '',
             linkedin_url: user.linkedin_url || '',
             message_vendeurs: user.message_vendeurs || '',
-            show_logo_in_listings: user.show_logo_in_listings || false,
             visible_in_directory: user.visible_in_directory !== false,
             preferred_language: user.preferred_language || 'fr',
             notification_emails_enabled: user.notification_emails_enabled !== false,
@@ -244,6 +248,7 @@ export default function Profile() {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       
       handleChange('avatar_url', file_url);
+      handleChange('logo_url', file_url);
       
       // Clean up
       revokePreviewUrl(logoPreview.url);
@@ -261,12 +266,33 @@ export default function Profile() {
     }
   };
 
+  const handleRemoveLogo = async () => {
+    setProcessingLogo(true);
+    try {
+      handleChange('avatar_url', '');
+      handleChange('logo_url', '');
+      await updateProfile(user.id, { avatar_url: null, logo_url: null });
+      await base44.auth.updateMe({ avatar_url: null });
+      await supabase
+        .from('business_logos')
+        .update({ logo_url: null })
+        .eq('seller_id', user.id);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Error removing logo:', error);
+      alert(language === 'fr' ? 'Erreur lors de la suppression du logo' : 'Error removing logo');
+    } finally {
+      setProcessingLogo(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setSaving(true);
     try {
-      // First, save the profile with all fields including show_logo_in_listings
-      // Only include fields that exist in the profiles table
+      // First, save the profile with all fields
       const profileUpdateData = {
+        email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
         company_name: formData.company_name,
@@ -274,8 +300,8 @@ export default function Profile() {
         bio: formData.bio,
         location: formData.location,
         avatar_url: formData.avatar_url,
+        logo_url: formData.logo_url || formData.avatar_url || null,
         sectors: formData.sectors_interest,
-        show_logo_in_listings: formData.show_logo_in_listings,
         budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
         budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
         experience_professionnelle: formData.experience,
@@ -285,11 +311,12 @@ export default function Profile() {
         is_seller: formData.is_seller
       };
 
-      // Update via Supabase profileService (handles show_logo_in_listings)
+      // Update via Supabase profileService
       await updateProfile(user.id, profileUpdateData);
       console.log('Updating profile: ', profileUpdateData);
 
       const data = {
+        email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone: formData.phone,
@@ -329,6 +356,7 @@ export default function Profile() {
 
       // Also save via base44 for compatibility
       const base44Data = {
+        email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
         company_name: formData.company_name,
@@ -340,7 +368,6 @@ export default function Profile() {
         budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
         budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
         experience: formData.experience,
-        show_logo_in_listings: formData.show_logo_in_listings,
         visible_in_directory: formData.visible_in_directory,
         preferred_language: formData.preferred_language,
         notification_emails_enabled: formData.notification_emails_enabled,
@@ -385,7 +412,7 @@ export default function Profile() {
                 <div className="relative">
                   {formData.avatar_url ? (
                     <img 
-                      src={formData.avatar_url}
+                      src={formData.logo_url || formData.avatar_url}
                       alt="Logo"
                       className="w-24 h-24 rounded-xl object-cover shadow-md bg-gray-100"
                     />
@@ -393,6 +420,18 @@ export default function Profile() {
                     <div className="w-24 h-24 rounded-xl bg-gray-200 flex items-center justify-center shadow-md">
                       <Building2 className="w-10 h-10 text-gray-400" />
                     </div>
+                  )}
+                  {formData.avatar_url && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      disabled={processingLogo}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-gray-500 hover:text-gray-700"
+                      aria-label={language === 'fr' ? 'Supprimer le logo' : 'Remove logo'}
+                      title={language === 'fr' ? 'Supprimer le logo' : 'Remove logo'}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   )}
                   <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
                     <Camera className="w-4 h-4 text-gray-600" />
@@ -441,15 +480,6 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-800 text-sm">{language === 'fr' ? 'Afficher le logo dans les annonces' : 'Display logo in listings'}</p>
-                </div>
-                <Switch
-                  checked={formData.show_logo_in_listings || false}
-                  onCheckedChange={(v) => handleChange('show_logo_in_listings', v)}
-                />
-              </div>
             </CardContent>
           </Card>
 
@@ -481,6 +511,17 @@ export default function Profile() {
                     className="mt-2"
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  placeholder="vous@exemple.com"
+                  className="mt-2"
+                />
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">

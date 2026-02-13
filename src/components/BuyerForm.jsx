@@ -11,9 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Save, Send, Loader2, Search, X } from 'lucide-react';
+import { Save, Send, Loader2, Search, X, Upload, FileText } from 'lucide-react';
 import ImageGallery from '@/components/ImageGallery';
 import { getDefaultImageForSector } from '@/constants/defaultImages';
+import { base44 } from '@/api/base44Client';
 
 const SECTORS = [
   'technology',
@@ -179,6 +180,7 @@ export default function BuyerForm({
 }) {
   const [locationInput, setLocationInput] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
 
   const handleChange = (field, value) => {
     onFormChange({ ...formData, [field]: value });
@@ -194,6 +196,28 @@ export default function BuyerForm({
 
   const removeLocation = (value) => {
     handleChange('buyer_locations', formData.buyer_locations.filter(loc => loc !== value));
+  };
+
+  const handleDocumentUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingDocument(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      handleChange('buyer_document_url', file_url);
+      handleChange('buyer_document_name', file.name);
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      alert(language === 'fr' ? 'Erreur lors du téléchargement' : 'Error uploading document');
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  const removeDocument = () => {
+    handleChange('buyer_document_url', '');
+    handleChange('buyer_document_name', '');
   };
 
   // Filter locations based on input
@@ -520,6 +544,62 @@ export default function BuyerForm({
               userEmail={user?.email}
               language={language}
             />
+          </CardContent>
+        </Card>
+
+        {/* Document Upload */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-display">
+              {language === 'fr' ? 'Document (CV ou autre)' : 'Document (CV or other)'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {formData.buyer_document_url ? (
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
+                <a
+                  href={formData.buyer_document_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-primary hover:underline"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    {formData.buyer_document_name || (language === 'fr' ? 'Document joint' : 'Attached document')}
+                  </span>
+                </a>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={removeDocument}
+                  className="text-red-500 hover:text-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 text-primary hover:text-primary/80 cursor-pointer">
+                {uploadingDocument ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                <span>{language === 'fr' ? 'Uploader un document' : 'Upload a document'}</span>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleDocumentUpload}
+                  disabled={uploadingDocument}
+                  className="hidden"
+                />
+              </label>
+            )}
+            <p className="text-xs text-gray-500">
+              {language === 'fr'
+                ? 'Formats acceptés : PDF, DOC, DOCX.'
+                : 'Accepted formats: PDF, DOC, DOCX.'}
+            </p>
           </CardContent>
         </Card>
 

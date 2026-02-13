@@ -198,28 +198,6 @@ export default function ImageGallery({
         )}
       </div>
 
-      {/* Info message */}
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-        {language === 'fr' ? (
-          <>
-            <p className="font-medium mb-1">💡 Astuce</p>
-            <p>
-              {userPhotosCount === 0
-                ? "Commencez avec l'image par défaut. Ajoutez vos photos pour plus d'impact!"
-                : `${photosRemaining} photo(s) restante(s) disponible(s) avec votre pack`}
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="font-medium mb-1">💡 Tip</p>
-            <p>
-              {userPhotosCount === 0
-                ? 'Start with the default image. Add your photos for more impact!'
-                : `${photosRemaining} photo(s) remaining available with your plan`}
-            </p>
-          </>
-        )}
-      </div>
     </div>
   );
 }

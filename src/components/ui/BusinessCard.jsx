@@ -38,6 +38,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
   const [messageSent, setMessageSent] = useState(false);
   const [user, setUser] = useState(null);
   const [sellerProfile, setSellerProfile] = useState(null);
+  const [sellerFallbackLogo, setSellerFallbackLogo] = useState(null);
 
   useEffect(() => {
     loadBusinessLogo();
@@ -48,12 +49,24 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
       if (business?.id) {
         const { data, error } = await supabase
           .from('business_logos')
-          .select('logo_url, show_logo_in_listings')
+          .select('logo_url')
           .eq('business_id', business.id)
           .maybeSingle();
 
         if (data && !error) {
           setSellerProfile(data);
+          return;
+        }
+      }
+      if (business?.seller_id) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('logo_url, avatar_url')
+          .eq('id', business.seller_id)
+          .maybeSingle();
+
+        if (profileData) {
+          setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url || null);
         }
       }
     } catch (error) {
@@ -77,6 +90,8 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
     ? (language === 'fr' ? 'Cession' : 'Sale')
     : (language === 'fr' ? 'Acquisition' : 'Acquisition');
   const growthPercentage = calculateGrowthPercentage(business.financial_years);
+  const shouldShowLogo = Boolean(sellerProfile?.logo_url || sellerFallbackLogo);
+  const displayLogoUrl = sellerProfile?.logo_url || sellerFallbackLogo;
 
   return (
     <motion.div
@@ -153,22 +168,15 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
             </Link>
           </div>
 
-          {/* Localisation + Logo */}
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500 }} className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
-              <MapPin className="w-4 h-4 mr-1.5 text-gray-400 flex-shrink-0" />
-              <span className="truncate">{business.location}</span>
+          {/* Localisation */}
+          {!business.hide_location && (
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500 }} className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
+                <MapPin className="w-4 h-4 mr-1.5 text-gray-400 flex-shrink-0" />
+                <span className="truncate">{business.location}</span>
+              </div>
             </div>
-            {sellerProfile?.show_logo_in_listings && sellerProfile?.logo_url && (
-              <LogoCard
-                logoUrl={sellerProfile.logo_url}
-                context="card"
-                altText="Seller logo"
-                rounded
-                shadow
-              />
-            )}
-          </div>
+          )}
 
           {/* Détails financiers - CESSION */}
           {business.type === 'cession' && (
@@ -209,6 +217,19 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
                     </Badge>
                   )}
                 </div>
+                {shouldShowLogo && (
+                  <div className="flex flex-col items-center gap-2 pt-2">
+                    <div className="h-px w-full bg-gray-100" />
+                    <LogoCard
+                      logoUrl={displayLogoUrl}
+                      context="card"
+                      altText="Seller logo"
+                      rounded
+                      shadow
+                    />
+                    <div className="h-px w-full bg-gray-100" />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -244,6 +265,19 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
                     {formatPrice(business.buyer_investment_available)}
                   </p>
                 </div>
+                {shouldShowLogo && (
+                  <div className="flex flex-col items-center gap-2 pt-2">
+                    <div className="h-px w-full bg-gray-100" />
+                    <LogoCard
+                      logoUrl={displayLogoUrl}
+                      context="card"
+                      altText="Seller logo"
+                      rounded
+                      shadow
+                    />
+                    <div className="h-px w-full bg-gray-100" />
+                  </div>
+                )}
               </div>
             </div>
           )}

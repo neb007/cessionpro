@@ -373,7 +373,7 @@ export default function MyListings() {
                         </div>
 
                         {/* Actions - Option B: All buttons visible */}
-                        <div className="mt-auto grid grid-cols-4 gap-2">
+                        <div className="mt-auto grid grid-cols-5 gap-2">
                           <Button 
                             size="sm" 
                             className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -401,6 +401,16 @@ export default function MyListings() {
                             title={language === 'fr' ? 'Dupliquer' : 'Duplicate'}
                           >
                             <Copy className="w-4 h-4" />
+                          </Button>
+
+                          <Button 
+                            size="sm" 
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => handleStatusChange(listing.id, 'sold')}
+                            disabled={updating[listing.id] || listing.status === 'sold'}
+                            title={language === 'fr' ? 'Marquer comme vendu' : 'Mark as sold'}
+                          >
+                            <CheckCircle className="w-4 h-4" />
                           </Button>
 
                           <Button 

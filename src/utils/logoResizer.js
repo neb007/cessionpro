@@ -14,8 +14,8 @@
  */
 export async function resizeLogo(file, options = {}) {
   const {
-    maxWidth = 400,
-    maxHeight = 400,
+    maxWidth = 300,
+    maxHeight = 120,
     quality = 0.9,
   } = options;
 
@@ -153,9 +153,9 @@ export function revokePreviewUrl(url) {
 export function getLogoDimensions(context = 'card') {
   const dimensions = {
     card: {
-      width: 48,
+      width: 96,
       height: 48,
-      className: 'w-12 h-12',
+      className: 'w-24 h-12',
     },
     listing: {
       width: 48,
@@ -163,9 +163,9 @@ export function getLogoDimensions(context = 'card') {
       className: 'w-12 h-12',
     },
     detail: {
-      width: 64,
-      height: 64,
-      className: 'w-16 h-16',
+      width: 96,
+      height: 48,
+      className: 'w-24 h-12',
     },
     profile: {
       width: 96,
