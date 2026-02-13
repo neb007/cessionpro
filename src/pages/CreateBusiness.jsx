@@ -232,6 +232,7 @@ export default function CreateBusiness() {
         growth_opportunities: formData.growth_opportunities,
         customer_base: formData.customer_base,
         seller_id: user?.id,  // Use user ID instead of email
+        seller_email: user?.email || null,
         status
       };
 

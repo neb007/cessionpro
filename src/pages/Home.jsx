@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { businessService } from '@/services/businessService';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import BusinessCard from '@/components/ui/BusinessCard';
 import { Button } from '@/components/ui/button';
@@ -34,14 +34,8 @@ export default function Home() {
 
   const loadData = async () => {
     try {
-      const businesses = await base44.entities.Business.filter(
-        { status: 'active' },
-        '-created_date',
-        6
-      );
-      setFeaturedBusinesses(businesses);
-      
-      const allBusinesses = await base44.entities.Business.filter({ status: 'active' });
+      const allBusinesses = await businessService.listBusinesses({ status: 'active' }, 'created_at');
+      setFeaturedBusinesses((allBusinesses || []).slice(0, 6));
       setStats({ businesses: allBusinesses.length, users: 150 });
     } catch (e) {
       console.error(e);

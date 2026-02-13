@@ -268,10 +268,6 @@ export default function MyListings() {
               <p className="text-gray-500 mb-6">
                 {language === 'fr' ? 'Publiez votre première annonce' : 'Publish your first listing'}
               </p>
-              <Button onClick={() => navigate(createPageUrl('CreateBusiness'))}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t('create_listing')}
-              </Button>
             </CardContent>
           </Card>
         ) : (

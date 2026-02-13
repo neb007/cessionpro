@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useSidebar } from '@/lib/SidebarContext';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import SidebarMenuItem from './SidebarMenuItem';
 import { motion } from 'framer-motion';
 import {
@@ -35,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/AuthContext';
+import { conversationService } from '@/services/conversationService';
 
 export default function Sidebar({ user }) {
   const { language, changeLanguage } = useLanguage();
@@ -63,23 +64,31 @@ export default function Sidebar({ user }) {
 
   // Load unread message count with real-time updates
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     const fetchUnreadCount = async () => {
       try {
-        // Get all conversations
-        const conversations = await base44.entities.Conversation.list('updated_at');
-        const myConvs = conversations.filter(c => c.participant_emails?.includes(user.email));
+        const { data: conversations, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .or(`participant_1_id.eq.${user.id},participant_2_id.eq.${user.id}`)
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        const myConvs = conversations || [];
         
         // Calculate total unread
         const total = myConvs.reduce((sum, conv) => {
-          const unread = conv.unread_count?.[user.email] || 0;
+          const unread = conv.unread_count?.[user.id] || 0;
           return sum + unread;
         }, 0);
         
         setUnreadCount(total);
         // Store in localStorage for persistence
-        localStorage.setItem(`unread_messages_${user.email}`, total.toString());
+        localStorage.setItem(`unread_messages_${user.id}`, total.toString());
       } catch (error) {
         console.error('Error calculating unread count:', error);
       }
@@ -88,17 +97,17 @@ export default function Sidebar({ user }) {
     // Initial load
     fetchUnreadCount();
 
-    // Poll every 3 seconds for real-time updates
-    const interval = setInterval(fetchUnreadCount, 3000);
-
-    // Also update on storage change events
-    window.addEventListener('storage', fetchUnreadCount);
+    const realtimeSubscription = conversationService.subscribeToUserConversations(
+      user.id,
+      () => fetchUnreadCount()
+    );
     
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', fetchUnreadCount);
+      if (realtimeSubscription) {
+        supabase.removeChannel(realtimeSubscription);
+      }
     };
-  }, [user?.email]);
+  }, [user?.id]);
 
   // Navigation items - EXPLORER section
   const explorerItems = [

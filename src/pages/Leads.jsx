@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,7 +58,12 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const userData = await base44.auth.me();
+      const { data: authData } = await supabase.auth.getUser();
+      const userData = authData?.user;
+      if (!userData) {
+        window.location.href = '/login';
+        return;
+      }
       setUser(userData);
 
       // Get my businesses
@@ -74,7 +80,7 @@ export default function Leads() {
       setLeads(myLeads);
 
     } catch (e) {
-      base44.auth.redirectToLogin();
+      window.location.href = '/login';
     }
     setLoading(false);
   };

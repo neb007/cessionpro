@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { recordPageView, getUniqueViewCount } from '@/services/pageViewService';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -66,6 +67,7 @@ const getLocationLabel = (value, language) => {
 export default function BusinessDetails() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +93,12 @@ export default function BusinessDetails() {
       loadBusinessLogo();
     }
   }, [business?.id]);
+
+  useEffect(() => {
+    if (authUser) {
+      setUser(authUser);
+    }
+  }, [authUser]);
 
   const loadBusinessLogo = async () => {
     try {
@@ -151,9 +159,12 @@ export default function BusinessDetails() {
       setViewCount(uniqueViews);
 
       try {
-        const userData = await base44.auth.me();
+        const { data: authData } = await supabase.auth.getUser();
+        const userData = authUser || authData?.user;
+        if (!userData) return;
+
         setUser(userData);
-        
+
         const favs = await base44.entities.Favorite.filter({ 
           user_id: userData.id,
           business_id: id 
@@ -170,7 +181,7 @@ export default function BusinessDetails() {
 
   const toggleFavorite = async () => {
     if (!user) {
-      base44.auth.redirectToLogin();
+      window.location.href = '/login';
       return;
     }
 
@@ -197,21 +208,33 @@ export default function BusinessDetails() {
   };
 
   const handleContact = async () => {
-    if (!user) {
-      base44.auth.redirectToLogin();
+    const currentUser = authUser || user;
+    if (!currentUser) {
+      window.location.href = '/login';
       return;
+    }
+    if (!user) {
+      setUser(currentUser);
     }
     setShowContactModal(true);
   };
 
   const sendMessage = async () => {
     if (!message.trim()) return;
+    const currentUser = authUser || user;
+    if (!currentUser) {
+      window.location.href = '/login';
+      return;
+    }
+    if (!user) {
+      setUser(currentUser);
+    }
     setSending(true);
     try {
       await sendBusinessMessage({
         business,
-        buyerEmail: user.email,
-        buyerName: user.full_name,
+        buyerEmail: currentUser.email,
+        buyerName: currentUser.user_metadata?.full_name || currentUser.email,
         message,
       });
 

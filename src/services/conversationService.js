@@ -25,6 +25,35 @@ export const conversationService = {
     }
   },
 
+  // Subscribe to all conversations for a user
+  subscribeToUserConversations(userId, callback) {
+    const subscription = supabase
+      .channel(`conversations:user:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+          filter: `participant_1_id=eq.${userId}`
+        },
+        (payload) => callback(payload)
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+          filter: `participant_2_id=eq.${userId}`
+        },
+        (payload) => callback(payload)
+      )
+      .subscribe();
+
+    return subscription;
+  },
+
   // Get single conversation by ID
   async getConversationById(id) {
     try {

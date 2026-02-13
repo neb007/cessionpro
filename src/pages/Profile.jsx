@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -272,7 +271,12 @@ export default function Profile() {
       handleChange('avatar_url', '');
       handleChange('logo_url', '');
       await updateProfile(user.id, { avatar_url: null, logo_url: null });
-      await base44.auth.updateMe({ avatar_url: null });
+      await supabase.auth.updateUser({
+        data: {
+          avatar_url: null,
+          logo_url: null
+        }
+      });
       await supabase
         .from('business_logos')
         .update({ logo_url: null })
@@ -354,28 +358,20 @@ export default function Profile() {
         });
       }
 
-      // Also save via base44 for compatibility
-      const base44Data = {
-        email: formData.email,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        company_name: formData.company_name,
-        phone: formData.phone,
-        bio: formData.bio,
-        location: formData.location,
-        avatar_url: formData.avatar_url,
-        sectors_interest: formData.sectors_interest,
-        budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
-        budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
-        experience: formData.experience,
-        visible_in_directory: formData.visible_in_directory,
-        preferred_language: formData.preferred_language,
-        notification_emails_enabled: formData.notification_emails_enabled,
-        user_type: formData.user_type,
-        role: formData.user_type
-      };
-
-      await base44.auth.updateMe(base44Data);
+      await supabase.auth.updateUser({
+        data: {
+          full_name: `${formData.first_name} ${formData.last_name}`.trim(),
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          company_name: formData.company_name,
+          phone: formData.phone,
+          profile_type: formData.user_type,
+          transaction_size: formData.budget_max,
+          sectors: formData.sectors_interest,
+          avatar_url: formData.avatar_url,
+          logo_url: formData.logo_url || formData.avatar_url || null
+        }
+      });
       
       setSaved(true);
       console.log('Profile saved successfully');

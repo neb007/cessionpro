@@ -7,16 +7,19 @@ import { supabase } from '@/api/supabaseClient';
 
 export const messageService = {
   // Get all messages for a conversation
-  async listMessages(conversationId) {
+  async listMessages(conversationId, options = {}) {
     try {
+      const { limit = 50, before } = options;
       const { data, error } = await supabase
         .from('messages')
-        .select('*, sender:sender_id(*)')
+        .select('*')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false })
+        .limit(limit)
+        .lt('created_at', before || new Date().toISOString());
 
       if (error) throw error;
-      return data || [];
+      return (data || []).reverse();
     } catch (error) {
       console.error('Error listing messages:', error);
       throw error;
@@ -28,7 +31,7 @@ export const messageService = {
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('*, sender:sender_id(*)')
+        .select('*')
         .eq('id', id)
         .single();
 
@@ -123,6 +126,26 @@ export const messageService = {
         'postgres_changes',
         {
           event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => callback(payload.new)
+      )
+      .subscribe();
+
+    return subscription;
+  }
+  ,
+
+  // Subscribe to message updates (read receipts, edits)
+  subscribeToMessageUpdates(conversationId, callback) {
+    const subscription = supabase
+      .channel(`messages:update:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`

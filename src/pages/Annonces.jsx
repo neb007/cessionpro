@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { businessService } from '@/services/businessService';
 import { mockBusinesses } from '@/components/data/mockData';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -200,9 +200,9 @@ export default function Businesses() {
     try {
       console.log('Loading active businesses...');
       // Load real data from database
-      const businesses = await base44.entities.Business.filter(
-        { status: 'active' }
-      );
+      const businesses = await businessService.filterBusinesses({
+        status: 'active'
+      }, 'created_at');
       console.log('Loaded businesses:', businesses);
       setBusinesses([...(businesses || []), ...mockBusinesses]);
     } catch (e) {
@@ -215,7 +215,7 @@ export default function Businesses() {
 
   const toggleFavorite = (businessId) => {
     if (!isAuthenticated) {
-      base44.auth.redirectToLogin();
+      window.location.href = '/login';
       return;
     }
 
@@ -270,8 +270,8 @@ export default function Businesses() {
   const sortedBusinesses = [...filteredBusinesses].sort((a, b) => {
     switch (sortBy) {
       case '-created_date': {
-        const dateA = new Date(b.created_at || b.created_date || 0).getTime();
-        const dateB = new Date(a.created_at || a.created_date || 0).getTime();
+      const dateA = new Date(b.created_at || 0).getTime();
+      const dateB = new Date(a.created_at || 0).getTime();
         return dateA - dateB;
       }
       case 'price_asc':

@@ -1,4 +1,3 @@
-import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
 
 /**
@@ -52,8 +51,20 @@ export const uploadBusinessImage = async (file, businessId, userEmail, isAdditio
       }
     }
 
-    // Upload vers Supabase Storage
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const fileName = `${Date.now()}_${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('Cession')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('Cession')
+      .getPublicUrl(uploadData.path);
+
+    const file_url = publicUrlData?.publicUrl;
 
     // Deduct photo credit if it's additional
     if (isAdditionalPhoto) {
@@ -148,9 +159,16 @@ export const getBusinessImages = async (businessId) => {
  */
 export const deleteBusinessImage = async (imageUrl) => {
   try {
-    // Optionnel: Supprimer de Supabase Storage
-    // const path = imageUrl.split('/').pop();
-    // await base44.integrations.Core.DeleteFile({ path });
+    if (!imageUrl) return true;
+
+    const marker = '/Cession/';
+    const index = imageUrl.indexOf(marker);
+    if (index === -1) return true;
+    const path = imageUrl.substring(index + marker.length);
+
+    await supabase.storage
+      .from('Cession')
+      .remove([path]);
     return true;
   } catch (error) {
     console.error('Error deleting image:', error);

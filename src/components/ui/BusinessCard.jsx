@@ -9,8 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 import { calculateGrowthPercentage } from '@/utils/growthCalculator';
@@ -32,6 +32,7 @@ const sectorColors = {
 
 export default function BusinessCard({ business, isFavorite, onToggleFavorite }) {
   const { t, language } = useLanguage();
+  const { user: authUser } = useAuth();
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -43,6 +44,12 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
   useEffect(() => {
     loadBusinessLogo();
   }, [business?.id]);
+
+  useEffect(() => {
+    if (authUser) {
+      setUser(authUser);
+    }
+  }, [authUser]);
 
   const loadBusinessLogo = async () => {
     try {
@@ -126,11 +133,16 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
             onClick={async (e) => {
               e.preventDefault();
               try {
-                const currentUser = user || await base44.auth.me();
+                const { data: authData } = await supabase.auth.getUser();
+                const currentUser = authUser || user || authData?.user;
+                if (!currentUser) {
+                  window.location.href = '/login';
+                  return;
+                }
                 setUser(currentUser);
                 setShowMessageModal(true);
               } catch (error) {
-                base44.auth.redirectToLogin();
+                console.error('Failed to open message modal:', error);
               }
             }}
             className="absolute bottom-3 left-3 p-2 rounded-full bg-black/50 text-white hover:bg-primary transition-colors z-50"
@@ -346,9 +358,10 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
                 onClick={async () => {
                   if (!message.trim()) return;
                   try {
-                    const currentUser = user || await base44.auth.me();
+                    const { data: authData } = await supabase.auth.getUser();
+                    const currentUser = authUser || user || authData?.user;
                     if (!currentUser) {
-                      base44.auth.redirectToLogin();
+                      window.location.href = '/login';
                       return;
                     }
                     setUser(currentUser);
@@ -356,7 +369,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
                     await sendBusinessMessage({
                       business,
                       buyerEmail: currentUser.email,
-                      buyerName: currentUser.full_name,
+                      buyerName: currentUser.user_metadata?.full_name || currentUser.email,
                       message,
                     });
 
@@ -368,7 +381,9 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
                     }, 2000);
                   } catch (error) {
                     console.error(error);
-                    base44.auth.redirectToLogin();
+                    alert(language === 'fr'
+                      ? 'Impossible d\'envoyer le message pour le moment.'
+                      : 'Unable to send the message right now.');
                   } finally {
                     setSending(false);
                   }

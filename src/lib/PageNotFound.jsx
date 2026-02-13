@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 
 
@@ -11,8 +11,9 @@ export default function PageNotFound({}) {
         queryKey: ['user'],
         queryFn: async () => {
             try {
-                const user = await base44.auth.me();
-                return { user, isAuthenticated: true };
+                const { data: authData } = await supabase.auth.getUser();
+                const user = authData?.user || null;
+                return { user, isAuthenticated: Boolean(user) };
             } catch (error) {
                 return { user: null, isAuthenticated: false };
             }

@@ -1,4 +1,6 @@
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
+import { messageService } from '@/services/messageService';
+import { leadService } from '@/services/leadService';
 
 /**
  * Shared helper to send a message about a business.
@@ -8,9 +10,6 @@ export async function sendBusinessMessage({ business, buyerEmail, buyerName, mes
   if (!business?.id) {
     throw new Error('Business information is required');
   }
-  if (!business?.seller_email) {
-    throw new Error('Business seller email is missing');
-  }
   if (!buyerEmail) {
     throw new Error('Buyer email is required');
   }
@@ -19,51 +18,167 @@ export async function sendBusinessMessage({ business, buyerEmail, buyerName, mes
     throw new Error('Message content is empty');
   }
 
-  // Fetch existing conversations once to reuse the same logic everywhere.
-  const conversations = await base44.entities.Conversation.list();
-  let conversation = conversations.find(
-    (c) =>
-      c.business_id === business.id &&
-      c.participant_emails?.includes(buyerEmail) &&
-      c.participant_emails?.includes(business.seller_email)
-  );
+  let sellerEmail = business?.seller_email || null;
+  let sellerId = business?.seller_id || business?.seller?.id || business?.seller?.user_id || null;
 
-  if (!conversation) {
-    conversation = await base44.entities.Conversation.create({
-      participant_emails: [buyerEmail, business.seller_email],
-      business_id: business.id,
-      business_title: business.title,
-      last_message: trimmedMessage,
-      last_message_date: new Date().toISOString(),
-      unread_count: { [business.seller_email]: 1 },
-    });
-  } else {
-    await base44.entities.Conversation.update(conversation.id, {
-      last_message: trimmedMessage,
-      last_message_date: new Date().toISOString(),
-      unread_count: {
-        ...conversation.unread_count,
-        [business.seller_email]: (conversation.unread_count?.[business.seller_email] || 0) + 1,
-      },
-    });
+  if (!sellerEmail && business?.seller?.email) {
+    sellerEmail = business.seller.email;
   }
 
-  await base44.entities.Message.create({
-    conversation_id: conversation.id,
-    sender_email: buyerEmail,
-    receiver_email: business.seller_email,
-    content: trimmedMessage,
-    business_id: business.id,
-    read: false,
-  });
+  if (!sellerEmail && sellerId) {
+    const { data: sellerProfile, error } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', sellerId)
+      .maybeSingle();
+    if (error) {
+      console.warn('Failed to fetch seller profile email:', error.message);
+    }
+    sellerEmail = sellerProfile?.email || null;
+  }
 
-  const existingLeads = await base44.entities.Lead.filter({
-    business_id: business.id,
-    buyer_email: buyerEmail,
+  if (!sellerEmail && business?.id) {
+    const { data: businessRow, error } = await supabase
+      .from('businesses')
+      .select('seller_id, seller_email')
+      .eq('id', business.id)
+      .maybeSingle();
+    if (error) {
+      console.warn('Failed to fetch business seller info:', error.message);
+    }
+    if (!sellerEmail) {
+      sellerEmail = businessRow?.seller_email || null;
+    }
+    if (!sellerId) {
+      sellerId = businessRow?.seller_id || null;
+    }
+  }
+
+  if (!sellerEmail && sellerId) {
+    const { data: sellerProfile, error } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', sellerId)
+      .maybeSingle();
+    if (error) {
+      console.warn('Failed to fetch seller profile email (fallback):', error.message);
+    }
+    sellerEmail = sellerProfile?.email || null;
+  }
+
+  if (!sellerEmail) {
+    throw new Error('Business seller email is missing');
+  }
+
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  const buyerId = authUser?.id || null;
+  if (!buyerId) {
+    throw new Error('Buyer user id is missing');
+  }
+
+  if (!sellerId && business?.seller_id) {
+    sellerId = business.seller_id;
+  }
+
+  if (!sellerId) {
+    const { data: sellerProfile, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', sellerEmail)
+      .maybeSingle();
+    if (error) {
+      console.warn('Failed to fetch seller profile id:', error.message);
+    }
+    sellerId = sellerProfile?.id || null;
+  }
+
+  let conversationRecord = null;
+  if (sellerId) {
+    const { data: existingConversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('business_id', business.id)
+      .or(
+        `and(participant_1_id.eq.${buyerId},participant_2_id.eq.${sellerId}),and(participant_1_id.eq.${sellerId},participant_2_id.eq.${buyerId})`
+      )
+      .maybeSingle();
+
+    if (conversationError) {
+      console.warn('Failed to fetch conversation:', conversationError.message);
+    }
+
+    if (!existingConversation) {
+      const { data: newConversation, error: conversationInsertError } = await supabase
+        .from('conversations')
+        .insert([
+          {
+            participant_1_id: buyerId,
+            participant_2_id: sellerId,
+            business_id: business.id,
+            subject: business.title || 'Conversation',
+            last_message: trimmedMessage,
+            last_message_date: new Date().toISOString(),
+            unread_count: { [sellerId]: 1 },
+            contact_status: 'pending',
+            accepted_at: null,
+            accepted_by: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        ])
+        .select('*')
+        .maybeSingle();
+
+      if (conversationInsertError) {
+        console.warn('Failed to create conversation:', conversationInsertError.message);
+      }
+      conversationRecord = newConversation || null;
+    } else {
+      const normalizedUnread = { ...(existingConversation.unread_count || {}) };
+      const updatedUnread = {
+        ...normalizedUnread,
+        [sellerId]: (normalizedUnread?.[sellerId] || 0) + 1,
+      };
+      const { data: updatedConversation, error: conversationUpdateError } = await supabase
+        .from('conversations')
+        .update({
+          last_message: trimmedMessage,
+          last_message_date: new Date().toISOString(),
+          unread_count: updatedUnread,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingConversation.id)
+        .select('*')
+        .maybeSingle();
+
+      if (conversationUpdateError) {
+        console.warn('Failed to update conversation:', conversationUpdateError.message);
+      }
+
+      conversationRecord = updatedConversation || existingConversation;
+    }
+
+    if (conversationRecord?.id) {
+      try {
+        await messageService.sendMessage({
+          conversation_id: conversationRecord.id,
+          receiver_id: sellerId,
+          content: trimmedMessage,
+          read: false,
+        });
+      } catch (error) {
+        console.warn('Failed to insert message into messaging inbox:', error?.message || error);
+      }
+    }
+  }
+
+  const existingLeads = await leadService.listLeads({
+    businessId: business.id,
+    buyerId,
   });
 
   if (existingLeads.length === 0) {
-    await base44.entities.Lead.create({
+    await leadService.createLead({
       business_id: business.id,
       buyer_email: buyerEmail,
       buyer_name: buyerName || buyerEmail,
@@ -72,14 +187,14 @@ export async function sendBusinessMessage({ business, buyerEmail, buyerName, mes
       last_contact_date: new Date().toISOString(),
     });
   } else {
-    await base44.entities.Lead.update(existingLeads[0].id, {
+    await leadService.updateLead(existingLeads[0].id, {
       last_contact_date: new Date().toISOString(),
       status: 'contacted',
     });
   }
 
   return {
-    conversationId: conversation.id,
+    conversationId: conversationRecord?.id || null,
   };
 }
 

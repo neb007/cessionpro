@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { messageService } from '@/services/messageService';
 
 const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
 const BUDGET_RANGES = [
@@ -66,11 +68,10 @@ export default function BuyersDirectory() {
   const loadData = async () => {
     try {
       // Check if user is logged in
-      try {
-        const userData = await base44.auth.me();
+      const { data: authData } = await supabase.auth.getUser();
+      const userData = authData?.user;
+      if (userData) {
         setCurrentUser(userData);
-      } catch (e) {
-        // Not logged in
       }
 
       // Load all users who are buyers and visible
@@ -88,7 +89,7 @@ export default function BuyersDirectory() {
 
   const handleContact = (buyer) => {
     if (!currentUser) {
-      base44.auth.redirectToLogin();
+      window.location.href = '/login';
       return;
     }
     setSelectedBuyer(buyer);
@@ -102,42 +103,75 @@ export default function BuyersDirectory() {
     
     setSending(true);
     try {
-      const conversationId = `direct_${currentUser.email}_${selectedBuyer.email}`;
-      
-      // Check if conversation exists
-      const convs = await base44.entities.Conversation.list();
-      let conversation = convs.find(c => 
-        c.participant_emails?.includes(currentUser.email) &&
-        c.participant_emails?.includes(selectedBuyer.email) &&
-        !c.business_id
-      );
+      const { data: existingConversation, error: conversationError } = await supabase
+        .from('conversations')
+        .select('*')
+        .or(
+          `and(participant_1_id.eq.${currentUser.id},participant_2_id.eq.${selectedBuyer.id}),and(participant_1_id.eq.${selectedBuyer.id},participant_2_id.eq.${currentUser.id})`
+        )
+        .maybeSingle();
 
-      if (!conversation) {
-        conversation = await base44.entities.Conversation.create({
-          participant_emails: [currentUser.email, selectedBuyer.email],
-          business_title: language === 'fr' ? 'Contact direct' : 'Direct contact',
-          last_message: message,
-          last_message_date: new Date().toISOString(),
-          unread_count: { [selectedBuyer.email]: 1 }
-        });
-      } else {
-        await base44.entities.Conversation.update(conversation.id, {
-          last_message: message,
-          last_message_date: new Date().toISOString(),
-          unread_count: {
-            ...conversation.unread_count,
-            [selectedBuyer.email]: (conversation.unread_count?.[selectedBuyer.email] || 0) + 1
-          }
-        });
+      if (conversationError) {
+        console.warn('Failed to fetch conversation:', conversationError.message);
       }
 
-      await base44.entities.Message.create({
-        conversation_id: conversation.id,
-        sender_email: currentUser.email,
-        receiver_email: selectedBuyer.email,
-        content: message,
-        read: false
-      });
+      let conversationRecord = existingConversation || null;
+      if (!conversationRecord) {
+        const { data: newConversation, error: conversationInsertError } = await supabase
+          .from('conversations')
+          .insert([
+            {
+              participant_1_id: currentUser.id,
+              participant_2_id: selectedBuyer.id,
+              subject: language === 'fr' ? 'Contact direct' : 'Direct contact',
+              last_message: message,
+              last_message_date: new Date().toISOString(),
+              unread_count: { [selectedBuyer.id]: 1 },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }
+          ])
+          .select('*')
+          .maybeSingle();
+
+        if (conversationInsertError) {
+          console.warn('Failed to create conversation:', conversationInsertError.message);
+        }
+
+        conversationRecord = newConversation || null;
+      } else {
+        const normalizedUnread = { ...(conversationRecord.unread_count || {}) };
+        const updatedUnread = {
+          ...normalizedUnread,
+          [selectedBuyer.id]: (normalizedUnread?.[selectedBuyer.id] || 0) + 1,
+        };
+        const { data: updatedConversation, error: conversationUpdateError } = await supabase
+          .from('conversations')
+          .update({
+            last_message: message,
+            last_message_date: new Date().toISOString(),
+            unread_count: updatedUnread,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', conversationRecord.id)
+          .select('*')
+          .maybeSingle();
+
+        if (conversationUpdateError) {
+          console.warn('Failed to update conversation:', conversationUpdateError.message);
+        }
+
+        conversationRecord = updatedConversation || conversationRecord;
+      }
+
+      if (conversationRecord?.id) {
+        await messageService.sendMessage({
+          conversation_id: conversationRecord.id,
+          receiver_id: selectedBuyer.id,
+          content: message,
+          read: false
+        });
+      }
 
       setMessageSent(true);
       setTimeout(() => {
