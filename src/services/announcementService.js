@@ -6,6 +6,79 @@ import { supabase } from '@/api/supabaseClient';
  */
 
 export const announcementService = {
+  async fetchSellerProfiles(sellerIds = []) {
+    if (!sellerIds.length) {
+      return { data: [] };
+    }
+
+    return supabase
+      .from('profiles')
+      .select('id, company_name, full_name, first_name, last_name')
+      .in('id', sellerIds);
+  },
+  async listAdminAnnouncements(filters = {}) {
+    try {
+      let query = supabase
+        .from('businesses')
+        .select('*');
+
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      if (filters.sourceType) {
+        query = query.eq('source_type', filters.sourceType);
+      }
+
+      if (filters.searchText) {
+        query = query.ilike('title', `%${filters.searchText}%`);
+      }
+
+      if (filters.sortBy) {
+        query = query.order(filters.sortBy, { ascending: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error listing admin announcements:', error);
+      throw error;
+    }
+  },
+
+  async approveAnnouncement(id) {
+    return this.updateAnnouncement(id, {
+      status: 'active',
+      rejected_reason: null,
+      updated_at: new Date().toISOString()
+    });
+  },
+
+  async rejectAnnouncement(id, reason) {
+    return this.updateAnnouncement(id, {
+      status: 'rejected',
+      rejected_reason: reason,
+      updated_at: new Date().toISOString()
+    });
+  },
+
+  async disableAnnouncement(id) {
+    return this.updateAnnouncement(id, {
+      status: 'withdrawn',
+      updated_at: new Date().toISOString()
+    });
+  },
+
+  async toggleCertification(id, isCertified) {
+    return this.updateAnnouncement(id, {
+      is_certified: isCertified,
+      updated_at: new Date().toISOString()
+    });
+  },
   // Get all announcements
   async listAnnouncements(filters = {}, sortBy = 'created_at') {
     try {

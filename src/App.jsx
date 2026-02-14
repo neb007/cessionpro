@@ -3,6 +3,9 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
+import AdminAnnonces from './pages/AdminAnnonces';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -29,6 +32,9 @@ const ProtectedRoute = ({ page, path, isAuthenticated }) => {
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated } = useAuth();
+  const AdminAnnoncesPage = Pages?.AdminAnnonces ?? AdminAnnonces;
+  const AdminDashboardPage = Pages?.AdminDashboard ?? AdminDashboard;
+  const AdminUsersPage = Pages?.AdminUsers ?? AdminUsers;
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -58,6 +64,30 @@ const AuthenticatedApp = () => {
           <MainPage />
         </LayoutWrapper>
       } />
+      <Route
+        path="/admin/annonces"
+        element={
+          <LayoutWrapper currentPageName="AdminAnnonces">
+            <ProtectedRoute page={<AdminAnnoncesPage />} path="AdminAnnonces" isAuthenticated={isAuthenticated} />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/admin/dashboard"
+        element={
+          <LayoutWrapper currentPageName="AdminDashboard">
+            <ProtectedRoute page={<AdminDashboardPage />} path="AdminDashboard" isAuthenticated={isAuthenticated} />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <LayoutWrapper currentPageName="AdminUsers">
+            <ProtectedRoute page={<AdminUsersPage />} path="AdminUsers" isAuthenticated={isAuthenticated} />
+          </LayoutWrapper>
+        }
+      />
       {Object.entries(Pages).map(([path, Page]) => {
         const isPublic = PUBLIC_PAGES.includes(path);
         

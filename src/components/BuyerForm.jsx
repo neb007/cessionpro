@@ -15,6 +15,7 @@ import { Save, Send, Loader2, Search, X, Upload, FileText } from 'lucide-react';
 import ImageGallery from '@/components/ImageGallery';
 import { getDefaultImageForSector } from '@/constants/defaultImages';
 import { base44 } from '@/api/base44Client';
+import { toast } from '@/components/ui/use-toast';
 
 const SECTORS = [
   'technology',
@@ -181,6 +182,9 @@ export default function BuyerForm({
   const [locationInput, setLocationInput] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
+  const publishMessage = language === 'fr'
+    ? "Votre annonce est en cours de validation. Elle sera publiée après validation par la plateforme."
+    : 'Your listing is under review and will be published after platform validation.';
 
   const handleChange = (field, value) => {
     onFormChange({ ...formData, [field]: value });
@@ -615,7 +619,13 @@ export default function BuyerForm({
                 {t('save_draft')}
               </Button>
               <Button
-                onClick={() => onSubmit('active')}
+                onClick={() => {
+                  onSubmit('active');
+                  toast({
+                    title: language === 'fr' ? 'Annonce envoyée' : 'Listing submitted',
+                    description: publishMessage
+                  });
+                }}
                 disabled={saving}
                 className="flex-1 py-6 bg-primary text-white hover:bg-primary/90"
               >

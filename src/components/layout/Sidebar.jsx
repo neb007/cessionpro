@@ -15,7 +15,10 @@ import {
   Bell,
   Globe,
   ChevronDown,
-  LogOut
+  LogOut,
+  ShieldCheck,
+  LayoutGrid,
+  Users
 } from 'lucide-react';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useSidebar } from '@/lib/SidebarContext';
@@ -44,6 +47,7 @@ export default function Sidebar({ user }) {
   const location = useLocation();
   const { logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const isAdmin = user?.email?.toLowerCase() === 'nebil007@hotmail.fr';
 
   // Get current page name from path AND query params
   const getCurrentPage = () => {
@@ -52,6 +56,9 @@ export default function Sidebar({ user }) {
     const typeParam = searchParams.get('type');
     
     // Return combined identifier
+    if (path.startsWith('admin')) {
+      return path.replace('admin/', 'admin-') || 'admin-dashboard';
+    }
     if (path === 'annonces' || path === '') {
       if (typeParam === 'cession') return 'annonces-cession';
       if (typeParam === 'acquisition') return 'annonces-acquisition';
@@ -150,6 +157,27 @@ export default function Sidebar({ user }) {
     }
   ];
 
+  const adminTools = [
+    {
+      label: language === 'fr' ? 'Dashboard' : 'Dashboard',
+      path: '/admin/dashboard',
+      icon: LayoutGrid,
+      pageKey: 'admin-dashboard'
+    },
+    {
+      label: language === 'fr' ? 'Admin Annonces' : 'Admin Listings',
+      path: '/admin/annonces',
+      icon: ShieldCheck,
+      pageKey: 'admin-annonces'
+    },
+    {
+      label: language === 'fr' ? 'Admin Utilisateurs' : 'Admin Users',
+      path: '/admin/users',
+      icon: Users,
+      pageKey: 'admin-users'
+    }
+  ];
+
   const handleMenuItemClick = () => {
     closeMobile();
   };
@@ -232,51 +260,51 @@ export default function Sidebar({ user }) {
             </div>
           </div>
 
-          {/* Navigation Principale */}
-          <div className="mb-6">
-            <h3 className="flex items-center gap-2 px-4 pt-2 pb-3">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-[#9AA3B2]">
-                {language === 'fr' ? 'Mon espace' : 'My Space'}
-              </span>
-            </h3>
-            <div className="space-y-1">
-              {navigationItems.map((item) => (
-                <div key={item.page} className="relative">
-                  <SidebarMenuItem
-                    icon={item.icon}
-                    label={item.label}
-                    page={item.page}
-                    isActive={currentPage === item.page.toLowerCase()}
-                    onClick={handleMenuItemClick}
-                  />
-                  {/* Unread Message Badge with Tooltip */}
+          {!isAdmin && (
+            <div className="mb-6">
+              <h3 className="flex items-center gap-2 px-4 pt-2 pb-3">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[#9AA3B2]">
+                  {language === 'fr' ? 'Mon espace' : 'My Space'}
+                </span>
+              </h3>
+              <div className="space-y-1">
+                {navigationItems.map((item) => (
+                  <div key={item.page} className="relative">
+                    <SidebarMenuItem
+                      icon={item.icon}
+                      label={item.label}
+                      page={item.page}
+                      isActive={currentPage === item.page.toLowerCase()}
+                      onClick={handleMenuItemClick}
+                    />
                     {item.page.toLowerCase() === 'messages' && unreadCount > 0 && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                          className="absolute top-2 right-3 bg-[#FF6B4A] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center cursor-help hover:bg-[#FF5530] transition-colors"
-                          >
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </motion.div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
-                          <p>
-                            {language === 'fr' 
-                              ? `📧 Vous avez ${unreadCount} message${unreadCount > 1 ? 's' : ''} non lu${unreadCount > 1 ? 's' : ''}`
-                              : `📧 You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`
-                            }
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-              ))}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <motion.div
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className="absolute top-2 right-3 bg-[#FF6B4A] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center cursor-help hover:bg-[#FF5530] transition-colors"
+                            >
+                              {unreadCount > 99 ? '99+' : unreadCount}
+                            </motion.div>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
+                            <p>
+                              {language === 'fr' 
+                                ? `📧 Vous avez ${unreadCount} message${unreadCount > 1 ? 's' : ''} non lu${unreadCount > 1 ? 's' : ''}`
+                                : `📧 You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`
+                              }
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Tools Section */}
           <div className="mb-6">
@@ -286,40 +314,62 @@ export default function Sidebar({ user }) {
               </span>
             </h3>
             <div className="space-y-1">
-              <SidebarMenuItem
-                icon={Zap}
-                label={language === 'fr' ? 'Smart Matching' : 'Smart Matching'}
-                page="SmartMatching"
-                isActive={currentPage === 'smartmatching'}
-                onClick={handleMenuItemClick}
-              />
-              {/* Dataroom - Disabled with Tooltip */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      disabled
-                      style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#C0C5D4] cursor-not-allowed transition-all duration-200 text-sm"
-                    >
-                      <Lock className="w-5 h-5" />
-                      <span>{language === 'fr' ? 'Dataroom' : 'Dataroom'}</span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
-                    <p>
-                      {language === 'fr' ? 'Bientôt disponible' : 'Coming Soon'}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <SidebarMenuItem
-                icon={Bell}
-                label={language === 'fr' ? 'Mes alertes' : 'My Alerts'}
-                page="Alerts"
-                isActive={currentPage === 'alerts'}
-                onClick={handleMenuItemClick}
-              />
+              {isAdmin ? (
+                adminTools.map((tool) => (
+                  <button
+                    key={tool.pageKey}
+                    onClick={() => {
+                      navigate(tool.path);
+                      handleMenuItemClick();
+                    }}
+                    style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm ${
+                      currentPage === tool.pageKey
+                        ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-medium'
+                        : 'text-[#111827] hover:bg-white/80 hover:text-[#3B4759]'
+                    }`}
+                  >
+                    <tool.icon className="w-5 h-5" />
+                    <span>{tool.label}</span>
+                  </button>
+                ))
+              ) : (
+                <>
+                  <SidebarMenuItem
+                    icon={Zap}
+                    label={language === 'fr' ? 'Smart Matching' : 'Smart Matching'}
+                    page="SmartMatching"
+                    isActive={currentPage === 'smartmatching'}
+                    onClick={handleMenuItemClick}
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          disabled
+                          style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#C0C5D4] cursor-not-allowed transition-all duration-200 text-sm"
+                        >
+                          <Lock className="w-5 h-5" />
+                          <span>{language === 'fr' ? 'Dataroom' : 'Dataroom'}</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="bg-gray-900 text-white text-xs px-3 py-2 rounded-md">
+                        <p>
+                          {language === 'fr' ? 'Bientôt disponible' : 'Coming Soon'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <SidebarMenuItem
+                    icon={Bell}
+                    label={language === 'fr' ? 'Mes alertes' : 'My Alerts'}
+                    page="Alerts"
+                    isActive={currentPage === 'alerts'}
+                    onClick={handleMenuItemClick}
+                  />
+                </>
+              )}
             </div>
           </div>
 

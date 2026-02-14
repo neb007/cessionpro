@@ -20,6 +20,7 @@ import PriceCalculator from '@/components/PriceCalculator';
 import { getDefaultImageForSector } from '@/constants/defaultImages';
 import { getRegionForFrenchCity } from '@/utils/frenchCitiesToRegions';
 import { getDepartmentForFrenchCity } from '@/utils/frenchCitiesToDepartments';
+import { toast } from '@/components/ui/use-toast';
 
 const SECTORS = [
   'technology',
@@ -57,6 +58,9 @@ export default function SellerForm({
   editingId
 }) {
   const [newAsset, setNewAsset] = useState('');
+  const publishMessage = language === 'fr'
+    ? "Votre annonce est en cours de validation. Elle sera publiée après validation par la plateforme."
+    : 'Your listing is under review and will be published after platform validation.';
 
   // Auto-generate region for France when location changes
   useEffect(() => {
@@ -520,7 +524,13 @@ export default function SellerForm({
                 {t('save_draft')}
               </Button>
               <Button
-                onClick={() => onSubmit('active')}
+                onClick={() => {
+                  onSubmit('active');
+                  toast({
+                    title: language === 'fr' ? 'Annonce envoyée' : 'Listing submitted',
+                    description: publishMessage
+                  });
+                }}
                 disabled={saving}
                 className="flex-1 py-6 bg-primary text-white hover:bg-primary/90"
               >

@@ -223,7 +223,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
                       {formatPrice(business.asking_price)}
                     </p>
                   </div>
-                  {business.verified && (
+                  {business.is_certified && (
                     <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 text-[11px] whitespace-nowrap">
                       ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
                     </Badge>

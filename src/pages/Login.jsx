@@ -13,8 +13,9 @@ import Logo from '@/components/Logo';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, authError, clearAuthError } = useAuth();
+  const { login, isAuthenticated, authError, clearAuthError, user } = useAuth();
   const { language } = useLanguage();
+  const adminEmail = 'nebil007@hotmail.fr';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -24,9 +25,12 @@ export default function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/Annonces');
+      const destination = user?.email?.toLowerCase() === adminEmail.toLowerCase()
+        ? '/admin/dashboard'
+        : '/Annonces';
+      navigate(destination);
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, user, adminEmail]);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,7 +76,10 @@ export default function Login() {
         localStorage.removeItem('rememberEmail');
       }
       
-      navigate('/Annonces');
+      const destination = email.trim().toLowerCase() === adminEmail.toLowerCase()
+        ? '/admin/dashboard'
+        : '/Annonces';
+      navigate(destination);
     } catch (error) {
       console.error('Login failed:', error);
       // Error is already handled by AuthContext

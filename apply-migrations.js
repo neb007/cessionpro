@@ -61,6 +61,14 @@ const migrations = [
     sql: `ALTER TABLE businesses ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'cession';`
   },
   {
+    name: 'Add is_certified column',
+    sql: `ALTER TABLE businesses ADD COLUMN IF NOT EXISTS is_certified BOOLEAN DEFAULT FALSE;`
+  },
+  {
+    name: 'Add rejected_reason column',
+    sql: `ALTER TABLE businesses ADD COLUMN IF NOT EXISTS rejected_reason TEXT;`
+  },
+  {
     name: 'Add buyer_budget_min column',
     sql: `ALTER TABLE businesses ADD COLUMN IF NOT EXISTS buyer_budget_min DECIMAL(15, 2);`
   },

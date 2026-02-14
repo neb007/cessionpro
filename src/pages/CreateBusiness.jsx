@@ -44,7 +44,7 @@ export default function CreateBusiness() {
     hide_location: false,
     assets_included: [],
     images: [],
-    status: 'active',
+    status: 'pending',
     legal_structure: '',
     registration_number: '',
     lease_info: '',
@@ -120,7 +120,7 @@ export default function CreateBusiness() {
               hide_location: business.hide_location || false,
               assets_included: business.assets_included || [],
               images: normalizedImages,
-              status: business.status || 'active',
+              status: business.status || 'pending',
               legal_structure: business.legal_structure || '',
               registration_number: business.registration_number || '',
               lease_info: business.lease_info || '',
@@ -233,7 +233,7 @@ export default function CreateBusiness() {
         customer_base: formData.customer_base,
         seller_id: user?.id,  // Use user ID instead of email
         seller_email: user?.email || null,
-        status
+        status: editingId ? 'pending' : 'pending'
       };
 
       const data = {
@@ -419,7 +419,7 @@ export default function CreateBusiness() {
           formData={formData}
           onPublish={() => {
             setChecklistOpen(false);
-            handleSubmit('active');
+            handleSubmit('pending');
           }}
           language={language}
         />

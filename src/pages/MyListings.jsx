@@ -325,7 +325,7 @@ export default function MyListings() {
                               {listing.reference_number}
                             </Badge>
                           )}
-                          {listing.verified && (
+                          {listing.is_certified && (
                             <Badge className="bg-green-100 text-green-700 border-0 text-[10px]">
                               ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
                             </Badge>
