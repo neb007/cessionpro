@@ -29,7 +29,7 @@ export default function Settings() {
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="mb-6">
         <h1 className="font-display text-2xl text-[#3B4759]">Paramètres</h1>
-        <p className="text-sm text-[#6B7A94]">
+        <p className="text-sm text-[#111827]">
           Gérez votre profil, votre abonnement et votre facturation sans quitter cette page.
         </p>
       </div>
@@ -45,7 +45,7 @@ export default function Settings() {
               className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 -mb-px ${
                 isActive
                   ? 'border-[#FF6B4A] text-[#FF6B4A] bg-orange-50'
-                  : 'border-transparent text-[#6B7A94] hover:text-[#3B4759]'
+                  : 'border-transparent text-[#111827] hover:text-[#3B4759]'
               }`}
             >
               <Icon className="w-4 h-4" />

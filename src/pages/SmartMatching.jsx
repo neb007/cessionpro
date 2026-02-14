@@ -248,7 +248,7 @@ export default function SmartMatching() {
         className={`w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] transition-all text-sm ${Icon ? 'pl-9' : ''}`}
       />
       {label && (
-        <label className="absolute -top-2 left-3 text-xs font-semibold text-[#6B7A94] bg-white px-1">
+        <label className="absolute -top-2 left-3 text-xs font-semibold text-[#111827] bg-white px-1">
           {label}
         </label>
       )}
@@ -267,7 +267,7 @@ export default function SmartMatching() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-[#3B4759]">Smart Matching</h1>
-                <p className="text-xs text-[#6B7A94]">
+                <p className="text-xs text-[#111827]">
                   {smartMatchingMode === 'buyer' 
                     ? 'Trouvez l\'entreprise parfaite à acquérir'
                     : 'Trouvez le bon acquéreur pour votre entreprise'}
@@ -550,7 +550,7 @@ export default function SmartMatching() {
             <div className="inline-block animate-spin">
               <Zap className="w-10 h-10 text-[#FF6B4A]" />
             </div>
-            <p className="text-[#6B7A94] mt-3 text-sm">Chargement...</p>
+            <p className="text-[#111827] mt-3 text-sm">Chargement...</p>
           </div>
         )}
 
@@ -577,7 +577,7 @@ export default function SmartMatching() {
                         
                         <div className="flex flex-wrap gap-1 mb-1">
                           {listing.location && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#6B7A94]">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#111827]">
                               <MapPin className="w-3 h-3" /> {listing.location}
                             </div>
                           )}
@@ -587,12 +587,12 @@ export default function SmartMatching() {
                             </div>
                           )}
                           {listing.employees && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#6B7A94]">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#111827]">
                               <Users className="w-3 h-3" /> {listing.employees}
                             </div>
                           )}
                           {listing.year_founded && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#6B7A94]">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#111827]">
                               <Calendar className="w-3 h-3" /> {listing.year_founded}
                             </div>
                           )}
@@ -636,7 +636,7 @@ export default function SmartMatching() {
             <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
               <Search className="w-8 h-8 text-gray-400" />
             </div>
-            <p className="text-[#6B7A94] text-sm">Configurez vos critères et lancez la recherche</p>
+            <p className="text-[#111827] text-sm">Configurez vos critères et lancez la recherche</p>
           </div>
         )}
 

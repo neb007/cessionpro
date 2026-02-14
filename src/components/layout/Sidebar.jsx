@@ -222,7 +222,7 @@ export default function Sidebar({ user }) {
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm ${
                     currentPage === item.pageKey
                       ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-medium'
-                      : 'text-[#6B7A94] hover:bg-white/80 hover:text-[#3B4759]'
+                      : 'text-[#111827] hover:bg-white/80 hover:text-[#3B4759]'
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
@@ -343,7 +343,7 @@ export default function Sidebar({ user }) {
             <div className="h-px bg-gray-200 mb-3" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm text-[#6B7A94] hover:bg-white/80 hover:text-[#3B4759] transition-colors">
+                <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm text-[#111827] hover:bg-white/80 hover:text-[#3B4759] transition-colors">
                   <span className="flex items-center gap-2">
                     <Globe className="w-4 h-4" />
                     {language === 'fr' ? 'Langue' : 'Language'}
@@ -366,7 +366,7 @@ export default function Sidebar({ user }) {
 
             <button
               onClick={() => logout(false)}
-              className="w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-xl text-sm text-[#6B7A94] hover:bg-white/80 hover:text-[#3B4759] transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-xl text-sm text-[#111827] hover:bg-white/80 hover:text-[#3B4759] transition-colors"
             >
               <LogOut className="w-4 h-4" />
               {language === 'fr' ? 'Déconnexion' : 'Logout'}

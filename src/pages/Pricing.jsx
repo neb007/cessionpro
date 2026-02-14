@@ -122,7 +122,7 @@ export default function Pricing() {
                 <CardTitle className={`text-base font-semibold ${isPopular ? 'text-[#FF6B4A]' : 'text-[#3B4759]'}`}>
                   {language === 'fr' ? option.frenchLabel : option.englishLabel}
                 </CardTitle>
-                <p className="text-xs text-[#6B7A94] mt-0.5 leading-relaxed">
+                <p className="text-xs text-[#111827] mt-0.5 leading-relaxed">
                   {language === 'fr' ? option.frenchDescription : option.englishDescription}
                 </p>
               </div>
@@ -137,7 +137,7 @@ export default function Pricing() {
                   <span className="text-3xl font-bold text-[#FF6B4A]">
                     {formatPrice(option.price, language)}
                   </span>
-                  <span className={`text-xs ${isPopular ? 'text-[#FF6B4A]' : 'text-[#6B7A94]'}`}>
+                  <span className={`text-xs ${isPopular ? 'text-[#FF6B4A]' : 'text-[#111827]'}`}>
                     {option.billingCycle === 'monthly'
                       ? l.perMonth
                       : option.billingCycle === 'yearly'
@@ -153,7 +153,7 @@ export default function Pricing() {
                   {(option.features[language] || option.features.fr).map((feature, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs">
                       <Check className="w-4 h-4 text-[#FF6B4A] flex-shrink-0 mt-0.5" />
-                      <span className="text-[#6B7A94]">{feature}</span>
+                      <span className="text-[#111827]">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -203,7 +203,7 @@ export default function Pricing() {
       <h2 className="font-display text-lg font-bold text-[#3B4759] mb-1">
         {title}
       </h2>
-      <p className="text-[#6B7A94] text-xs">
+      <p className="text-[#111827] text-xs">
         {subtitle}
       </p>
     </div>
@@ -272,7 +272,7 @@ export default function Pricing() {
                 <h3 className="font-display text-base font-bold text-[#3B4759] mb-1.5">
                   {l.verifiedTitle}
                 </h3>
-                <p className="text-[#6B7A94] text-xs mb-3">
+                <p className="text-[#111827] text-xs mb-3">
                   {l.verifiedDesc}
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -296,7 +296,7 @@ export default function Pricing() {
             viewport={{ once: true }}
             className="bg-white border border-gray-200 rounded-lg p-6"
           >
-            <p className="text-[#6B7A94] text-xs mb-3">
+            <p className="text-[#111827] text-xs mb-3">
               {l.contactTeam}
             </p>
             <Button className="bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white px-6 py-2 rounded-lg text-xs">

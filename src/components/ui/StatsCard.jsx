@@ -26,7 +26,7 @@ export default function StatsCard({ icon: Icon, label, value, trend, color = 'pr
         )}
       </div>
       <p className="text-3xl font-mono font-bold text-[#3B4759] mb-1">{value}</p>
-      <p className="text-sm text-[#6B7A94]">{label}</p>
+      <p className="text-sm text-[#111827]">{label}</p>
     </motion.div>
   );
 }

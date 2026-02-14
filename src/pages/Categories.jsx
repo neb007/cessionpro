@@ -67,7 +67,7 @@ export default function Categories() {
           <h1 className="font-display text-4xl font-bold text-[#3B4759] mb-4">
             {t('language') === 'fr' ? 'Secteurs d\'activité' : 'Business Sectors'}
           </h1>
-          <p className="text-lg text-[#6B7A94] max-w-2xl mx-auto">
+          <p className="text-lg text-[#111827] max-w-2xl mx-auto">
             {t('language') === 'fr' 
               ? 'Explorez les entreprises par secteur d\'activité'
               : 'Explore businesses by industry sector'}
@@ -94,7 +94,7 @@ export default function Categories() {
                       <h3 className="font-display text-xl font-semibold text-[#3B4759] mb-2 group-hover:text-[#FF6B4A] transition-colors">
                         {t(sector)}
                       </h3>
-                      <p className="text-sm text-[#6B7A94]">
+                      <p className="text-sm text-[#111827]">
                         {t('language') === 'fr' ? 'Voir les annonces' : 'View listings'}
                       </p>
                     </CardContent>

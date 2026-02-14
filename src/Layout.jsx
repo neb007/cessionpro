@@ -78,7 +78,7 @@ function LayoutContent({ children, currentPageName }) {
                   CessionPro
                 </span>
               </div>
-              <p className="text-[#6B7A94] max-w-sm">
+              <p className="text-[#111827] max-w-sm">
                 {language === 'fr' 
                   ? "La plateforme de référence pour la cession et reprise d'entreprises."
                   : "The leading platform for business acquisitions and sales."}
@@ -97,7 +97,7 @@ function LayoutContent({ children, currentPageName }) {
               <h4 className="font-display font-semibold text-white mb-4">
                 {language === 'fr' ? 'Contact' : 'Contact'}
               </h4>
-              <p className="text-[#6B7A94]">contact@cessionpro.com</p>
+              <p className="text-[#111827]">contact@cessionpro.com</p>
             </div>
           </div>
           <div className="border-t border-[#4A5668] mt-12 pt-8 text-center text-sm">

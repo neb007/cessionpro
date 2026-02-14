@@ -44,7 +44,7 @@ export default function SmartMatchingBanner({ isPurchased = false }) {
           <h4 className="font-bold text-sm text-[#3B4759] mb-1">
             {content.title}
           </h4>
-          <p className="text-xs text-[#6B7A94] mb-3 leading-snug">
+          <p className="text-xs text-[#111827] mb-3 leading-snug">
             {content.subtitle}
           </p>
           <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white text-xs font-medium transition-all">

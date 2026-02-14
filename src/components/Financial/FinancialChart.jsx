@@ -48,8 +48,8 @@ export default function FinancialChart({ financialYears, language }) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="year" stroke="#6B7A94" />
-                <YAxis stroke="#6B7A94" tickFormatter={formatCurrency} />
+                <XAxis dataKey="year" stroke="#111827" />
+                <YAxis stroke="#111827" tickFormatter={formatCurrency} />
                 <Tooltip
                   formatter={formatCurrency}
                   contentStyle={{ 
@@ -74,8 +74,8 @@ export default function FinancialChart({ financialYears, language }) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="year" stroke="#6B7A94" />
-                <YAxis stroke="#6B7A94" tickFormatter={formatCurrency} />
+                <XAxis dataKey="year" stroke="#111827" />
+                <YAxis stroke="#111827" tickFormatter={formatCurrency} />
                 <Tooltip
                   formatter={formatCurrency}
                   contentStyle={{ 
@@ -107,8 +107,8 @@ export default function FinancialChart({ financialYears, language }) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="year" stroke="#6B7A94" />
-                <YAxis stroke="#6B7A94" tickFormatter={formatCurrency} />
+                <XAxis dataKey="year" stroke="#111827" />
+                <YAxis stroke="#111827" tickFormatter={formatCurrency} />
                 <Tooltip
                   formatter={formatCurrency}
                   contentStyle={{ 
@@ -133,8 +133,8 @@ export default function FinancialChart({ financialYears, language }) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="year" stroke="#6B7A94" />
-                <YAxis stroke="#6B7A94" />
+                <XAxis dataKey="year" stroke="#111827" />
+                <YAxis stroke="#111827" />
                 <Tooltip
                   contentStyle={{ 
                     backgroundColor: 'white',

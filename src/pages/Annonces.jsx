@@ -315,7 +315,7 @@ export default function Businesses() {
         <div className="w-full p-4 mb-0" style={{ backgroundColor: '#F6F5F3' }}>
           {/* Sort Dropdown */}
           <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-[#E7E2DE]">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-[#6B7A94]">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-[#111827]">
               <span>{language === 'fr' ? 'Trier par:' : 'Sort by:'}</span>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-40 h-9 text-xs sm:text-sm border-gray-200 rounded-lg bg-white">
