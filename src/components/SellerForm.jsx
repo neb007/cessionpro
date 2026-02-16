@@ -445,6 +445,64 @@ export default function SellerForm({
               </CardContent>
             </Card>
 
+            {/* Optional Display Fields */}
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="font-display">
+                  {language === 'fr' ? 'Champs optionnels pour l\'annonce' : 'Optional fields for listing'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <Label>{language === 'fr' ? 'Détails concernant la cession' : 'Cession details'}</Label>
+                  <Textarea
+                    value={formData.cession_details}
+                    onChange={(e) => handleChange('cession_details', e.target.value)}
+                    placeholder={language === 'fr' ? 'Ajoutez des détails si besoin...' : 'Add details if needed...'}
+                    className="mt-2 min-h-24"
+                  />
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {language === 'fr' ? 'Afficher dans l\'annonce' : 'Show in listing'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {language === 'fr' ? 'Activez pour publier ce champ' : 'Enable to publish this field'}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.show_cession_details}
+                      onCheckedChange={(v) => handleChange('show_cession_details', v)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>{language === 'fr' ? 'Taille de la surface' : 'Surface area'}</Label>
+                  <Input
+                    value={formData.surface_area}
+                    onChange={(e) => handleChange('surface_area', e.target.value)}
+                    placeholder={language === 'fr' ? 'Ex: 120 m²' : 'Ex: 120 m²'}
+                    className="mt-2"
+                  />
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {language === 'fr' ? 'Afficher dans l\'annonce' : 'Show in listing'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {language === 'fr' ? 'Activez pour publier ce champ' : 'Enable to publish this field'}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.show_surface_area}
+                      onCheckedChange={(v) => handleChange('show_surface_area', v)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Financial Years */}
             <FinancialYearsManager
               financialYears={formData.financial_years}

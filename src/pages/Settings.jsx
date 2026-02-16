@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, CreditCard, Receipt } from 'lucide-react';
 import Profile from './Profile';
-import Pricing from './Pricing';
+import Abonnement from './Abonnement';
 import Billing from './Billing';
 
 const tabs = [
@@ -57,7 +57,7 @@ export default function Settings() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
         {activeTab === 'profile' && <Profile />}
-        {activeTab === 'pricing' && <Pricing />}
+        {activeTab === 'pricing' && <Abonnement />}
         {activeTab === 'billing' && <Billing />}
       </div>
     </div>

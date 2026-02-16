@@ -79,6 +79,7 @@ export default function Profile() {
     visible_in_directory: true,
     preferred_language: 'fr',
     notification_emails_enabled: true,
+    show_real_identity: true,
     is_buyer: false,
     is_seller: false,
     user_type: 'buyer'
@@ -128,6 +129,7 @@ export default function Profile() {
         visible_in_directory: profile.visible_in_directory !== false,
         preferred_language: profile.preferred_language || 'fr',
         notification_emails_enabled: profile.notification_emails_enabled !== false,
+        show_real_identity: profile.show_real_identity !== false,
         is_buyer: profile.is_buyer || false,
         is_seller: profile.is_seller || false,
         user_type: userType
@@ -156,6 +158,7 @@ export default function Profile() {
             visible_in_directory: user.visible_in_directory !== false,
             preferred_language: user.preferred_language || 'fr',
             notification_emails_enabled: user.notification_emails_enabled !== false,
+            show_real_identity: user.show_real_identity !== false,
             is_buyer: true,
             is_seller: false,
             user_type: 'buyer'
@@ -312,7 +315,8 @@ export default function Profile() {
         linkedin_url: formData.linkedin_url,
         aide_vendeur_description: formData.bio,
         is_buyer: formData.is_buyer,
-        is_seller: formData.is_seller
+        is_seller: formData.is_seller,
+        show_real_identity: formData.show_real_identity
       };
 
       // Update via Supabase profileService
@@ -369,7 +373,8 @@ export default function Profile() {
           transaction_size: formData.budget_max,
           sectors: formData.sectors_interest,
           avatar_url: formData.avatar_url,
-          logo_url: formData.logo_url || formData.avatar_url || null
+          logo_url: formData.logo_url || formData.avatar_url || null,
+          show_real_identity: formData.show_real_identity
         }
       });
       
@@ -675,6 +680,22 @@ export default function Profile() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl backdrop-blur-sm mb-4">
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {language === 'fr' ? 'Afficher mon identité' : 'Show my identity'}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {language === 'fr'
+                      ? 'Nom/prénom ou société visibles lors des messages'
+                      : 'Your name/company is shown when sending messages'}
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.show_real_identity}
+                  onCheckedChange={(v) => handleChange('show_real_identity', v)}
+                />
+              </div>
               <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl backdrop-blur-sm">
                 <div>
                   <p className="font-medium text-gray-900">

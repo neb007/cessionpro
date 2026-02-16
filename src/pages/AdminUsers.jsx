@@ -8,8 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertTriangle, Users } from 'lucide-react';
 
-const ADMIN_EMAIL = 'nebil007@hotmail.fr';
-
 export default function AdminUsers() {
   const { user, isLoadingAuth } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -19,8 +17,22 @@ export default function AdminUsers() {
   const [profiles, setProfiles] = useState([]);
   const [listingCounts, setListingCounts] = useState({});
   const [actionLoading, setActionLoading] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  useEffect(() => {
+    if (!user?.id) return;
+    const loadAdminFlag = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!error) {
+        setIsAdmin(!!data?.is_admin);
+      }
+    };
+    loadAdminFlag();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -33,10 +45,24 @@ export default function AdminUsers() {
     try {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, company_name, full_name, first_name, last_name, is_buyer, is_seller, is_blocked, created_at')
+        .select('id, email, company_name, full_name, first_name, last_name, is_buyer, is_seller, is_blocked, is_admin, created_at')
         .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        if (profilesError.code === '42703') {
+          const { data: fallbackProfiles, error: fallbackError } = await supabase
+            .from('profiles')
+            .select('id, email, company_name, full_name, first_name, last_name, is_buyer, is_seller, is_admin, created_at')
+            .order('created_at', { ascending: false });
+
+          if (fallbackError) throw fallbackError;
+          setProfiles((fallbackProfiles || []).map((profile) => ({ ...profile, is_blocked: false })));
+        } else {
+          throw profilesError;
+        }
+      } else {
+        setProfiles(profilesData || []);
+      }
 
       const { data: listingsData, error: listingsError } = await supabase
         .from('businesses')
@@ -55,7 +81,6 @@ export default function AdminUsers() {
         return acc;
       }, {});
 
-      setProfiles(profilesData || []);
       setListingCounts(counts);
     } catch (err) {
       console.error('Erreur lors du chargement des comptes:', err);
@@ -98,8 +123,12 @@ export default function AdminUsers() {
         .from('profiles')
         .update({ is_blocked: nextBlocked })
         .eq('id', profile.id);
-
-      if (updateError) throw updateError;
+      if (updateError) {
+        if (updateError.code === '42703') {
+          throw new Error("La colonne is_blocked n'existe pas encore. Applique la migration SQL.");
+        }
+        throw updateError;
+      }
 
       const statusToApply = nextBlocked ? 'withdrawn' : 'draft';
       const { error: listingError } = await supabase
@@ -112,7 +141,28 @@ export default function AdminUsers() {
       await loadUsers();
     } catch (err) {
       console.error('Erreur lors du blocage utilisateur:', err);
-      setError('Impossible de mettre à jour le statut utilisateur.');
+      setError(err?.message || 'Impossible de mettre à jour le statut utilisateur.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const updateUserAdminStatus = async (profile) => {
+    if (!profile?.id) return;
+    if (profile.id === user?.id) return;
+    const nextAdmin = !profile.is_admin;
+    setActionLoading(profile.id);
+    setError(null);
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ is_admin: nextAdmin })
+        .eq('id', profile.id);
+      if (updateError) throw updateError;
+      await loadUsers();
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour admin:', err);
+      setError(err?.message || 'Impossible de mettre à jour le rôle admin.');
     } finally {
       setActionLoading(null);
     }
@@ -191,6 +241,8 @@ export default function AdminUsers() {
                 <TableHead>Utilisateur</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Rôles</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead>Admin</TableHead>
                 <TableHead>Offres Cession</TableHead>
                 <TableHead>Offres Acquisition</TableHead>
                 <TableHead>Date création</TableHead>
@@ -200,13 +252,13 @@ export default function AdminUsers() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-gray-500">
+                  <TableCell colSpan={9} className="text-center text-sm text-gray-500">
                     Chargement...
                   </TableCell>
                 </TableRow>
               ) : filteredProfiles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-gray-500">
+                  <TableCell colSpan={9} className="text-center text-sm text-gray-500">
                     Aucun utilisateur trouvé.
                   </TableCell>
                 </TableRow>
@@ -229,6 +281,32 @@ export default function AdminUsers() {
                               ? 'Acheteur'
                               : '—'}
                       </TableCell>
+                      <TableCell className="text-sm">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            profile.is_blocked
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}
+                        >
+                          {profile.is_blocked ? 'Bloqué' : 'Actif'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <Button
+                          variant={profile.is_admin ? 'outline' : 'secondary'}
+                          size="sm"
+                          disabled={actionLoading === profile.id || profile.id === user?.id}
+                          onClick={() => updateUserAdminStatus(profile)}
+                        >
+                          {profile.is_admin ? 'Retirer admin' : 'Rendre admin'}
+                        </Button>
+                        {profile.id === user?.id && (
+                          <div className="mt-1 text-xs text-gray-400">
+                            Auto‑déclassement interdit
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm text-gray-600">{counts.cession}</TableCell>
                       <TableCell className="text-sm text-gray-600">{counts.acquisition}</TableCell>
                       <TableCell className="text-sm text-gray-600">
@@ -243,7 +321,7 @@ export default function AdminUsers() {
                           disabled={actionLoading === profile.id}
                           onClick={() => updateUserBlockStatus(profile)}
                         >
-                          {profile.is_blocked ? 'Débloquer' : 'Bloquer'}
+                          {profile.is_blocked ? 'Activer' : 'Désactiver'}
                         </Button>
                       </TableCell>
                     </TableRow>

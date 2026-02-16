@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -18,8 +18,28 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          setUser(session.user);
-          setIsAuthenticated(true);
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_blocked')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (profileError && profileError.code !== '42703') {
+            console.error('Profile check failed:', profileError);
+          }
+
+          if (!profileError && profile?.is_blocked) {
+            await supabase.auth.signOut();
+            setUser(null);
+            setIsAuthenticated(false);
+            setAuthError({
+              type: 'account_blocked',
+              message: 'Votre compte est bloqué. Contactez le support.'
+            });
+          } else {
+            setUser(session.user);
+            setIsAuthenticated(true);
+          }
         } else {
           setUser(null);
           setIsAuthenticated(false);
@@ -46,8 +66,26 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (session?.user) {
-        setUser(session.user);
-        setIsAuthenticated(true);
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_blocked')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profileError && profileError.code !== '42703') throw profileError;
+
+        if (profile?.is_blocked) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setIsAuthenticated(false);
+          setAuthError({
+            type: 'account_blocked',
+            message: 'Votre compte est bloqué. Contactez le support.'
+          });
+        } else {
+          setUser(session.user);
+          setIsAuthenticated(true);
+        }
       } else {
         setUser(null);
         setIsAuthenticated(false);
@@ -62,6 +100,12 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
     } catch (error) {
+      if (error?.name === 'AbortError' || error?.name === 'DOMException') {
+        console.warn('Auth check aborted:', error);
+        setIsLoadingPublicSettings(false);
+        setIsLoadingAuth(false);
+        return;
+      }
       console.error('App state check failed:', error);
       setAuthError({
         type: 'auth_error',
@@ -162,9 +206,33 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (error) throw error;
+
+      if (data?.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_blocked')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        if (profileError && profileError.code !== '42703') throw profileError;
+
+        if (profile?.is_blocked) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setIsAuthenticated(false);
+          setAuthError({
+            type: 'account_blocked',
+            message: 'Votre compte est bloqué. Contactez le support.'
+          });
+          throw new Error('ACCOUNT_BLOCKED');
+        }
+      }
       return data;
     } catch (error) {
       console.error('Login error:', error);
+      if (error?.message === 'ACCOUNT_BLOCKED') {
+        throw error;
+      }
       setAuthError({
         type: 'login_error',
         message: error.message || 'Login failed'

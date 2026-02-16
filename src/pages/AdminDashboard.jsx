@@ -4,8 +4,6 @@ import { supabase } from '@/api/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { AlertTriangle, FileText, Users, ShieldCheck, Clock, TrendingUp } from 'lucide-react';
 
-const ADMIN_EMAIL = 'nebil007@hotmail.fr';
-
 export default function AdminDashboard() {
   const { user, isLoadingAuth } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -22,7 +20,22 @@ export default function AdminDashboard() {
     hybrid: 0,
   });
 
-  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const loadAdminFlag = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!error) {
+        setIsAdmin(!!data?.is_admin);
+      }
+    };
+    loadAdminFlag();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isAdmin) return;

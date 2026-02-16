@@ -54,6 +54,11 @@ export default function CreateBusiness() {
     competitive_advantages: '',
     growth_opportunities: '',
     customer_base: '',
+    cession_details: '',
+    surface_area: '',
+    show_cession_details: false,
+    show_surface_area: false,
+    buyer_image: [],
     business_type: '',
     reference_number: '',
     // Buyer specific fields
@@ -129,6 +134,11 @@ export default function CreateBusiness() {
               market_position: business.market_position || '',
               competitive_advantages: business.competitive_advantages || '',
               growth_opportunities: business.growth_opportunities || '',
+              customer_base: business.customer_base || '',
+              cession_details: business.cession_details || '',
+              surface_area: business.surface_area || '',
+              show_cession_details: business.show_cession_details || false,
+              show_surface_area: business.show_surface_area || false,
               buyer_image: normalizeImageArray(business.buyer_image || []).map((url) => ({
                 url,
                 isDefault: false
@@ -231,6 +241,10 @@ export default function CreateBusiness() {
         competitive_advantages: formData.competitive_advantages,
         growth_opportunities: formData.growth_opportunities,
         customer_base: formData.customer_base,
+        cession_details: formData.cession_details,
+        surface_area: formData.surface_area,
+        show_cession_details: formData.show_cession_details,
+        show_surface_area: formData.show_surface_area,
         seller_id: user?.id,  // Use user ID instead of email
         seller_email: user?.email || null,
         status: editingId ? 'pending' : 'pending'

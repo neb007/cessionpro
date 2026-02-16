@@ -259,6 +259,17 @@ export default function BusinessDetails() {
     }).format(price);
   };
 
+  const formatDate = (dateValue) => {
+    if (!dateValue) return '-';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen py-8 lg:py-12">
@@ -398,6 +409,20 @@ export default function BusinessDetails() {
                   </div>
                 )}
               </div>
+              <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-500">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  <span>{language === 'fr' ? 'Publication' : 'Published'} :</span>
+                  <span className="font-medium text-gray-700">{formatDate(business.created_at)}</span>
+                </div>
+                {business.updated_at && business.updated_at !== business.created_at && (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4" />
+                    <span>{language === 'fr' ? 'Mise à jour' : 'Updated'} :</span>
+                    <span className="font-medium text-gray-700">{formatDate(business.updated_at)}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Key Metrics - CESSION */}
@@ -451,7 +476,12 @@ export default function BusinessDetails() {
             </Card>
 
             {/* Details - CESSION only */}
-            {business.type === 'cession' && (business.reason_for_sale || business.assets_included?.length > 0) && (
+            {business.type === 'cession' && (
+              business.reason_for_sale ||
+              business.assets_included?.length > 0 ||
+              (business.show_surface_area && business.surface_area) ||
+              (business.show_cession_details && business.cession_details)
+            ) && (
               <Card className="border-0 shadow-sm">
                 <CardContent className="p-6">
                   <h2 className="font-display text-xl font-semibold text-gray-900 mb-4">
@@ -475,6 +505,22 @@ export default function BusinessDetails() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+                    {business.show_surface_area && business.surface_area && (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">
+                          {language === 'fr' ? 'Taille de la surface' : 'Surface area'}
+                        </p>
+                        <p className="font-medium text-gray-900">{business.surface_area}</p>
+                      </div>
+                    )}
+                    {business.show_cession_details && business.cession_details && (
+                      <div className="sm:col-span-2">
+                        <p className="text-sm text-gray-500 mb-1">
+                          {language === 'fr' ? 'Détails concernant la cession' : 'Cession details'}
+                        </p>
+                        <p className="text-gray-700 whitespace-pre-wrap">{business.cession_details}</p>
                       </div>
                     )}
                   </div>

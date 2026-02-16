@@ -12,7 +12,6 @@ import {
   Zap,
   Lock,
   Settings,
-  Bell,
   Globe,
   ChevronDown,
   LogOut,
@@ -361,13 +360,6 @@ export default function Sidebar({ user }) {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <SidebarMenuItem
-                    icon={Bell}
-                    label={language === 'fr' ? 'Mes alertes' : 'My Alerts'}
-                    page="Alerts"
-                    isActive={currentPage === 'alerts'}
-                    onClick={handleMenuItemClick}
-                  />
                 </>
               )}
             </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/api/supabaseClient';
 import { announcementService } from '@/services/announcementService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +11,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertTriangle, Check, Eye, RefreshCcw, ShieldCheck, XCircle } from 'lucide-react';
-
-const ADMIN_EMAIL = 'nebil007@hotmail.fr';
 const STATUS_LABELS = {
   pending: { label: 'En attente', className: 'bg-orange-100 text-orange-700' },
   active: { label: 'Active', className: 'bg-emerald-100 text-emerald-700' },
   withdrawn: { label: 'Désactivée', className: 'bg-red-100 text-red-700' },
+  draft: { label: 'Brouillon', className: 'bg-gray-100 text-gray-700' },
   rejected: { label: 'Refusée', className: 'bg-slate-200 text-slate-700' },
   flagged: { label: 'Signalée', className: 'bg-violet-100 text-violet-700' }
 };
@@ -40,6 +40,8 @@ export default function AdminAnnonces() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
   const completionFields = useMemo(
     () => [
@@ -114,7 +116,21 @@ export default function AdminAnnonces() {
     return Math.round((filled / total) * 100);
   };
 
-  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  useEffect(() => {
+    if (!user?.id) return;
+    const loadAdminFlag = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!error) {
+        setIsAdmin(!!data?.is_admin);
+      }
+      setIsCheckingAdmin(false);
+    };
+    loadAdminFlag();
+  }, [user?.id]);
 
   const loadAnnouncements = async () => {
     setLoading(true);
@@ -169,7 +185,7 @@ export default function AdminAnnonces() {
   useEffect(() => {
     if (!isAdmin) return;
     loadAnnouncements();
-  }, [statusFilter, sourceFilter]);
+  }, [isAdmin, statusFilter, sourceFilter, searchText]);
 
   const filteredAnnouncements = useMemo(() => {
     if (!searchText.trim()) return announcements;
@@ -247,6 +263,10 @@ export default function AdminAnnonces() {
     return <div className="p-8">Chargement...</div>;
   }
 
+  if (isCheckingAdmin) {
+    return <div className="p-8">Vérification des droits...</div>;
+  }
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF9F7] p-8">
@@ -314,6 +334,7 @@ export default function AdminAnnonces() {
                   <SelectItem value="ALL">Tous</SelectItem>
                   <SelectItem value="pending">En attente</SelectItem>
                   <SelectItem value="active">Actives</SelectItem>
+                  <SelectItem value="draft">Brouillon</SelectItem>
                   <SelectItem value="withdrawn">Désactivées</SelectItem>
                   <SelectItem value="rejected">Refusées</SelectItem>
                   <SelectItem value="flagged">Signalées</SelectItem>

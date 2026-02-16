@@ -68,7 +68,7 @@ export const announcementService = {
 
   async disableAnnouncement(id) {
     return this.updateAnnouncement(id, {
-      status: 'withdrawn',
+      status: 'draft',
       updated_at: new Date().toISOString()
     });
   },

@@ -76,6 +76,30 @@ export async function sendBusinessMessage({ business, buyerEmail, buyerName, mes
     throw new Error('Buyer user id is missing');
   }
 
+  let resolvedBuyerName = buyerName || buyerEmail;
+  try {
+    const { data: buyerProfile, error: buyerProfileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, company_name, show_real_identity')
+      .eq('id', buyerId)
+      .maybeSingle();
+
+    if (buyerProfileError) {
+      console.warn('Failed to fetch buyer profile for identity settings:', buyerProfileError.message);
+    }
+
+    if (buyerProfile?.show_real_identity === false) {
+      resolvedBuyerName = 'Utilisateur anonyme';
+    } else if (buyerProfile) {
+      resolvedBuyerName =
+        buyerProfile.company_name ||
+        `${buyerProfile.first_name || ''} ${buyerProfile.last_name || ''}`.trim() ||
+        buyerEmail;
+    }
+  } catch (error) {
+    console.warn('Failed to resolve buyer identity:', error?.message || error);
+  }
+
   if (!sellerId && business?.seller_id) {
     sellerId = business.seller_id;
   }
@@ -181,7 +205,7 @@ export async function sendBusinessMessage({ business, buyerEmail, buyerName, mes
     await leadService.createLead({
       business_id: business.id,
       buyer_email: buyerEmail,
-      buyer_name: buyerName || buyerEmail,
+      buyer_name: resolvedBuyerName,
       status: 'new',
       source: 'message',
       last_contact_date: new Date().toISOString(),
