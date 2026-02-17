@@ -7,11 +7,11 @@ import { supabase } from '@/api/supabaseClient';
 
 export const businessService = {
   // Get all businesses
-  async listBusinesses(filters = {}, sortBy = 'created_at') {
+  async listBusinesses(filters = {}, sortBy = 'created_at', options = {}) {
     try {
       let query = supabase
         .from('businesses')
-        .select('*');
+        .select(options.columns || '*');
 
       // Apply filters
       if (filters.sector) {
@@ -33,6 +33,11 @@ export const businessService = {
 
       // Apply sorting
       query = query.order(sortBy, { ascending: false });
+      if (options.limit && typeof options.offset === 'number') {
+        query = query.range(options.offset, options.offset + options.limit - 1);
+      } else if (options.limit) {
+        query = query.limit(options.limit);
+      }
 
       const { data, error } = await query;
       
@@ -122,8 +127,8 @@ export const businessService = {
   },
 
   // Filter businesses by criteria
-  async filterBusinesses(filters, sortBy = 'created_at') {
-    return this.listBusinesses(filters, sortBy);
+  async filterBusinesses(filters, sortBy = 'created_at', options = {}) {
+    return this.listBusinesses(filters, sortBy, options);
   },
 
   // Get businesses by seller ID

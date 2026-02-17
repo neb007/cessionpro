@@ -250,6 +250,13 @@ export default function CreateBusiness() {
         status: editingId ? 'pending' : 'pending'
       };
 
+      if (!BUSINESS_FIELDS_SUPPORTED) {
+        delete baseData.cession_details;
+        delete baseData.surface_area;
+        delete baseData.show_cession_details;
+        delete baseData.show_surface_area;
+      }
+
       const data = {
         ...baseData,
         business_type: formData.business_type || null,

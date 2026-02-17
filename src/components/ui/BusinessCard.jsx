@@ -14,7 +14,6 @@ import { useAuth } from '@/lib/AuthContext';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 import { calculateGrowthPercentage } from '@/utils/growthCalculator';
-import { getProfile } from '@/services/profileService';
 import LogoCard from '@/components/ui/LogoCard';
 
 const sectorColors = {
@@ -30,7 +29,7 @@ const sectorColors = {
   other: 'bg-gray-100 text-muted-foreground',
 };
 
-export default function BusinessCard({ business, isFavorite, onToggleFavorite }) {
+export default function BusinessCard({ business, isFavorite, onToggleFavorite, fetchSellerLogo = true }) {
   const { t, language } = useLanguage();
   const { user: authUser } = useAuth();
   const [showMessageModal, setShowMessageModal] = useState(false);
@@ -42,8 +41,9 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
   const [sellerFallbackLogo, setSellerFallbackLogo] = useState(null);
 
   useEffect(() => {
+    if (!fetchSellerLogo) return;
     loadBusinessLogo();
-  }, [business?.id]);
+  }, [business?.id, business?.seller_id, fetchSellerLogo]);
 
   useEffect(() => {
     if (authUser) {
@@ -182,7 +182,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
 
           {/* Localisation */}
           {!business.hide_location && (
-            <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
               <div style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500 }} className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
                 <MapPin className="w-4 h-4 mr-1.5 text-gray-400 flex-shrink-0" />
                 <span className="truncate">{business.location}</span>
@@ -192,7 +192,7 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite })
 
           {/* Détails financiers - CESSION */}
           {business.type === 'cession' && (
-            <div className="pt-3 border-t border-gray-100 mt-auto space-y-3">
+            <div className="pt-2 border-t border-gray-100 mt-auto space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 600, fontSize: '12px' }} className="text-[#8A98AD] uppercase tracking-wider">CA</p>

@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { businessService } from '@/services/businessService';
-import { mockBusinesses } from '@/components/data/mockData';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import BusinessCard from '@/components/ui/BusinessCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-
+import SortControl from '@/components/annonces/SortControl';
+import FilterBarDesktop from '@/components/annonces/FilterBarDesktop';
+import FilterSheetMobile from '@/components/annonces/FilterSheetMobile';
+import ActiveFilterChips from '@/components/annonces/ActiveFilterChips';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+
 import { 
   Search, 
-  X,
-  List,
-  ArrowRight,
-  ArrowLeft
+  Loader2,
+  SlidersHorizontal,
+  ArrowUpDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -152,41 +152,101 @@ const DEPARTMENTS = [
   { value: '974', label: '974 - Réunion' },
   { value: '976', label: '976 - Mayotte' }
 ];
+const PAGE_SIZE = 24;
+const DEFAULT_FILTERS = {
+  query: '',
+  sector: '',
+  country: '',
+  department: '',
+  budgetMin: '',
+  budgetMax: '',
+  sortBy: '-created_date',
+};
+
+function useDebouncedValue(value, delayMs) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+
+  return debounced;
+}
+
+const normalize = (value) => (value || '').trim().toLowerCase();
 
 export default function Businesses() {
   const { t, language } = useLanguage();
-  const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   
   const [businesses, setBusinesses] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
   const [favorites, setFavorites] = useState([]);
+  const loadMoreRef = useRef(null);
+  const isFetchingRef = useRef(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
   
-  // Filters
   const [listingType, setListingType] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSector, setSelectedSector] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [sortBy, setSortBy] = useState('-created_date');
-  const [budgetRange, setBudgetRange] = useState([0, 5000000]);
+  const [filtersState, setFiltersState] = useState(() => ({ ...DEFAULT_FILTERS }));
+  const debouncedQuery = useDebouncedValue(filtersState.query, 250);
+  const debouncedBudgetMin = useDebouncedValue(filtersState.budgetMin, 300);
+  const debouncedBudgetMax = useDebouncedValue(filtersState.budgetMax, 300);
+
+  const fetchBusinessesPage = async (pageToLoad, replace = false) => {
+    if (isFetchingRef.current) return;
+    if (!replace && !hasMore) return;
+
+    isFetchingRef.current = true;
+    if (replace) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
+      const fetched = await businessService.filterBusinesses(
+        { status: 'active' },
+        'created_at',
+        {
+          columns: 'id,title,description,location,country,department,region,sector,type,asking_price,annual_revenue,buyer_budget_min,buyer_budget_max,buyer_investment_available,buyer_sectors_interested,financial_years,views_count,reference_number,hide_location,is_certified,seller_id,created_at,images',
+          limit: PAGE_SIZE,
+          offset: pageToLoad * PAGE_SIZE
+        }
+      );
+
+      const pageData = fetched || [];
+      setBusinesses((prev) => {
+        if (replace) return pageData;
+        const seen = new Set(prev.map((b) => b.id));
+        return [...prev, ...pageData.filter((b) => !seen.has(b.id))];
+      });
+      setPage(pageToLoad + 1);
+      setHasMore(pageData.length === PAGE_SIZE);
+    } catch (e) {
+      console.error('Error loading businesses:', e);
+      if (replace) setBusinesses([]);
+      setHasMore(false);
+    } finally {
+      isFetchingRef.current = false;
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
-    loadData();
-    
-    // Set up interval to refresh data periodically
-    const interval = setInterval(() => {
-      loadData();
-    }, 5000); // Refresh every 5 seconds
-    
-    return () => clearInterval(interval);
+    fetchBusinessesPage(0, true);
   }, []);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const search = urlParams.get('search') || '';
-    setSearchQuery(search);
+    setFiltersState((prev) => ({ ...prev, query: search }));
 
     const type = urlParams.get('type');
     if (type && (type === 'cession' || type === 'acquisition')) {
@@ -196,21 +256,52 @@ export default function Businesses() {
     }
   }, [location.search]);
 
-  const loadData = async () => {
-    try {
-      console.log('Loading active businesses...');
-      // Load real data from database
-      const businesses = await businessService.filterBusinesses({
-        status: 'active'
-      }, 'created_at');
-      console.log('Loaded businesses:', businesses);
-      setBusinesses([...(businesses || []), ...mockBusinesses]);
-    } catch (e) {
-      console.error('Error loading businesses:', e);
-      // Fallback to mock data on error
-      setBusinesses(mockBusinesses || []);
-    }
-    setLoading(false);
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0]?.isIntersecting &&
+          !loading &&
+          !loadingMore &&
+          hasMore
+        ) {
+          fetchBusinessesPage(page);
+        }
+      },
+      { rootMargin: '200px 0px' }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [page, loading, loadingMore, hasMore]);
+
+  const updateFilter = (key, value) => {
+    setFiltersState((prev) => {
+      const next = { ...prev, [key]: value };
+
+      if (key === 'country' && normalize(value) !== 'france') {
+        next.department = '';
+      }
+
+      if (key === 'budgetMin') {
+        const minValue = Number(value) || 0;
+        const maxValue = Number(prev.budgetMax) || 5000000;
+        if (minValue > maxValue) {
+          next.budgetMax = String(minValue);
+        }
+      }
+
+      if (key === 'budgetMax') {
+        const maxValue = Number(value) || 5000000;
+        const minValue = Number(prev.budgetMin) || 0;
+        if (maxValue < minValue) {
+          next.budgetMax = String(minValue);
+        }
+      }
+
+      return next;
+    });
   };
 
   const toggleFavorite = (businessId) => {
@@ -227,48 +318,87 @@ export default function Businesses() {
     }
   };
 
+  const clearFilters = () => {
+    setFiltersState({ ...DEFAULT_FILTERS });
+  };
+
+  const normalizedBudgetMin = Number(debouncedBudgetMin) || 0;
+  const normalizedBudgetMaxRaw = Number(debouncedBudgetMax) || 5000000;
+  const normalizedBudgetMax = normalizedBudgetMin > normalizedBudgetMaxRaw
+    ? normalizedBudgetMin
+    : normalizedBudgetMaxRaw;
+
   // Filter businesses
-  const filteredBusinesses = businesses.filter(business => {
+  const filteredBusinesses = useMemo(() => businesses.filter(business => {
     // Type filter
     if (listingType !== 'all' && business.type !== listingType) return false;
     
     // Search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (debouncedQuery) {
+      const query = debouncedQuery.toLowerCase();
+      const reference = business.reference_number?.toLowerCase() || '';
+      const idValue = business.id ? String(business.id).toLowerCase() : '';
+
       if (
         !business.title?.toLowerCase().includes(query) &&
         !business.description?.toLowerCase().includes(query) &&
         !business.location?.toLowerCase().includes(query) &&
-        !t(business.sector)?.toLowerCase().includes(query)
+        !t(business.sector)?.toLowerCase().includes(query) &&
+        !reference.includes(query) &&
+        !idValue.includes(query)
       ) {
         return false;
       }
     }
 
     // Sector
-    if (selectedSector && selectedSector !== 'all' && business.sector !== selectedSector) return false;
+    if (filtersState.sector && filtersState.sector !== 'all' && business.sector !== filtersState.sector) return false;
 
     // Country
-    if (selectedCountry && selectedCountry !== 'all' && business.country?.toLowerCase() !== selectedCountry.toLowerCase()) {
-      return false;
+    const countryFilter = normalize(filtersState.country);
+    if (countryFilter && countryFilter !== 'all') {
+      const businessCountry = normalize(business.country);
+      const businessCountryLabel = normalize(
+        COUNTRIES.find((item) => normalize(item.value) === businessCountry)?.label
+      );
+      if (
+        !businessCountry.includes(countryFilter) &&
+        !businessCountryLabel.includes(countryFilter)
+      ) {
+        return false;
+      }
     }
 
     // Department
     const departmentValue = business.department || business.region || business.location || '';
-    if (selectedDepartment && selectedDepartment !== 'all' && !departmentValue.toLowerCase().includes(selectedDepartment.toLowerCase())) {
+    if (
+      filtersState.department &&
+      normalize(filtersState.department) !== 'all' &&
+      !normalize(departmentValue).includes(normalize(filtersState.department))
+    ) {
       return false;
     }
 
     // Budget range
     const price = business.asking_price || 0;
-    if (price < budgetRange[0] || price > budgetRange[1]) return false;
+    if (price < normalizedBudgetMin || price > normalizedBudgetMax) return false;
 
     return true;
-  });
+  }), [
+    businesses,
+    listingType,
+    debouncedQuery,
+    filtersState.sector,
+    filtersState.country,
+    filtersState.department,
+    normalizedBudgetMin,
+    normalizedBudgetMax,
+    t
+  ]);
 
   // Sort
-  const sortedBusinesses = [...filteredBusinesses].sort((a, b) => {
-    switch (sortBy) {
+  const sortedBusinesses = useMemo(() => [...filteredBusinesses].sort((a, b) => {
+    switch (filtersState.sortBy) {
       case '-created_date': {
       const dateA = new Date(b.created_at || 0).getTime();
       const dateB = new Date(a.created_at || 0).getTime();
@@ -281,23 +411,15 @@ export default function Businesses() {
       default:
         return 0;
     }
-  });
-
-  const clearFilters = () => {
-    setSearchQuery('');
-    setSelectedSector('');
-    setSelectedCountry('');
-    setSelectedDepartment('');
-    setBudgetRange([0, 5000000]);
-  };
+  }), [filteredBusinesses, filtersState.sortBy]);
 
   const hasActiveFilters =
-    searchQuery ||
-    (selectedSector && selectedSector !== 'all') ||
-    (selectedCountry && selectedCountry !== 'all') ||
-    (selectedDepartment && selectedDepartment !== 'all') ||
-    budgetRange[0] !== 0 ||
-    budgetRange[1] !== 5000000;
+    filtersState.query ||
+    (filtersState.sector && filtersState.sector !== 'all') ||
+    (filtersState.country && filtersState.country !== 'all') ||
+    (filtersState.department && filtersState.department !== 'all') ||
+    (filtersState.budgetMin && Number(filtersState.budgetMin) > 0) ||
+    (filtersState.budgetMax && Number(filtersState.budgetMax) < 5000000);
 
   return (
     <div className="min-h-screen py-6 lg:py-8 bg-[#FAF9F7]">
@@ -312,162 +434,94 @@ export default function Businesses() {
         </div>
 
         {/* Search & Filters Bar */}
-        <div className="w-full p-4 mb-0" style={{ backgroundColor: '#F6F5F3' }}>
-          {/* Sort Dropdown */}
-          <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-[#E7E2DE]">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-[#111827]">
-              <span>{language === 'fr' ? 'Trier par:' : 'Sort by:'}</span>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40 h-9 text-xs sm:text-sm border-gray-200 rounded-lg bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="-created_date">{language === 'fr' ? 'Plus récent' : 'Newest'}</SelectItem>
-                  <SelectItem value="price_asc">{language === 'fr' ? 'Prix: Croissant' : 'Price: Low-High'}</SelectItem>
-                  <SelectItem value="price_desc">{language === 'fr' ? 'Prix: Décroissant' : 'Price: High-Low'}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Filters Row - Responsive Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            <div className="col-span-2 sm:col-span-1">
-              <div className="relative">
+        <div className="sticky top-0 z-20 bg-[#FAF9F7] pb-3">
+          <div className="w-full">
+            <div className="sm:hidden w-full bg-[#FAF9F7]">
+              <div className="relative mb-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={filtersState.query}
+                  onChange={(e) => updateFilter('query', e.target.value)}
                   placeholder={t('search_placeholder')}
-                  className="pl-9 h-9 text-xs sm:text-sm border-gray-300 focus:border-primary rounded-lg w-full bg-white"
+                  className="pl-9 h-10 text-sm border-gray-300 focus:border-primary rounded-lg w-full bg-white"
                 />
               </div>
-            </div>
-            <div className="col-span-1">
-              <Select value={selectedSector} onValueChange={setSelectedSector}>
-                <SelectTrigger className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm">
-                  <SelectValue placeholder={language === 'fr' ? 'Sect.' : 'Sect.'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{language === 'fr' ? 'Tous' : 'All'}</SelectItem>
-                  {SECTORS.map(sector => (
-                    <SelectItem key={sector} value={sector}>
-                      {t(sector)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-1">
-              <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                <SelectTrigger className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm">
-                  <SelectValue placeholder={language === 'fr' ? 'Pays' : 'Pays'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{language === 'fr' ? 'Tous' : 'All'}</SelectItem>
-                  {COUNTRIES.map(country => (
-                    <SelectItem key={country.value} value={country.value}>
-                      {country.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-1">
-              <Select 
-                value={selectedDepartment} 
-                onValueChange={setSelectedDepartment}
-                disabled={selectedCountry && selectedCountry !== 'all' && selectedCountry !== 'france'}
-              >
-                <SelectTrigger className={`h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm ${
-                  selectedCountry && selectedCountry !== 'all' && selectedCountry !== 'france' 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : ''
-                }`}>
-                  <SelectValue placeholder={language === 'fr' ? 'Dép.' : 'Dpt.'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{language === 'fr' ? 'Tous' : 'All'}</SelectItem>
-                  {DEPARTMENTS.map(department => (
-                    <SelectItem key={department.value} value={department.value}>
-                      {department.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-1">
-              <Input
-                type="number"
-                value={budgetRange[0] === 0 ? '' : budgetRange[0]}
-                onChange={(e) => setBudgetRange([Number(e.target.value) || 0, budgetRange[1]])}
-                placeholder={language === 'fr' ? 'Min' : 'Min'}
-                className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm"
-              />
-            </div>
-            <div className="col-span-1">
-              <Input
-                type="number"
-                value={budgetRange[1] === 5000000 ? '' : budgetRange[1]}
-                onChange={(e) => setBudgetRange([budgetRange[0], Number(e.target.value) || 5000000])}
-                placeholder={language === 'fr' ? 'Max' : 'Max'}
-                className="h-9 w-full rounded-lg border-gray-300 bg-white text-xs sm:text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Active Filters */}
-          {hasActiveFilters && (
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-              <span className="text-sm text-gray-500">Filtres actifs:</span>
-              <div className="flex flex-wrap gap-2">
-                {searchQuery && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                    "{searchQuery}"
-                    <button onClick={() => setSearchQuery('')}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {selectedSector && selectedSector !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-sm">
-                    {t(selectedSector)}
-                    <button onClick={() => setSelectedSector('')}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {(budgetRange[0] > 0 || budgetRange[1] < 5000000) && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                    {budgetRange[0] > 0 ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, notation: 'compact' }).format(budgetRange[0]) : ''}
-                    {budgetRange[0] > 0 && budgetRange[1] < 5000000 ? ' - ' : ''}
-                    {budgetRange[1] < 5000000 ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, notation: 'compact' }).format(budgetRange[1]) : ''}
-                    <button onClick={() => setBudgetRange([0, 5000000])}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {selectedCountry && selectedCountry !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
-                    {selectedCountry}
-                    <button onClick={() => setSelectedCountry('')}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {selectedDepartment && selectedDepartment !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
-                    {selectedDepartment}
-                    <button onClick={() => setSelectedDepartment('')}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E7E2DE]">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 text-sm"
+                  onClick={() => setMobileFiltersOpen(true)}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  {language === 'fr' ? 'Filtres' : 'Filters'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 text-sm"
+                  onClick={() => setMobileSortOpen(true)}
+                >
+                  <ArrowUpDown className="w-4 h-4" />
+                  {language === 'fr' ? 'Tri' : 'Sort'}
+                </Button>
               </div>
             </div>
-          )}
+
+            <FilterBarDesktop
+              filtersState={filtersState}
+              language={language}
+              t={t}
+              sectors={SECTORS}
+              countries={COUNTRIES}
+              departments={DEPARTMENTS}
+              onUpdateFilter={updateFilter}
+            />
+
+            <ActiveFilterChips
+              filtersState={filtersState}
+              hasActiveFilters={hasActiveFilters}
+              language={language}
+              t={t}
+              onUpdateFilter={updateFilter}
+            />
+          </div>
         </div>
+
+        <FilterSheetMobile
+          open={mobileFiltersOpen}
+          onOpenChange={setMobileFiltersOpen}
+          filtersState={filtersState}
+          language={language}
+          t={t}
+          sectors={SECTORS}
+          countries={COUNTRIES}
+          departments={DEPARTMENTS}
+          onUpdateFilter={updateFilter}
+        />
+
+        <Sheet open={mobileSortOpen} onOpenChange={setMobileSortOpen}>
+          <SheetContent side="bottom" className="h-[40vh] rounded-t-2xl">
+            <SheetHeader className="text-left">
+              <SheetTitle className="font-display">
+                {language === 'fr' ? 'Trier les annonces' : 'Sort listings'}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="mt-4">
+              <SortControl
+                value={filtersState.sortBy}
+                onChange={(value) => {
+                  updateFilter('sortBy', value);
+                  setMobileSortOpen(false);
+                }}
+                language={language}
+                compact
+                className="w-full"
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
 
         {/* Results */}
         {loading ? (
@@ -510,12 +564,18 @@ export default function Businesses() {
                     business={business}
                     isFavorite={favorites.includes(business.id)}
                     onToggleFavorite={toggleFavorite}
+                    fetchSellerLogo={false}
                   />
                 </motion.div>
               ))}
             </AnimatePresence>
           </motion.div>
         )}
+        <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
+          {loadingMore && (
+            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -407,7 +407,10 @@ export default function Sidebar({ user }) {
             </DropdownMenu>
 
             <button
-              onClick={() => logout(false)}
+              onClick={async () => {
+                await logout(false);
+                navigate('/');
+              }}
               className="w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-xl text-sm text-[#111827] hover:bg-white/80 hover:text-[#3B4759] transition-colors"
             >
               <LogOut className="w-4 h-4" />

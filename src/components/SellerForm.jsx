@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,9 +58,36 @@ export default function SellerForm({
   editingId
 }) {
   const [newAsset, setNewAsset] = useState('');
+  const publishToastRef = useRef(null);
+  const publishToastTimerRef = useRef(null);
   const publishMessage = language === 'fr'
     ? "Votre annonce est en cours de validation. Elle sera publiée après validation par la plateforme."
     : 'Your listing is under review and will be published after platform validation.';
+
+  const clearPublishToast = () => {
+    if (publishToastTimerRef.current) {
+      clearTimeout(publishToastTimerRef.current);
+      publishToastTimerRef.current = null;
+    }
+    if (publishToastRef.current) {
+      publishToastRef.current.dismiss();
+      publishToastRef.current = null;
+    }
+  };
+
+  const showPublishToast = () => {
+    clearPublishToast();
+    const toastInstance = toast({
+      title: language === 'fr' ? 'Annonce envoyée' : 'Listing submitted',
+      description: publishMessage
+    });
+    publishToastRef.current = toastInstance;
+    publishToastTimerRef.current = setTimeout(() => {
+      toastInstance.dismiss();
+      publishToastRef.current = null;
+      publishToastTimerRef.current = null;
+    }, 6000);
+  };
 
   // Auto-generate region for France when location changes
   useEffect(() => {
@@ -72,6 +99,10 @@ export default function SellerForm({
       }
     }
   }, [formData.location, formData.country]);
+
+  useEffect(() => () => {
+    clearPublishToast();
+  }, []);
 
   const handleChange = (field, value) => {
     const updatedData = { ...formData, [field]: value };
@@ -266,11 +297,11 @@ export default function SellerForm({
               </CardHeader>
               <CardContent className="space-y-4">
                 {editingId && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
-                    <p className="text-sm text-amber-800">
-                      {language === 'fr' 
-                        ? 'Les informations financières ne peuvent pas être modifiées après la publication.' 
-                        : 'Financial information cannot be modified after publication.'}
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                    <p className="text-sm text-blue-800">
+                      {language === 'fr'
+                        ? 'Vous pouvez modifier les informations financières même après publication.'
+                        : 'You can edit financial information even after publication.'}
                     </p>
                   </div>
                 )}
@@ -284,7 +315,6 @@ export default function SellerForm({
                       placeholder="500000"
                       className="mt-2 font-mono"
                       required
-                      disabled={!!editingId}
                     />
                   </div>
 
@@ -296,7 +326,6 @@ export default function SellerForm({
                       onChange={(e) => handleChange('annual_revenue', e.target.value)}
                       placeholder="1000000"
                       className="mt-2 font-mono"
-                      disabled={!!editingId}
                     />
                   </div>
 
@@ -308,7 +337,6 @@ export default function SellerForm({
                       onChange={(e) => handleChange('ebitda', e.target.value)}
                       placeholder="200000"
                       className="mt-2 font-mono"
-                      disabled={!!editingId}
                     />
                   </div>
 
@@ -320,7 +348,6 @@ export default function SellerForm({
                       onChange={(e) => handleChange('employees', e.target.value)}
                       placeholder="10"
                       className="mt-2 font-mono"
-                      disabled={!!editingId}
                     />
                   </div>
 
@@ -332,7 +359,6 @@ export default function SellerForm({
                       onChange={(e) => handleChange('year_founded', e.target.value)}
                       placeholder="2010"
                       className="mt-2 font-mono"
-                      disabled={!!editingId}
                     />
                   </div>
                 </div>
@@ -584,10 +610,7 @@ export default function SellerForm({
               <Button
                 onClick={() => {
                   onSubmit('active');
-                  toast({
-                    title: language === 'fr' ? 'Annonce envoyée' : 'Listing submitted',
-                    description: publishMessage
-                  });
+                  showPublishToast();
                 }}
                 disabled={saving}
                 className="flex-1 py-6 bg-primary text-white hover:bg-primary/90"

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -182,9 +182,36 @@ export default function BuyerForm({
   const [locationInput, setLocationInput] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
+  const publishToastRef = useRef(null);
+  const publishToastTimerRef = useRef(null);
   const publishMessage = language === 'fr'
     ? "Votre annonce est en cours de validation. Elle sera publiée après validation par la plateforme."
     : 'Your listing is under review and will be published after platform validation.';
+
+  const clearPublishToast = () => {
+    if (publishToastTimerRef.current) {
+      clearTimeout(publishToastTimerRef.current);
+      publishToastTimerRef.current = null;
+    }
+    if (publishToastRef.current) {
+      publishToastRef.current.dismiss();
+      publishToastRef.current = null;
+    }
+  };
+
+  const showPublishToast = () => {
+    clearPublishToast();
+    const toastInstance = toast({
+      title: language === 'fr' ? 'Annonce envoyée' : 'Listing submitted',
+      description: publishMessage
+    });
+    publishToastRef.current = toastInstance;
+    publishToastTimerRef.current = setTimeout(() => {
+      toastInstance.dismiss();
+      publishToastRef.current = null;
+      publishToastTimerRef.current = null;
+    }, 6000);
+  };
 
   const handleChange = (field, value) => {
     onFormChange({ ...formData, [field]: value });
@@ -223,6 +250,10 @@ export default function BuyerForm({
     handleChange('buyer_document_url', '');
     handleChange('buyer_document_name', '');
   };
+
+  useEffect(() => () => {
+    clearPublishToast();
+  }, []);
 
   // Filter locations based on input
   const getFilteredLocations = () => {
@@ -621,10 +652,7 @@ export default function BuyerForm({
               <Button
                 onClick={() => {
                   onSubmit('active');
-                  toast({
-                    title: language === 'fr' ? 'Annonce envoyée' : 'Listing submitted',
-                    description: publishMessage
-                  });
+                  showPublishToast();
                 }}
                 disabled={saving}
                 className="flex-1 py-6 bg-primary text-white hover:bg-primary/90"
