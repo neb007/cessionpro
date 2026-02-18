@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Lock, AlertCircle, FileCheck } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**

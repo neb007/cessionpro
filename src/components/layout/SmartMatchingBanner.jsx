@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Zap, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 
 export default function SmartMatchingBanner({ isPurchased = false }) {

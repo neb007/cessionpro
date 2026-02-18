@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Check, Zap } from 'lucide-react';
-import { PRICING, getPricingLabel, getPricingDescription, formatPrice, getContactPackages, getPhotoPackages } from '@/constants/pricing';
+import { getPricingLabel, getPricingDescription, formatPrice, getContactPackages, getPhotoPackages } from '@/constants/pricing';
 import { Button } from '@/components/ui/button';
 
 /**

@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Target, Briefcase, Mail, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Logo from '@/components/Logo';
 
 export default function Step1Objective({ onSelectObjective, onEmailSignup, isLoading }) {
   const containerVariants = {

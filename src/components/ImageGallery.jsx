@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Loader2, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { X, Upload, Loader2 } from 'lucide-react';
 import { uploadBusinessImage } from '@/services/imageService';
-import { Button } from '@/components/ui/button';
 
 export default function ImageGallery({
   images,

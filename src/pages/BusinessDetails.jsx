@@ -19,16 +19,10 @@ import {
 } from '@/components/ui/dialog';
 import { 
   MapPin, 
-  Users, 
-  Calendar, 
-  TrendingUp,
+  Calendar,
   Heart,
   MessageCircle,
-  Share2,
-  ChevronLeft,
-  ChevronRight,
   Lock,
-  Building2,
   Eye,
   CheckCircle2,
   ArrowLeft,
@@ -38,7 +32,6 @@ import {
 import { motion } from 'framer-motion';
 import FinancialChart from '@/components/Financial/FinancialChart';
 import BentoPhotoGallery from '@/components/BentoPhotoGallery';
-import { getBusinessImageList, getPrimaryImageUrl } from '@/utils/imageHelpers';
 import LogoCard from '@/components/ui/LogoCard';
 import { FRENCH_DEPARTMENTS } from '@/utils/frenchDepartmentsData';
 import { EUROPEAN_COUNTRIES } from '@/utils/europeanCountries';

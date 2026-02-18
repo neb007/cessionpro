@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Calculator } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function PriceCalculator({

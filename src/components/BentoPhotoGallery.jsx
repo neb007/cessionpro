@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Grid3x3, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Image as ImageIcon, Grid3x3 } from 'lucide-react';
 import { getBusinessImageList } from '@/utils/imageHelpers';
 import PhotoLightbox from './PhotoLightbox';
 

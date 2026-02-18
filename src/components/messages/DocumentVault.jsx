@@ -1,17 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FileText, 
   Download, 
   Lock, 
-  CheckCircle2, 
-  Clock,
-  Eye,
+  CheckCircle2,
   Share2,
   Trash2,
-  File,
-  FileJson,
-  FileCode,
   AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

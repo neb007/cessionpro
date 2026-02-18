@@ -6,9 +6,8 @@ import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -26,8 +25,7 @@ import {
   MessageSquare,
   Building2,
   Loader2,
-  Star,
-  User
+  Star
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import moment from 'moment';

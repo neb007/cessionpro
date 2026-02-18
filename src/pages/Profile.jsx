@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -11,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -21,19 +19,15 @@ import {
 } from '@/components/ui/select';
 import { 
   User, 
-  Building2, 
-  Phone, 
-  MapPin,
+  Building2,
   Save,
   Loader2,
   X,
-  Plus,
   Camera,
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { DicebearAvatar } from '@/components/messages/DicebearAvatar';
 import { resizeLogo, validateLogoFile, createPreviewUrl, revokePreviewUrl } from '@/utils/logoResizer';
 import {
   Dialog,

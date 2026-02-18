@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Zap, MapPin, Briefcase, Send, TrendingUp, Users, Calendar, BarChart3, X, Search, ChevronDown } from 'lucide-react';
+import { Zap, MapPin, Send, TrendingUp, Users, Calendar, BarChart3, X, Search } from 'lucide-react';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
-import SmartMatchingBanner from '@/components/layout/SmartMatchingBanner';
 
 // Secteurs disponibles
 const SECTORS = [

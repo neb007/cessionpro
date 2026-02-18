@@ -16,10 +16,8 @@ import { X, Plus, Save, Send, Loader2, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FinancialYearsManager from '@/components/Financial/FinancialYearsManager';
 import ImageGallery from '@/components/ImageGallery';
-import PriceCalculator from '@/components/PriceCalculator';
 import { getDefaultImageForSector } from '@/constants/defaultImages';
 import { getRegionForFrenchCity } from '@/utils/frenchCitiesToRegions';
-import { getDepartmentForFrenchCity } from '@/utils/frenchCitiesToDepartments';
 import { toast } from '@/components/ui/use-toast';
 
 const SECTORS = [

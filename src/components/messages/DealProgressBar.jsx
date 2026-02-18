@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Circle, Lock, Unlock } from 'lucide-react';
+import { CheckCircle, Lock } from 'lucide-react';
 
 /**
  * DealProgressBar Component

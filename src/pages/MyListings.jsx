@@ -14,36 +14,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+
+
+
+
 import { 
   Plus, 
   Eye, 
   Building2,
-  MoreVertical,
   Edit,
   Trash2,
   CheckCircle,
   Clock,
   XCircle,
   Loader2,
-  TrendingUp,
   Copy,
   ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateUniqueReference } from '@/utils/referenceGenerator';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 
 const statusConfig = {
