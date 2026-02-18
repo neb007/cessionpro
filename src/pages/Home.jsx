@@ -4,6 +4,7 @@ import { createPageUrl } from '@/utils';
 import { businessService } from '@/services/businessService';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import BusinessCard from '@/components/ui/BusinessCard';
+import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -68,11 +69,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-white" />
-              </div>
+              <Logo size="sm" showText={false} />
               <span className="font-display font-bold text-lg text-gray-900 hidden sm:inline">
-                CessionPro
+                Riviqo
               </span>
             </Link>
             <div className="flex items-center gap-4">
@@ -294,8 +293,8 @@ export default function Home() {
             >
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
                 {language === 'fr' 
-                  ? 'Pourquoi choisir CessionPro ?'
-                  : 'Why choose CessionPro?'}
+                  ? 'Pourquoi choisir Riviqo ?'
+                  : 'Why choose Riviqo?'}
               </h2>
               <p className="text-lg text-gray-500 mb-10">
                 {language === 'fr'
@@ -383,8 +382,8 @@ export default function Home() {
               </h2>
               <p className="text-xl text-white/80 mb-8">
                 {language === 'fr'
-                  ? 'Rejoignez CessionPro et accédez à un réseau de repreneurs et vendeurs qualifiés.'
-                  : 'Join CessionPro and access a network of qualified buyers and sellers.'}
+                  ? 'Rejoignez Riviqo et accédez à un réseau de repreneurs et vendeurs qualifiés.'
+                  : 'Join Riviqo and access a network of qualified buyers and sellers.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/AccountCreation">

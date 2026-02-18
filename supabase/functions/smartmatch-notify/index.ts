@@ -51,7 +51,7 @@ const logDispatch = async (params: {
   error?: string | null;
 }) => {
   try {
-    await params.supabase.from('email_dispatch_logs').insert({
+    const { error } = await params.supabase.from('email_dispatch_logs').insert({
       actor_id: params.actorId,
       event_type: 'smartmatch_notify',
       recipient_id: params.recipientId || null,
@@ -62,8 +62,28 @@ const logDispatch = async (params: {
       provider_id: params.providerId || null,
       error: params.error || null
     });
-  } catch (_error) {
+
+    if (error) {
+      console.error('[smartmatch-notify] email_dispatch_logs insert failed', {
+        error: error.message,
+        actorId: params.actorId,
+        recipientId: params.recipientId || null,
+        recipientEmail: params.recipientEmail || null,
+        sourceId: params.sourceId,
+        idempotencyKey: params.idempotencyKey || null,
+        status: params.status
+      });
+    }
+  } catch (error) {
     // Best-effort logging only.
+    console.error('[smartmatch-notify] unexpected email_dispatch_logs error', {
+      error: (error as Error).message,
+      actorId: params.actorId,
+      recipientId: params.recipientId || null,
+      sourceId: params.sourceId,
+      idempotencyKey: params.idempotencyKey || null,
+      status: params.status
+    });
   }
 };
 

@@ -137,7 +137,7 @@ export default function Register() {
 
   const translations = {
     fr: {
-      title: 'Créer un compte CessionPro',
+      title: 'Créer un compte Riviqo',
       subtitle: 'Rejoignez notre communauté de professionnels',
       email: 'Adresse email',
       emailPlaceholder: 'vous@exemple.com',
@@ -160,7 +160,7 @@ export default function Register() {
       passwordStrength: 'Sécurité du mot de passe'
     },
     en: {
-      title: 'Create a CessionPro Account',
+      title: 'Create a Riviqo Account',
       subtitle: 'Join our community of professionals',
       email: 'Email address',
       emailPlaceholder: 'you@example.com',

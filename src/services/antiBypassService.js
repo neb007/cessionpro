@@ -1,7 +1,7 @@
 /**
  * Anti-Bypass Detection Service
  * Detects and prevents attempts to share contact information outside the platform
- * Protects user privacy and ensures all communications stay on Cessionpro
+ * Protects user privacy and ensures all communications stay on Riviqo
  */
 
 class AntiBypassService {
@@ -57,11 +57,11 @@ class AntiBypassService {
       payment: 'medium'
     };
 
-    // Whitelist for safe URLs (Cessionpro domains)
+    // Whitelist for safe URLs (Riviqo domains)
     this.urlWhitelist = [
-      'cessionpro.com',
-      'app.cessionpro.com',
-      'www.cessionpro.com'
+      'riviqo.com',
+      'app.riviqo.com',
+      'www.riviqo.com'
     ];
   }
 
@@ -145,17 +145,17 @@ class AntiBypassService {
    */
   getWarningMessage(violationType) {
     const messages = {
-      email: 'Adresse email détectée. Veuillez garder toutes les communications sur Cessionpro pour votre sécurité.',
+      email: 'Adresse email détectée. Veuillez garder toutes les communications sur Riviqo pour votre sécurité.',
       phone: 'Numéro de téléphone détecté. Utilisez la plateforme pour toutes les communications.',
-      whatsapp: 'WhatsApp détecté. Continuez la conversation sur Cessionpro pour maintenir un historique sécurisé.',
+      whatsapp: 'WhatsApp détecté. Continuez la conversation sur Riviqo pour maintenir un historique sécurisé.',
       telegram: 'Telegram détecté. La plateforme propose une messagerie sécurisée.',
-      viber: 'Viber détecté. Utilisez Cessionpro pour tracer toutes les communications.',
-      signal: 'Signal détecté. Cessionpro offre une communication sécurisée.',
-      wechat: 'WeChat détecté. Gardez les discussions sur Cessionpro.',
-      skype: 'Skype détecté. Communiquez via Cessionpro.',
-      social: 'Réseaux sociaux détectés. Restez sur Cessionpro pour une communication professionnelle.',
-      url: 'Lien externe détecté. Partagez les documents via la Data Room Cessionpro.',
-      payment: 'Informations de paiement détectées. Utilisez les canaux officiels Cessionpro.'
+      viber: 'Viber détecté. Utilisez Riviqo pour tracer toutes les communications.',
+      signal: 'Signal détecté. Riviqo offre une communication sécurisée.',
+      wechat: 'WeChat détecté. Gardez les discussions sur Riviqo.',
+      skype: 'Skype détecté. Communiquez via Riviqo.',
+      social: 'Réseaux sociaux détectés. Restez sur Riviqo pour une communication professionnelle.',
+      url: 'Lien externe détecté. Partagez les documents via la Data Room Riviqo.',
+      payment: 'Informations de paiement détectées. Utilisez les canaux officiels Riviqo.'
     };
 
     return messages[violationType] || 'Contenu suspect détecté. Veuillez vérifier votre message.';

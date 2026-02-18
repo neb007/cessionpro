@@ -92,8 +92,8 @@ export default function Dataroom() {
             
             <p className="text-sm text-gray-500 mb-8">
               {language === 'fr'
-                ? 'La Dataroom sera intégrée comme fonctionnalité premium de CessionPro'
-                : 'Dataroom will be integrated as a premium CessionPro feature'}
+                ? 'La Dataroom sera intégrée comme fonctionnalité premium de Riviqo'
+                : 'Dataroom will be integrated as a premium Riviqo feature'}
             </p>
 
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium mb-6">
@@ -197,8 +197,7 @@ export default function Dataroom() {
             variant="outline"
             className="gap-2"
             onClick={() => {
-              // Open the plan file
-              window.location.href = 'https://github.com/neb007/cessionpro/blob/main/DATAROOM_IMPLEMENTATION_PLAN.md';
+              window.location.href = 'https://riviqo.com';
             }}
           >
             <FileText className="w-4 h-4" />

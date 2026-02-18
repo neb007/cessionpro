@@ -63,7 +63,7 @@ const logEmailDispatch = async (params: {
   error?: string | null;
 }) => {
   try {
-    await params.supabase.from('email_dispatch_logs').insert({
+    const { error } = await params.supabase.from('email_dispatch_logs').insert({
       actor_id: params.actorId,
       event_type: params.eventType,
       recipient_id: params.recipientId || null,
@@ -74,8 +74,30 @@ const logEmailDispatch = async (params: {
       provider_id: params.providerId || null,
       error: params.error || null
     });
-  } catch (_error) {
+
+    if (error) {
+      console.error('[send-email] email_dispatch_logs insert failed', {
+        error: error.message,
+        actorId: params.actorId,
+        eventType: params.eventType,
+        recipientId: params.recipientId || null,
+        recipientEmail: params.recipientEmail || null,
+        sourceId: params.sourceId || null,
+        idempotencyKey: params.idempotencyKey || null,
+        status: params.status
+      });
+    }
+  } catch (error) {
     // Logging must never block email delivery.
+    console.error('[send-email] unexpected email_dispatch_logs error', {
+      error: (error as Error).message,
+      actorId: params.actorId,
+      eventType: params.eventType,
+      recipientId: params.recipientId || null,
+      sourceId: params.sourceId || null,
+      idempotencyKey: params.idempotencyKey || null,
+      status: params.status
+    });
   }
 };
 
@@ -126,7 +148,7 @@ const buildSubjectAndHtml = (
   data: {
     senderName?: string;
     messagePreview?: string;
-    listingTitle?: string;
+    listingTitle?: string | null;
     dealStage?: string;
     documentName?: string;
     signerName?: string;

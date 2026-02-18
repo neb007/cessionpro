@@ -224,7 +224,7 @@ export default function Sidebar({ user }) {
                 <Building2 className="w-5 h-5 text-white" />
               </div>
               <span className="font-display font-bold text-lg text-[#3B4759]">
-                CessionPro
+                Riviqo
               </span>
             </Link>
           </div>

@@ -309,19 +309,19 @@ const translations = {
   }
 };
 
-const LanguageContext = createContext();
+const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
   const [language, setLanguage] = useState('fr');
   
   useEffect(() => {
-    const saved = localStorage.getItem('cessionpro_lang');
+    const saved = localStorage.getItem('riviqo_lang') || localStorage.getItem('cessionpro_lang');
     if (saved) setLanguage(saved);
   }, []);
   
   const changeLanguage = (lang) => {
     setLanguage(lang);
-    localStorage.setItem('cessionpro_lang', lang);
+    localStorage.setItem('riviqo_lang', lang);
   };
   
   const t = (key) => translations[language]?.[key] || translations['fr'][key] || key;

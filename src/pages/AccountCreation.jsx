@@ -28,6 +28,7 @@ export default function AccountCreation() {
     transactionSize: '', // 'less_1m', '1_5m', '5_10m', 'more_10m'
     
     // Step 3
+    email: '',
     firstName: '',
     lastName: '',
     company: '',
@@ -84,7 +85,20 @@ export default function AccountCreation() {
       setError('');
       setIsLoading(true);
 
+      const email = formData.email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
       // Validate required fields
+      if (!email) {
+        setError('Veuillez renseigner une adresse email');
+        return;
+      }
+
+      if (!emailRegex.test(email)) {
+        setError('Veuillez renseigner une adresse email valide');
+        return;
+      }
+
       if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.company.trim()) {
         setError('Veuillez remplir tous les champs obligatoires');
         return;
@@ -100,12 +114,17 @@ export default function AccountCreation() {
         return;
       }
 
-      // Construct email from first name and last name (or use a simple format)
-      // Note: In production, you might want to ask for email instead
-      const email = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}@cessionpro.local`.replace(/\s+/g, '');
-
       // Register with Supabase
-      const result = await register(email, formData.password);
+      const result = await register(email, formData.password, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        company: formData.company,
+        phone: formData.phone,
+        userGoal: formData.userGoal,
+        profileType: formData.profileType,
+        transactionSize: formData.transactionSize,
+        sectors: formData.sectors
+      });
 
       if (result?.user) {
         // TODO: Save additional profile data to database

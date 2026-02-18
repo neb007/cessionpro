@@ -12,7 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: 'cessionpro-auth',
+    storageKey: 'riviqo-auth',
     flowType: 'pkce'
   }
 });

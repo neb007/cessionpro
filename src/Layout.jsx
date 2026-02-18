@@ -75,7 +75,7 @@ function LayoutContent({ children, currentPageName }) {
                   <Building2 className="w-5 h-5 text-white" />
                 </div>
                 <span className="font-display font-bold text-xl text-white">
-                  CessionPro
+                  Riviqo
                 </span>
               </div>
               <p className="text-[#111827] max-w-sm">
@@ -97,11 +97,11 @@ function LayoutContent({ children, currentPageName }) {
               <h4 className="font-display font-semibold text-white mb-4">
                 {language === 'fr' ? 'Contact' : 'Contact'}
               </h4>
-              <p className="text-[#111827]">contact@cessionpro.com</p>
+              <p className="text-[#111827]">contact@riviqo.com</p>
             </div>
           </div>
           <div className="border-t border-[#4A5668] mt-12 pt-8 text-center text-sm">
-            © {new Date().getFullYear()} CessionPro. {language === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'}
+            © {new Date().getFullYear()} Riviqo. {language === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'}
           </div>
         </div>
       </footer>

@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
 
 const AuthContext = createContext(null);
+const APP_URL = (import.meta.env.VITE_APP_URL || 'https://riviqo.com').replace(/\/$/, '');
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -141,14 +142,15 @@ export const AuthProvider = ({ children }) => {
         password,
         options: {
           data: rawUserMetaData,
-          emailRedirectTo: `${window.location.origin}/auth-callback`
+          emailRedirectTo: `${APP_URL}/auth-callback`
         }
       });
 
       if (error) throw error;
 
-      // If signup successful, save the profile data to the profiles table
-      if (data.user) {
+      // If signup returns an authenticated session, we can enrich profile immediately.
+      // When email confirmation is required, session is often null and RLS blocks writes.
+      if (data.user && data.session?.user?.id === data.user.id) {
         await saveProfileData(data.user.id, rawUserMetaData);
       }
 
@@ -184,10 +186,17 @@ export const AuthProvider = ({ children }) => {
         }, { onConflict: 'id' });
 
       if (error) {
+        if (error.code === '42501') {
+          // Expected in some signup flows without active user session (email confirmation required).
+          return;
+        }
         console.error('Error saving profile data:', error);
         throw error;
       }
     } catch (error) {
+      if (error?.code === '42501') {
+        return;
+      }
       console.error('Profile save error:', error);
       // Don't throw here - registration was successful, just profile save failed
       setAuthError({
@@ -245,7 +254,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setAuthError(null);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: `${APP_URL}/reset-password`
       });
 
       if (error) throw error;

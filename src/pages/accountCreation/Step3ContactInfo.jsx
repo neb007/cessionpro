@@ -49,6 +49,8 @@ export default function Step3ContactInfo({
     show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
 
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   // Password strength calculation
   const calculatePasswordStrength = (pwd) => {
     let strength = 0;
@@ -93,6 +95,7 @@ export default function Step3ContactInfo({
   };
 
   // Validation
+  const emailError = touched.email && (!formData.email.trim() || !validateEmail(formData.email));
   const firstNameError = touched.firstName && !formData.firstName.trim();
   const lastNameError = touched.lastName && !formData.lastName.trim();
   const companyError = touched.company && !formData.company.trim();
@@ -104,6 +107,8 @@ export default function Step3ContactInfo({
     formData.password !== formData.confirmPassword;
 
   const isFormValid =
+    formData.email.trim() &&
+    validateEmail(formData.email) &&
     formData.firstName.trim() &&
     formData.lastName.trim() &&
     formData.company.trim() &&
@@ -151,6 +156,30 @@ export default function Step3ContactInfo({
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
+          {/* Email */}
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="email" className="text-charcoal font-medium">
+              Email <span className="text-primary">*</span>
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleFieldChange('email', e.target.value)}
+              onBlur={() => setTouched({ ...touched, email: true })}
+              placeholder="vous@exemple.com"
+              disabled={isLoading}
+              className={`rounded-lg border-2 bg-gray-50 px-4 py-3 text-charcoal focus:bg-white focus:outline-none transition-all ${
+                emailError
+                  ? 'border-red-300'
+                  : 'border-gray-200 focus:border-primary'
+              }`}
+            />
+            {emailError && (
+              <p className="text-red-500 text-xs">Une adresse email valide est obligatoire</p>
+            )}
+          </div>
+
           {/* First Name */}
           <div className="space-y-2">
             <Label htmlFor="firstName" className="text-charcoal font-medium">

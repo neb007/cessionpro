@@ -98,7 +98,7 @@ export default function Login() {
 
   const translations = {
     fr: {
-      title: 'Connexion à CessionPro',
+      title: 'Connexion à Riviqo',
       subtitle: 'Accédez à votre compte pour explorer les opportunités',
       email: 'Adresse email',
       emailPlaceholder: 'vous@exemple.com',
@@ -117,7 +117,7 @@ export default function Login() {
       connecting: 'Connexion en cours...'
     },
     en: {
-      title: 'Login to CessionPro',
+      title: 'Login to Riviqo',
       subtitle: 'Access your account to explore opportunities',
       email: 'Email address',
       emailPlaceholder: 'you@example.com',

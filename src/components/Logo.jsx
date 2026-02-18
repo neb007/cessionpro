@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function Logo({ size = 'md', showText = true }) {
+  const [useFallbackIcon, setUseFallbackIcon] = useState(false);
   const sizes = {
     sm: 'w-12 h-12',
     md: 'w-16 h-16',
@@ -13,82 +14,38 @@ export default function Logo({ size = 'md', showText = true }) {
     lg: 'text-4xl'
   };
 
+  const iconSizes = {
+    sm: 'w-6 h-6',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12'
+  };
+
   return (
     <div className="flex flex-col items-center">
-      {/* Logo SVG */}
-      <div className={`${sizes[size]} flex items-center justify-center bg-white rounded-full shadow-md`}>
-        <svg viewBox="0 0 200 200" className="w-full h-full p-2" xmlns="http://www.w3.org/2000/svg">
-          {/* Circular arrows - Blue arrow up-right */}
-          <path
-            d="M 100 50 Q 140 80 140 120"
-            fill="none"
-            stroke="#0F3460"
-            strokeWidth="16"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      {/* Riviqo Icon */}
+      <div className={`${sizes[size]} flex items-center justify-center bg-[#111111] rounded-2xl shadow-md`}>
+        {!useFallbackIcon ? (
+          <img
+            src="/riviqo-logo.svg"
+            alt="Riviqo"
+            className={`${iconSizes[size]} object-contain`}
+            onError={() => setUseFallbackIcon(true)}
           />
-          {/* Arrow head - Blue */}
-          <polygon points="140,60 165,75 150,100" fill="#0F3460" />
-
-          {/* Circular arrows - Orange arrow down-right */}
-          <path
-            d="M 140 120 Q 140 160 100 150"
-            fill="none"
-            stroke="#E67E22"
-            strokeWidth="16"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Arrow head - Orange */}
-          <polygon points="100,160 80,150 95,125" fill="#E67E22" />
-
-          {/* Circular arrows - Orange arrow down-left */}
-          <path
-            d="M 100 150 Q 60 160 60 120"
-            fill="none"
-            stroke="#E67E22"
-            strokeWidth="16"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Arrow head - Orange */}
-          <polygon points="60,150 35,135 50,110" fill="#E67E22" />
-
-          {/* Circular arrows - Blue arrow up-left */}
-          <path
-            d="M 60 120 Q 60 80 100 50"
-            fill="none"
-            stroke="#0F3460"
-            strokeWidth="16"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Arrow head - Blue */}
-          <polygon points="100,40 120,65 105,90" fill="#0F3460" />
-
-          {/* Handshake in center */}
-          <path
-            d="M 80 100 L 95 95 Q 100 93 105 95 L 120 100"
-            fill="none"
-            stroke="#0F3460"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Right hand part */}
-          <path d="M 105 95 L 115 85 M 115 85 L 125 90" stroke="#E67E22" strokeWidth="3" fill="none" strokeLinecap="round" />
-          {/* Left hand part */}
-          <path d="M 95 95 L 85 85 M 85 85 L 75 90" stroke="#0F3460" strokeWidth="3" fill="none" strokeLinecap="round" />
-        </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" className={`${iconSizes[size]} text-white`} fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 9.5L6.5 5L9 7.5L6 11L2 9.5Z" fill="currentColor"/>
+            <path d="M22 9.5L17.5 5L15 7.5L18 11L22 9.5Z" fill="currentColor"/>
+            <path d="M7 11L10.2 9.2C11 8.8 12 8.8 12.8 9.2L17 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M8.2 12.5L11 14.8C11.6 15.3 12.4 15.3 13 14.8L15.8 12.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7 13.6L9.2 15.5M9 15.8L11.2 17.6M11 17.9L12.8 19.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </div>
 
       {/* Logo Text */}
       {showText && (
         <div className="mt-2 text-center">
-          <h2 className={`font-bold ${textSizes[size]} text-gray-900`}>
-            <span className="text-[#0F3460]">Cession</span>
-            <span className="text-[#E67E22]">Pro</span>
-          </h2>
+          <h2 className={`font-bold ${textSizes[size]} text-gray-900 tracking-wide`}>RIVIQO</h2>
           <p className="text-xs text-gray-500 mt-1">
             Connecting Business & Opportunity
           </p>

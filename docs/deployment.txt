@@ -1,0 +1,15 @@
+Riviqo - Edge Functions Deployment Status
+Date: 2026-02-18
+
+Project ref: rjvndsrnajenoncgzrzq
+
+Deployed:
+- send-email
+- smartmatch-notify
+
+Not deployed (intentional):
+- stripe-webhook
+
+Notes:
+- Stripe webhook is prepared in code but not activated/deployed yet.
+- This is expected for now (production activation deferred).
