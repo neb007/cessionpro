@@ -70,9 +70,6 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2">
               <Logo size="sm" showText={false} />
-              <span className="font-display font-bold text-lg text-gray-900 hidden sm:inline">
-                Riviqo
-              </span>
             </Link>
             <div className="flex items-center gap-4">
               <Link to="/Login" className="text-gray-900 hover:text-gray-700 font-medium transition-colors px-4 py-2">

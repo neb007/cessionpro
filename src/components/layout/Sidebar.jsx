@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
-  Building2,
   Briefcase,
   ArrowRightFromLine,
   ArrowLeftFromLine,
@@ -38,6 +37,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/AuthContext';
 import { conversationService } from '@/services/conversationService';
+import Logo from '@/components/Logo';
 
 export default function Sidebar({ user }) {
   const { language, changeLanguage } = useLanguage();
@@ -220,12 +220,7 @@ export default function Sidebar({ user }) {
           {/* Logo Section */}
           <div className="flex items-center justify-between px-4 py-4">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center shadow-lg shadow-[#FF6B4A]/20">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-display font-bold text-lg text-[#3B4759]">
-                Riviqo
-              </span>
+              <Logo size="sm" showText={false} />
             </Link>
           </div>
 

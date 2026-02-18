@@ -4,10 +4,8 @@ import { createPageUrl } from '@/utils';
 import { LanguageProvider, useLanguage } from '@/components/i18n/LanguageContext';
 import { SidebarProvider } from '@/lib/SidebarContext';
 import { useAuth } from '@/lib/AuthContext';
-import {
-  Building2
-} from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
+import Logo from '@/components/Logo';
 
 function LayoutContent({ children, currentPageName }) {
   const { t, language, changeLanguage } = useLanguage();
@@ -71,12 +69,9 @@ function LayoutContent({ children, currentPageName }) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center shadow-lg shadow-[#FF6B4A]/20">
-                  <Building2 className="w-5 h-5 text-white" />
+                <div className="bg-white/95 rounded-xl px-3 py-2 inline-flex">
+                  <Logo size="md" showText={false} />
                 </div>
-                <span className="font-display font-bold text-xl text-white">
-                  Riviqo
-                </span>
               </div>
               <p className="text-[#111827] max-w-sm">
                 {language === 'fr' 
