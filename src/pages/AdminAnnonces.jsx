@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { announcementService } from '@/services/announcementService';
+import { emailNotificationService } from '@/services/emailNotificationService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -211,6 +212,20 @@ export default function AdminAnnonces() {
     try {
       const response = await announcementService.approveAnnouncement(announcement.id);
       if (response?.error) throw response.error;
+      if (response?.status === 'active') {
+        const idempotencyKey = `listing:${response.id}:published`;
+        await emailNotificationService.sendListingPublished({
+          listingId: response.id,
+          recipientId: response.seller_id,
+          idempotencyKey,
+          language: 'fr'
+        });
+        await emailNotificationService.sendSmartMatchNotification({
+          listingId: response.id,
+          idempotencyKey: `smartmatch:${response.id}`,
+          language: 'fr'
+        });
+      }
       await loadAnnouncements();
     } finally {
       setActionLoading(null);

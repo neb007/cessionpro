@@ -31,7 +31,8 @@ const iconMap = {
   user: User,
   users: Users,
   database: Database,
-  shield: Shield
+  shield: Shield,
+  star: Star
 };
 
 export default function Abonnement() {
@@ -309,6 +310,7 @@ export default function Abonnement() {
             <SectionTitle title={l.optionsTitle} subtitle={l.optionsSubtitle} />
             <div className="border border-gray-100 rounded-3xl px-6">
               <OptionRow option={PRICING.premium.smartMatching} isPopular={true} />
+              <OptionRow option={PRICING.premium.sponsoredListing} />
               <OptionRow option={PRICING.premium.dataRoom} />
               <OptionRow option={PRICING.premium.ndaProtection} />
             </div>

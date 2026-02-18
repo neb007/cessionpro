@@ -4,7 +4,7 @@ import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, Zap, Image, Images, User, Users, Database, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Check, Zap, Image, Images, User, Users, Database, Shield, AlertCircle, CheckCircle2, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PRICING, formatPrice } from '@/constants/pricing';
 
@@ -193,6 +193,7 @@ export default function Pricing() {
       users: Users,
       database: Database,
       shield: Shield,
+      star: Star,
     };
     return icons[iconName];
   };
@@ -221,6 +222,7 @@ export default function Pricing() {
               option={PRICING.premium.smartMatching} 
               isPopular={true}
             />
+            <PricingCard option={PRICING.premium.sponsoredListing} />
             <PricingCard 
               option={PRICING.premium.dataRoom}
               hasTooltip={true}

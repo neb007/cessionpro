@@ -1,10 +1,9 @@
 /**
  * Email Notification Service
- * Handles sending email notifications when messages are received
- * Uses Resend or SendGrid API
+ * Handles sending email notifications via Supabase Edge Functions (Resend)
  */
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:3001';
+import { supabase } from '@/api/supabaseClient';
 
 class EmailNotificationService {
   /**
@@ -14,40 +13,34 @@ class EmailNotificationService {
   async sendMessageNotification(data) {
     try {
       const {
-        recipientEmail,
-        recipientName,
+        recipientId,
         senderName,
         messagePreview,
         conversationId,
-        businessTitle,
-        language = 'en'
+        sourceId,
+        idempotencyKey,
+        language = 'fr'
       } = data;
 
-      const response = await fetch(`${API_ENDPOINT}/api/notifications/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
           type: 'message',
-          recipient: recipientEmail,
-          recipientName,
+          recipientId,
+          conversationId,
           senderName,
           messagePreview,
-          conversationId,
-          businessTitle,
-          language,
-          timestamp: new Date().toISOString()
-        })
+          sourceId: sourceId || conversationId,
+          idempotencyKey,
+          language
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Email notification failed: ${response.statusText}`);
+      if (error) {
+        throw new Error(`Email notification failed: ${error.message}`);
       }
 
-      console.log('[Email] Message notification sent to:', recipientEmail);
-      return await response.json();
+      console.log('[Email] Message notification sent to:', recipientId);
+      return data;
     } catch (error) {
       console.error('[Email] Error sending notification:', error);
       // Don't throw - email notifications are non-critical
@@ -59,39 +52,22 @@ class EmailNotificationService {
    */
   async sendDealStageNotification(data) {
     try {
-      const {
-        recipientEmail,
-        recipientName,
-        dealStage,
-        businessTitle,
-        conversationId,
-        language = 'en'
-      } = data;
-
-      const response = await fetch(`${API_ENDPOINT}/api/notifications/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`
-        },
-        body: JSON.stringify({
+      const { recipientId, dealStage, sourceId, idempotencyKey, language = 'fr' } = data;
+      const { data: response, error } = await supabase.functions.invoke('send-email', {
+        body: {
           type: 'deal_stage_update',
-          recipient: recipientEmail,
-          recipientName,
+          recipientId,
           dealStage,
-          businessTitle,
-          conversationId,
-          language,
-          timestamp: new Date().toISOString()
-        })
+          sourceId,
+          idempotencyKey,
+          language
+        }
       });
-
-      if (!response.ok) {
-        throw new Error(`Deal stage notification failed: ${response.statusText}`);
+      if (error) {
+        throw new Error(`Deal stage notification failed: ${error.message}`);
       }
-
-      console.log('[Email] Deal stage notification sent to:', recipientEmail);
-      return await response.json();
+      console.log('[Email] Deal stage notification sent');
+      return response;
     } catch (error) {
       console.error('[Email] Error sending deal stage notification:', error);
     }
@@ -102,41 +78,23 @@ class EmailNotificationService {
    */
   async sendDocumentSharedNotification(data) {
     try {
-      const {
-        recipientEmail,
-        recipientName,
-        senderName,
-        documentName,
-        conversationId,
-        businessTitle,
-        language = 'en'
-      } = data;
-
-      const response = await fetch(`${API_ENDPOINT}/api/notifications/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`
-        },
-        body: JSON.stringify({
+      const { recipientId, senderName, documentName, sourceId, idempotencyKey, language = 'fr' } = data;
+      const { data: response, error } = await supabase.functions.invoke('send-email', {
+        body: {
           type: 'document_shared',
-          recipient: recipientEmail,
-          recipientName,
+          recipientId,
           senderName,
           documentName,
-          conversationId,
-          businessTitle,
-          language,
-          timestamp: new Date().toISOString()
-        })
+          sourceId,
+          idempotencyKey,
+          language
+        }
       });
-
-      if (!response.ok) {
-        throw new Error(`Document notification failed: ${response.statusText}`);
+      if (error) {
+        throw new Error(`Document notification failed: ${error.message}`);
       }
-
-      console.log('[Email] Document notification sent to:', recipientEmail);
-      return await response.json();
+      console.log('[Email] Document notification sent');
+      return response;
     } catch (error) {
       console.error('[Email] Error sending document notification:', error);
     }
@@ -147,82 +105,86 @@ class EmailNotificationService {
    */
   async sendNDASignedNotification(data) {
     try {
-      const {
-        recipientEmail,
-        recipientName,
-        signerName,
-        conversationId,
-        businessTitle,
-        language = 'en'
-      } = data;
-
-      const response = await fetch(`${API_ENDPOINT}/api/notifications/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`
-        },
-        body: JSON.stringify({
+      const { recipientId, signerName, sourceId, idempotencyKey, language = 'fr' } = data;
+      const { data: response, error } = await supabase.functions.invoke('send-email', {
+        body: {
           type: 'nda_signed',
-          recipient: recipientEmail,
-          recipientName,
+          recipientId,
           signerName,
-          conversationId,
-          businessTitle,
-          language,
-          timestamp: new Date().toISOString()
-        })
+          sourceId,
+          idempotencyKey,
+          language
+        }
       });
-
-      if (!response.ok) {
-        throw new Error(`NDA notification failed: ${response.statusText}`);
+      if (error) {
+        throw new Error(`NDA notification failed: ${error.message}`);
       }
-
-      console.log('[Email] NDA signed notification sent to:', recipientEmail);
-      return await response.json();
+      console.log('[Email] NDA notification sent');
+      return response;
     } catch (error) {
       console.error('[Email] Error sending NDA notification:', error);
     }
   }
 
   /**
-   * Get auth token from localStorage
+   * Send listing published notification
    */
-  async getAuthToken() {
-    // Get from Supabase session
+  async sendListingPublished({ listingId, recipientId, sourceId, idempotencyKey, language = 'fr' }) {
     try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) {
-        throw new Error('No active session');
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          type: 'listing_published',
+          listingId,
+          recipientId,
+          sourceId: sourceId || listingId,
+          idempotencyKey,
+          language
+        }
+      });
+
+      if (error) {
+        throw new Error(`Listing published notification failed: ${error.message}`);
       }
-      return data.session.access_token;
-    } catch (e) {
-      console.error('[Email] No auth token available');
-      return null;
+
+      console.log('[Email] Listing published notification sent');
+      return data;
+    } catch (error) {
+      console.error('[Email] Error sending listing published notification:', error);
     }
   }
 
   /**
-   * Check if notifications are enabled for user
+   * Trigger smart match notification for a listing
+   */
+  async sendSmartMatchNotification({ listingId, idempotencyKey, language = 'fr' }) {
+    try {
+      const { data, error } = await supabase.functions.invoke('smartmatch-notify', {
+        body: { listingId, idempotencyKey, language }
+      });
+
+      if (error) {
+        throw new Error(`Smart match notification failed: ${error.message}`);
+      }
+
+      console.log('[Email] Smart match notification triggered');
+      return data;
+    } catch (error) {
+      console.error('[Email] Error triggering smart match notification:', error);
+    }
+  }
+
+  /**
+   * Get auth token from localStorage
    */
   async isNotificationEnabled(userId) {
     try {
-      const response = await fetch(
-        `${API_ENDPOINT}/api/notifications/preferences/${userId}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${await this.getAuthToken()}`
-          }
-        }
-      );
-
-      if (!response.ok) {
-        return true; // Default to enabled
-      }
-
-      const data = await response.json();
-      return data.emailNotifications !== false;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('notification_emails_enabled')
+        .eq('id', userId)
+        .maybeSingle();
+      if (error) return true;
+      return data?.notification_emails_enabled !== false;
     } catch (error) {
       console.error('[Email] Error checking notification preference:', error);
       return true; // Default to enabled
@@ -234,24 +196,19 @@ class EmailNotificationService {
    */
   async updateNotificationPreferences(userId, preferences) {
     try {
-      const response = await fetch(
-        `${API_ENDPOINT}/api/notifications/preferences/${userId}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await this.getAuthToken()}`
-          },
-          body: JSON.stringify(preferences)
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Update failed: ${response.statusText}`);
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          notification_emails_enabled: preferences?.emailNotifications !== false
+        })
+        .eq('id', userId)
+        .select('id')
+        .maybeSingle();
+      if (error) {
+        throw new Error(`Update failed: ${error.message}`);
       }
-
       console.log('[Email] Notification preferences updated');
-      return await response.json();
+      return data;
     } catch (error) {
       console.error('[Email] Error updating preferences:', error);
     }

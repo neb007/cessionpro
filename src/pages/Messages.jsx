@@ -24,7 +24,8 @@ import { fr, enUS } from 'date-fns/locale';
 // Import new messaging components
 // (Optional) future messaging components can be re-enabled when used
 import { DicebearAvatar } from '@/components/messages/DicebearAvatar';
-import { messageNotificationQueue } from '@/services/messageNotificationQueue';
+import { DealStageManager, DocumentVault } from '@/components/messages';
+import { emailNotificationService } from '@/services/emailNotificationService';
 import { antiBypassService } from '@/services/antiBypassService';
 import { conversationService } from '@/services/conversationService';
 import { messageService } from '@/services/messageService';
@@ -65,10 +66,13 @@ export default function Messages() {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [participantProfiles, setParticipantProfiles] = useState({});
   const [selectedBusiness, setSelectedBusiness] = useState(null);
+  const [conversationDocuments, setConversationDocuments] = useState([]);
   const [showInbox, setShowInbox] = useState(true);
   const [conversationFilter, setConversationFilter] = useState('all');
   const [archivingConversationId, setArchivingConversationId] = useState(null);
   const [blockingConversationId, setBlockingConversationId] = useState(null);
+  const [dealActionLoading, setDealActionLoading] = useState(false);
+  const lastDealActionRef = useRef(0);
 
   useEffect(() => {
     loadData();
@@ -77,6 +81,7 @@ export default function Messages() {
   useEffect(() => {
     if (selectedConversation) {
       loadMessages(selectedConversation.id);
+      loadConversationEvents(selectedConversation.id);
       setShowInbox(false);
     }
   }, [selectedConversation?.id]);
@@ -570,31 +575,22 @@ export default function Messages() {
         }
       });
 
-      // Add message to notification queue (batches every 10 min)
+      // Send immediate email notification (non-critical)
       try {
-        // Get recipient notification preference (default true if not set)
         const recipientNotificationsEnabled = NOTIFICATIONS_ENABLED;
-        const recipientProfile = participantProfiles?.[otherParticipantId];
-        const recipientEmail = recipientProfile?.email;
-
-        if (!recipientEmail) {
-          throw new Error('Recipient email missing');
-        }
-        
-        messageNotificationQueue.addNotification(
-          recipientEmail,
-          {
-            senderEmail: user?.email,
+        if (recipientNotificationsEnabled) {
+          await emailNotificationService.sendMessageNotification({
+            recipientId: otherParticipantId,
             senderName: user?.user_metadata?.full_name || user?.email,
             messagePreview: newMessage.substring(0, 100),
             conversationId: selectedConversation.id,
-            businessTitle: selectedConversation.business_title || selectedConversation.subject,
-            messageContent: newMessage
-          },
-          recipientNotificationsEnabled // Pass notification flag
-        );
+            sourceId: selectedConversation.id,
+            idempotencyKey: `conv:${selectedConversation.id}:message:${Date.now()}`,
+            language
+          });
+        }
       } catch (error) {
-        console.warn('Queue notification failed (non-critical):', error);
+        console.warn('Email notification failed (non-critical):', error);
       }
 
       // Clear typing indicator
@@ -619,6 +615,256 @@ export default function Messages() {
       );
     }
     setSending(false);
+  };
+
+  const getStageLabel = (stageValue) => {
+    const labels = {
+      contact: language === 'fr' ? 'Contact' : 'Contact',
+      nda: 'NDA',
+      data_room: language === 'fr' ? 'Data Room' : 'Data Room',
+      loi: 'LOI',
+      closing: language === 'fr' ? 'Closing' : 'Closing'
+    };
+    return labels[stageValue] || stageValue || 'contact';
+  };
+
+  const loadConversationEvents = async (conversationId) => {
+    if (!conversationId) return;
+    try {
+      const { data, error } = await supabase
+        .from('conversation_events')
+        .select('id, event_type, payload, actor_id, created_at')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const docs = (data || [])
+        .filter((evt) => evt.event_type === 'document_shared')
+        .map((evt) => ({
+          id: evt.id,
+          file_name: evt.payload?.document_name || 'Document',
+          file_type: 'shared',
+          file_size: evt.payload?.file_size || 0,
+          uploaded_by: evt.payload?.sender_name || 'Utilisateur',
+          requires_nda_signed: true,
+          is_signed: Boolean(selectedConversation?.nda_signed),
+          signed_at: selectedConversation?.nda_signed_at || null,
+          created_at: evt.created_at
+        }));
+
+      if (docs.length > 0) {
+        setConversationDocuments(docs);
+      } else if (selectedConversation?.last_shared_document_name) {
+        setConversationDocuments([
+          {
+            id: `fallback-${conversationId}`,
+            file_name: selectedConversation.last_shared_document_name,
+            file_type: 'shared',
+            file_size: 0,
+            uploaded_by: 'Utilisateur',
+            requires_nda_signed: true,
+            is_signed: Boolean(selectedConversation?.nda_signed),
+            signed_at: selectedConversation?.nda_signed_at || null
+          }
+        ]);
+      } else {
+        setConversationDocuments([]);
+      }
+    } catch (error) {
+      console.warn('Conversation events unavailable:', error?.message || error);
+      if (selectedConversation?.last_shared_document_name) {
+        setConversationDocuments([
+          {
+            id: `fallback-${conversationId}`,
+            file_name: selectedConversation.last_shared_document_name,
+            file_type: 'shared',
+            file_size: 0,
+            uploaded_by: 'Utilisateur',
+            requires_nda_signed: true,
+            is_signed: Boolean(selectedConversation?.nda_signed),
+            signed_at: selectedConversation?.nda_signed_at || null
+          }
+        ]);
+      } else {
+        setConversationDocuments([]);
+      }
+    }
+  };
+
+  const appendConversationEvent = async (conversationId, eventType, payload = {}) => {
+    if (!conversationId || !user?.id) return;
+    try {
+      await supabase.from('conversation_events').insert({
+        conversation_id: conversationId,
+        event_type: eventType,
+        actor_id: user.id,
+        payload
+      });
+    } catch (error) {
+      console.warn('Failed to append conversation event:', error?.message || error);
+    }
+  };
+
+  const updateConversationState = (updated) => {
+    if (!updated?.id) return;
+    setSelectedConversation((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
+    setConversations((prev) => prev.map((conv) => (conv.id === updated.id ? { ...conv, ...updated } : conv)));
+  };
+
+  const handleDealStageChange = async (nextStage) => {
+    if (!selectedConversation?.id || !user?.id || dealActionLoading) return;
+    const now = Date.now();
+    if (now - lastDealActionRef.current < 800) return;
+    lastDealActionRef.current = now;
+    const previousStage = selectedConversation?.deal_stage || 'contact';
+    if (previousStage === nextStage) return;
+
+    setDealActionLoading(true);
+    try {
+      const updated = await conversationService.updateConversation(selectedConversation.id, {
+        deal_stage: nextStage
+      });
+      const merged = updated || { ...selectedConversation, deal_stage: nextStage };
+      updateConversationState(merged);
+      await appendConversationEvent(selectedConversation.id, 'deal_stage_changed', {
+        previous_stage: previousStage,
+        next_stage: nextStage
+      });
+
+      const recipientId = getOtherParticipantId(merged);
+      if (recipientId && recipientId !== user.id) {
+        await emailNotificationService.sendDealStageNotification({
+          recipientId,
+          dealStage: getStageLabel(nextStage),
+          sourceId: selectedConversation.id,
+          idempotencyKey: `conv:${selectedConversation.id}:stage:${nextStage}`,
+          language
+        });
+      }
+    } catch (error) {
+      console.error('Failed to change deal stage:', error);
+    }
+    setDealActionLoading(false);
+  };
+
+  const handleShareDocument = async (presetName = '') => {
+    if (!selectedConversation?.id || !user?.id || dealActionLoading) return;
+    const defaultName = presetName || (language === 'fr' ? 'Document partage' : 'Shared document');
+    const enteredName = window.prompt(
+      language === 'fr' ? 'Nom du document a partager' : 'Document name to share',
+      defaultName
+    );
+    const documentName = enteredName?.trim();
+    if (!documentName) return;
+
+    setDealActionLoading(true);
+    try {
+      const updated = await conversationService.updateConversation(selectedConversation.id, {
+        last_shared_document_name: documentName
+      });
+      const merged = updated || {
+        ...selectedConversation,
+        last_shared_document_name: documentName
+      };
+      updateConversationState(merged);
+      const senderName = user?.user_metadata?.full_name || user?.email || 'Utilisateur';
+      await appendConversationEvent(selectedConversation.id, 'document_shared', {
+        document_name: documentName,
+        sender_name: senderName
+      });
+      setConversationDocuments((prev) => [
+        {
+          id: `local-${Date.now()}`,
+          file_name: documentName,
+          file_type: 'shared',
+          file_size: 0,
+          uploaded_by: senderName,
+          requires_nda_signed: true,
+          is_signed: Boolean(merged.nda_signed),
+          signed_at: merged.nda_signed_at || null
+        },
+        ...prev
+      ]);
+
+      const recipientId = getOtherParticipantId(merged);
+      if (recipientId && recipientId !== user.id) {
+        await emailNotificationService.sendDocumentSharedNotification({
+          recipientId,
+          senderName,
+          documentName,
+          sourceId: selectedConversation.id,
+          idempotencyKey: `conv:${selectedConversation.id}:doc:${Date.now()}`,
+          language
+        });
+      }
+    } catch (error) {
+      console.error('Failed to share document:', error);
+    }
+    setDealActionLoading(false);
+  };
+
+  const handleSignNDA = async () => {
+    if (!selectedConversation?.id || !user?.id || dealActionLoading) return;
+    setDealActionLoading(true);
+    try {
+      const signedAt = new Date().toISOString();
+      const updated = await conversationService.updateConversation(selectedConversation.id, {
+        nda_signed: true,
+        nda_signed_at: signedAt
+      });
+      const merged = updated || {
+        ...selectedConversation,
+        nda_signed: true,
+        nda_signed_at: signedAt
+      };
+      updateConversationState(merged);
+
+      const signerName = user?.user_metadata?.full_name || user?.email || 'Utilisateur';
+      await appendConversationEvent(selectedConversation.id, 'nda_signed', {
+        signer_name: signerName,
+        signed_at: signedAt
+      });
+
+      const recipientId = getOtherParticipantId(merged);
+      if (recipientId && recipientId !== user.id) {
+        await emailNotificationService.sendNDASignedNotification({
+          recipientId,
+          signerName,
+          sourceId: selectedConversation.id,
+          idempotencyKey: `conv:${selectedConversation.id}:nda:signed`,
+          language
+        });
+      }
+    } catch (error) {
+      console.error('Failed to sign NDA:', error);
+    }
+    setDealActionLoading(false);
+  };
+
+  const handleDealActionClick = async (actionId) => {
+    if (actionId === 'sign_nda') {
+      await handleSignNDA();
+      return;
+    }
+    if (actionId === 'share_documents') {
+      await handleShareDocument();
+    }
+  };
+
+  const handleDocumentDownload = (documentId) => {
+    const doc = conversationDocuments.find((item) => item.id === documentId);
+    if (!doc) return;
+    alert(
+      language === 'fr'
+        ? `Aucun fichier physique lie a \"${doc.file_name}\" (mode MVP).`
+        : `No physical file is attached to \"${doc.file_name}\" (MVP mode).`
+    );
+  };
+
+  const handleDocumentDelete = (documentId) => {
+    setConversationDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
   };
 
   const formatMessageTime = (date) => {
@@ -1022,6 +1268,40 @@ export default function Messages() {
                         : 'Details available after acceptance.'}
                     </p>
                   )}
+                </div>
+
+                <div className="border-t border-border pt-3 space-y-3">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                    {language === 'fr' ? 'Avancement du dossier' : 'Deal progress'}
+                  </p>
+                  <DealStageManager
+                    currentStage={selectedConversation?.deal_stage || 'contact'}
+                    onStageChange={handleDealStageChange}
+                    onActionClick={handleDealActionClick}
+                    language={language === 'fr' ? 'fr' : 'en'}
+                    isBuyer={selectedConversation?.participant_1_id === user?.id}
+                  />
+                  {dealActionLoading && (
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'fr' ? 'Mise a jour en cours...' : 'Updating...'}
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t border-border pt-3 space-y-3">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                    {language === 'fr' ? 'Documents (MVP)' : 'Documents (MVP)'}
+                  </p>
+                  <DocumentVault
+                    documents={conversationDocuments}
+                    currentStage={selectedConversation?.deal_stage || 'contact'}
+                    onDownload={handleDocumentDownload}
+                    onDelete={handleDocumentDelete}
+                    onShare={() => handleShareDocument()}
+                    language={language === 'fr' ? 'fr' : 'en'}
+                    isSeller={selectedConversation?.participant_2_id === user?.id}
+                    isNDASigned={Boolean(selectedConversation?.nda_signed)}
+                  />
                 </div>
 
                 <Button

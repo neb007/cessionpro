@@ -1,0 +1,14 @@
+{
+  "confirm_signup": {
+    "fr": "Confirmez votre inscription Riviqo",
+    "en": "Confirm your Riviqo signup"
+  },
+  "reset_password": {
+    "fr": "Reinitialisez votre mot de passe Riviqo",
+    "en": "Reset your Riviqo password"
+  },
+  "confirm_email_change": {
+    "fr": "Confirmez votre changement d'email",
+    "en": "Confirm your email change"
+  }
+}

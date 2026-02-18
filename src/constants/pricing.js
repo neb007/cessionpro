@@ -147,6 +147,21 @@ export const PRICING = {
       comingSoon: true,
       frenchTooltip: 'Disponible prochainement',
       englishTooltip: 'Coming soon'
+    },
+
+    sponsoredListing: {
+      id: 'sponsored_listing',
+      price: 29.99,
+      billingCycle: 'monthly',
+      frenchLabel: 'Annonce sponsorisée',
+      englishLabel: 'Sponsored listing',
+      frenchDescription: 'Mettez votre annonce en avant pour plus de visibilité',
+      englishDescription: 'Boost your listing for more visibility',
+      features: {
+        fr: ['Mise en avant dans les résultats', 'Priorité d’affichage', 'Visibilité accrue'],
+        en: ['Featured in search results', 'Priority placement', 'Increased visibility']
+      },
+      icon: 'star'
     }
   },
 
