@@ -134,6 +134,8 @@ export default function Checkout() {
         confirmPayment: 'Payer maintenant',
         paymentUnavailable: 'Paiement indisponible',
         genericError: 'Impossible de confirmer le paiement.',
+        stripeConfigMismatch:
+          'Configuration Stripe incohérente (clé publique différente du compte qui a créé le paiement). Redirection vers le paiement hébergé…',
         missingPayload: 'Votre panier est vide ou expiré. Retournez sur Abonnement.',
         missingStripeKey:
           'La clé Stripe publique est absente (VITE_STRIPE_PUBLISHABLE_KEY). Ajoutez-la dans les variables d’environnement Vercel (Production/Preview), puis redéployez.',
@@ -163,6 +165,8 @@ export default function Checkout() {
         confirmPayment: 'Pay now',
         paymentUnavailable: 'Payment unavailable',
         genericError: 'Unable to confirm payment.',
+        stripeConfigMismatch:
+          'Stripe configuration mismatch (publishable key does not match the account that created the payment). Redirecting to hosted checkout…',
         missingPayload: 'Your cart is empty or expired. Please return to Subscription page.',
         missingStripeKey:
           'Missing Stripe publishable key (VITE_STRIPE_PUBLISHABLE_KEY). Add it to Vercel environment variables (Production/Preview), then redeploy.',
@@ -443,6 +447,18 @@ export default function Checkout() {
                     currency={checkoutData.currency}
                     mode={checkoutData.mode}
                     onElementLoadError={(message) => {
+                      const normalized = (message || '').toLowerCase();
+                      if (normalized.includes('client_secret provided does not match')) {
+                        setElementsLoadError(t.stripeConfigMismatch);
+                        toast({
+                          title: t.paymentUnavailable,
+                          description: t.stripeConfigMismatch,
+                          variant: 'destructive'
+                        });
+                        openHostedCheckout();
+                        return;
+                      }
+
                       setElementsLoadError(message);
                       toast({
                         title: t.paymentUnavailable,
