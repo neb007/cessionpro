@@ -35,6 +35,7 @@ const AuthenticatedApp = () => {
   const AdminAnnoncesPage = Pages?.AdminAnnonces ?? AdminAnnonces;
   const AdminDashboardPage = Pages?.AdminDashboard ?? AdminDashboard;
   const AdminUsersPage = Pages?.AdminUsers ?? AdminUsers;
+  const CheckoutPage = Pages?.Checkout;
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -109,6 +110,16 @@ const AuthenticatedApp = () => {
           />
         );
       })}
+      {CheckoutPage ? (
+        <Route
+          path="/checkout"
+          element={
+            <LayoutWrapper currentPageName="Checkout">
+              <ProtectedRoute page={<CheckoutPage />} path="Checkout" isAuthenticated={isAuthenticated} />
+            </LayoutWrapper>
+          }
+        />
+      ) : null}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
