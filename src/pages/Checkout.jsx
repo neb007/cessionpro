@@ -174,6 +174,7 @@ export default function Checkout() {
   const [errorMessage, setErrorMessage] = useState('');
   const [checkoutData, setCheckoutData] = useState(null);
   const [checkoutPayload, setCheckoutPayload] = useState(null);
+  const [isHostedFallbackLoading, setIsHostedFallbackLoading] = useState(false);
 
   const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
   const stripePromise = useMemo(() => (stripeKey ? loadStripe(stripeKey) : null), [stripeKey]);
@@ -235,6 +236,33 @@ export default function Checkout() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const openHostedCheckout = async () => {
+    try {
+      if (!checkoutPayload?.items?.length) {
+        throw new Error(t.missingPayload);
+      }
+
+      setIsHostedFallbackLoading(true);
+      const data = await billingService.createCheckoutSession({
+        items: checkoutPayload.items,
+        language
+      });
+
+      if (!data?.url) {
+        throw new Error(t.genericError);
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      toast({
+        title: t.paymentUnavailable,
+        description: error?.message || t.genericError,
+        variant: 'destructive'
+      });
+      setIsHostedFallbackLoading(false);
     }
   };
 
@@ -354,9 +382,18 @@ export default function Checkout() {
                   <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
                     {errorMessage || t.genericError}
                   </div>
-                  <Button variant="outline" className="rounded-full" onClick={bootstrapCheckout}>
-                    {t.refresh}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" className="rounded-full" onClick={bootstrapCheckout}>
+                      {t.refresh}
+                    </Button>
+                    <Button
+                      className="rounded-full bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white"
+                      onClick={openHostedCheckout}
+                      disabled={isHostedFallbackLoading}
+                    >
+                      {isHostedFallbackLoading ? t.processing : t.confirmPayment}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <Elements
