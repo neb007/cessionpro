@@ -271,6 +271,17 @@ export default function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!isLoading) return;
+
+    const watchdog = setTimeout(() => {
+      setErrorMessage((prev) => prev || t.genericError);
+      setIsLoading(false);
+    }, 12000);
+
+    return () => clearTimeout(watchdog);
+  }, [isLoading, t.genericError]);
+
   const appearance = {
     theme: 'stripe',
     variables: {
@@ -374,8 +385,20 @@ export default function Checkout() {
                   {t.missingStripeKey}
                 </div>
               ) : isLoading ? (
-                <div className="rounded-xl border border-dashed border-gray-200 p-6 text-sm text-[#3B4759]">
-                  {t.loading}
+                <div className="rounded-xl border border-dashed border-gray-200 p-6 text-sm text-[#3B4759] space-y-3">
+                  <p>{t.loading}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" className="rounded-full" onClick={bootstrapCheckout}>
+                      {t.refresh}
+                    </Button>
+                    <Button
+                      className="rounded-full bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white"
+                      onClick={openHostedCheckout}
+                      disabled={isHostedFallbackLoading}
+                    >
+                      {isHostedFallbackLoading ? t.processing : t.confirmPayment}
+                    </Button>
+                  </div>
                 </div>
               ) : errorMessage || !checkoutData?.clientSecret ? (
                 <div className="space-y-4">
