@@ -6,6 +6,12 @@ import { supabase } from '@/api/supabaseClient';
  */
 
 export const businessService = {
+  _formatError(error, fallback = 'Une erreur est survenue') {
+    const code = error?.code ? ` [${error.code}]` : '';
+    const details = error?.details ? ` — ${error.details}` : '';
+    return `${error?.message || fallback}${code}${details}`;
+  },
+
   // Get all businesses
   async listBusinesses(filters = {}, sortBy = 'created_at', options = {}) {
     try {
@@ -45,7 +51,7 @@ export const businessService = {
       return data || [];
     } catch (error) {
       console.error('Error listing businesses:', error);
-      throw error;
+      throw new Error(this._formatError(error, 'Impossible de charger les annonces'));
     }
   },
 
@@ -79,7 +85,7 @@ export const businessService = {
       return count || 0;
     } catch (error) {
       console.error('Error counting businesses:', error);
-      throw error;
+      throw new Error(this._formatError(error, 'Impossible de compter les annonces'));
     }
   },
 
