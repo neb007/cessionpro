@@ -1,5 +1,7 @@
+// @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import Stripe from 'https://esm.sh/stripe@16.12.0?target=deno';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 type PurchaseEmailPayload = {
   customerName: string;
@@ -14,7 +16,9 @@ const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
 const STRIPE_WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const EMAIL_FROM = Deno.env.get('EMAIL_FROM') || 'Riviqo <no-reply@riviqo.com>';
-const APP_URL = Deno.env.get('APP_URL') || 'https://riviqo.com';
+const APP_URL = (Deno.env.get('APP_URL') || 'https://riviqo.com').replace(/\/$/, '');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 const jsonResponse = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
@@ -22,7 +26,16 @@ const jsonResponse = (status: number, body: Record<string, unknown>) =>
     headers: { 'Content-Type': 'application/json' }
   });
 
-const formatAmount = (amount: number | null | undefined, currency: string) => {
+const getSupabaseClient = () => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false }
+  });
+};
+
+const formatAmount = (amount: number | null | undefined) => {
   if (amount == null) return '0.00';
   const value = amount / 100;
   return new Intl.NumberFormat('fr-FR', {
@@ -31,10 +44,7 @@ const formatAmount = (amount: number | null | undefined, currency: string) => {
   }).format(value);
 };
 
-const buildPurchaseEmail = (
-  language: 'fr' | 'en',
-  payload: PurchaseEmailPayload
-) => {
+const buildPurchaseEmail = (language: 'fr' | 'en', payload: PurchaseEmailPayload) => {
   const isFr = language === 'fr';
   const subject = isFr
     ? 'Confirmation de votre achat Riviqo'
@@ -71,7 +81,7 @@ const buildPurchaseEmail = (
                       <div><strong>${isFr ? 'Produit' : 'Product'}:</strong> ${payload.productName}</div>
                       <div style="margin-top:8px;"><strong>${isFr ? 'Montant' : 'Amount'}:</strong> ${payload.amount} ${payload.currency.toUpperCase()}</div>
                     </div>
-                    <a href="${payload.invoiceUrl || `${APP_URL}/Abonnement`}" style="display:inline-block;padding:12px 18px;background:#111111;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;">
+                    <a href="${payload.invoiceUrl || `${APP_URL}/Settings?tab=billing`}" style="display:inline-block;padding:12px 18px;background:#111111;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;">
                       ${isFr ? 'Voir la facture' : 'View invoice'}
                     </a>
                   </td>
@@ -113,6 +123,12 @@ const sendViaResend = async (to: string, subject: string, html: string) => {
   }
 };
 
+const getLanguageFromEvent = (event: Stripe.Event): 'fr' | 'en' => {
+  const object = event?.data?.object as any;
+  const metadata = object?.metadata || {};
+  return metadata?.language === 'en' ? 'en' : 'fr';
+};
+
 const resolvePurchasePayload = async (
   stripe: Stripe,
   event: Stripe.Event
@@ -135,7 +151,7 @@ const resolvePurchasePayload = async (
       customerName: session.customer_details?.name || 'Client',
       customerEmail,
       productName,
-      amount: formatAmount(session.amount_total, session.currency || 'eur'),
+      amount: formatAmount(session.amount_total),
       currency: (session.currency || 'eur').toUpperCase(),
       invoiceUrl: null
     };
@@ -151,13 +167,180 @@ const resolvePurchasePayload = async (
       customerName: invoice.customer_name || 'Client',
       customerEmail,
       productName: lineItem?.description || 'Riviqo subscription',
-      amount: formatAmount(invoice.amount_paid, invoice.currency || 'eur'),
+      amount: formatAmount(invoice.amount_paid),
       currency: (invoice.currency || 'eur').toUpperCase(),
       invoiceUrl: invoice.hosted_invoice_url || null
     };
   }
 
   return null;
+};
+
+const upsertTransaction = async (params: {
+  supabase: ReturnType<typeof createClient>;
+  event: Stripe.Event;
+}) => {
+  const { supabase, event } = params;
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const userId = session.metadata?.user_id || session.client_reference_id || null;
+    const itemCodes = (session.metadata?.item_codes || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    await supabase.from('billing_checkout_sessions').upsert(
+      {
+        user_id: userId,
+        stripe_checkout_session_id: session.id,
+        stripe_customer_id: typeof session.customer === 'string' ? session.customer : null,
+        mode: session.mode,
+        status: session.status || 'complete',
+        currency: session.currency || 'eur',
+        amount_total_cents: session.amount_total || null,
+        item_codes: itemCodes,
+        metadata: session.metadata || {},
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'stripe_checkout_session_id' }
+    );
+
+    await supabase.from('billing_transactions').upsert(
+      {
+        user_id: userId,
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id:
+          typeof session.payment_intent === 'string' ? session.payment_intent : null,
+        stripe_customer_id: typeof session.customer === 'string' ? session.customer : null,
+        stripe_event_id: event.id,
+        status: session.payment_status || 'paid',
+        currency: session.currency || 'eur',
+        amount_paid_cents: session.amount_total || null,
+        item_codes: itemCodes,
+        payload: session,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'stripe_payment_intent_id' }
+    );
+  }
+
+  if (event.type === 'invoice.payment_succeeded') {
+    const invoice = event.data.object as Stripe.Invoice;
+    const userId = invoice.metadata?.user_id || null;
+
+    await supabase.from('billing_transactions').upsert(
+      {
+        user_id: userId,
+        stripe_invoice_id: invoice.id,
+        stripe_payment_intent_id:
+          typeof invoice.payment_intent === 'string' ? invoice.payment_intent : null,
+        stripe_customer_id: typeof invoice.customer === 'string' ? invoice.customer : null,
+        stripe_event_id: event.id,
+        status: 'paid',
+        currency: invoice.currency || 'eur',
+        amount_paid_cents: invoice.amount_paid || null,
+        invoice_url: invoice.hosted_invoice_url || null,
+        payload: invoice,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'stripe_invoice_id' }
+    );
+  }
+
+  if (event.type === 'payment_intent.payment_failed') {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    await supabase.from('billing_transactions').upsert(
+      {
+        stripe_payment_intent_id: paymentIntent.id,
+        stripe_customer_id:
+          typeof paymentIntent.customer === 'string' ? paymentIntent.customer : null,
+        stripe_event_id: event.id,
+        status: paymentIntent.status || 'failed',
+        currency: paymentIntent.currency || 'eur',
+        amount_paid_cents: paymentIntent.amount_received || 0,
+        payload: paymentIntent,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'stripe_payment_intent_id' }
+    );
+  }
+
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+
+    let userId = paymentIntent.metadata?.user_id || null;
+    if (!userId && typeof paymentIntent.customer === 'string') {
+      const { data: customerRow } = await supabase
+        .from('billing_customers')
+        .select('user_id')
+        .eq('stripe_customer_id', paymentIntent.customer)
+        .maybeSingle();
+      userId = customerRow?.user_id || null;
+    }
+
+    const itemCodes = (paymentIntent.metadata?.item_codes || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    await supabase.from('billing_transactions').upsert(
+      {
+        user_id: userId,
+        stripe_payment_intent_id: paymentIntent.id,
+        stripe_customer_id:
+          typeof paymentIntent.customer === 'string' ? paymentIntent.customer : null,
+        stripe_event_id: event.id,
+        status: paymentIntent.status || 'succeeded',
+        currency: paymentIntent.currency || 'eur',
+        amount_paid_cents: paymentIntent.amount_received || paymentIntent.amount || null,
+        item_codes: itemCodes,
+        payload: paymentIntent,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'stripe_payment_intent_id' }
+    );
+  }
+};
+
+const upsertSubscription = async (params: {
+  supabase: ReturnType<typeof createClient>;
+  event: Stripe.Event;
+}) => {
+  const { supabase, event } = params;
+  if (
+    event.type !== 'customer.subscription.updated' &&
+    event.type !== 'customer.subscription.deleted'
+  ) {
+    return;
+  }
+
+  const sub = event.data.object as Stripe.Subscription;
+  const item = sub.items?.data?.[0];
+  const price = item?.price;
+  const userId = sub.metadata?.user_id || null;
+
+  await supabase.from('billing_subscriptions').upsert(
+    {
+      user_id: userId,
+      stripe_subscription_id: sub.id,
+      stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : null,
+      stripe_price_id: price?.id || null,
+      status: sub.status,
+      cancel_at_period_end: Boolean(sub.cancel_at_period_end),
+      current_period_start: sub.current_period_start
+        ? new Date(sub.current_period_start * 1000).toISOString()
+        : null,
+      current_period_end: sub.current_period_end
+        ? new Date(sub.current_period_end * 1000).toISOString()
+        : null,
+      canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+      ended_at: sub.ended_at ? new Date(sub.ended_at * 1000).toISOString() : null,
+      payload: sub,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: 'stripe_subscription_id' }
+  );
 };
 
 serve(async (req) => {
@@ -180,45 +363,96 @@ serve(async (req) => {
   const stripe = new Stripe(STRIPE_SECRET_KEY, {
     apiVersion: '2024-06-20'
   });
+  const supabase = getSupabaseClient();
 
   let event: Stripe.Event;
   try {
-    event = await stripe.webhooks.constructEventAsync(
-      body,
-      signature,
-      STRIPE_WEBHOOK_SECRET
-    );
+    event = await stripe.webhooks.constructEventAsync(body, signature, STRIPE_WEBHOOK_SECRET);
   } catch (error) {
     return jsonResponse(400, {
       error: `Webhook signature verification failed: ${(error as Error).message}`
     });
   }
 
-  // Only process supported payment events for purchase emails.
-  if (
-    event.type !== 'checkout.session.completed' &&
-    event.type !== 'invoice.payment_succeeded'
-  ) {
+  const handledEvents = new Set([
+    'checkout.session.completed',
+    'invoice.payment_succeeded',
+    'customer.subscription.updated',
+    'customer.subscription.deleted',
+    'payment_intent.succeeded',
+    'payment_intent.payment_failed'
+  ]);
+
+  const { data: alreadyProcessed } = await supabase
+    .from('billing_webhook_events')
+    .select('id, processing_status')
+    .eq('event_id', event.id)
+    .maybeSingle();
+
+  if (alreadyProcessed) {
+    return jsonResponse(200, { received: true, duplicate: true, eventType: event.type });
+  }
+
+  await supabase.from('billing_webhook_events').insert({
+    event_id: event.id,
+    event_type: event.type,
+    processing_status: handledEvents.has(event.type) ? 'processing' : 'ignored',
+    payload: {
+      id: event.id,
+      type: event.type,
+      created: event.created
+    }
+  });
+
+  if (!handledEvents.has(event.type)) {
+    await supabase
+      .from('billing_webhook_events')
+      .update({
+        processing_status: 'ignored',
+        processed_at: new Date().toISOString()
+      })
+      .eq('event_id', event.id);
+
     return jsonResponse(200, { received: true, ignored: event.type });
   }
 
   try {
-    const payload = await resolvePurchasePayload(stripe, event);
-    if (!payload) {
-      return jsonResponse(200, { received: true, skipped: 'no_customer_email' });
+    await upsertTransaction({ supabase, event });
+    await upsertSubscription({ supabase, event });
+
+    if (event.type === 'checkout.session.completed' || event.type === 'invoice.payment_succeeded') {
+      const payload = await resolvePurchasePayload(stripe, event);
+      if (payload) {
+        const language = getLanguageFromEvent(event);
+        const { subject, html } = buildPurchaseEmail(language, payload);
+        await sendViaResend(payload.customerEmail, subject, html);
+      }
     }
 
-    const language: 'fr' | 'en' = 'fr';
-    const { subject, html } = buildPurchaseEmail(language, payload);
-    await sendViaResend(payload.customerEmail, subject, html);
+    await supabase
+      .from('billing_webhook_events')
+      .update({
+        processing_status: 'processed',
+        processed_at: new Date().toISOString(),
+        error: null
+      })
+      .eq('event_id', event.id);
 
     return jsonResponse(200, {
       received: true,
-      sent: true,
-      eventType: event.type,
-      recipient: payload.customerEmail
+      processed: true,
+      eventType: event.type
     });
   } catch (error) {
+    await supabase
+      .from('billing_webhook_events')
+      .update({
+        processing_status: 'failed',
+        processed_at: new Date().toISOString(),
+        error: (error as Error).message
+      })
+      .eq('event_id', event.id);
+
     return jsonResponse(500, {
       error: (error as Error).message,
       eventType: event.type

@@ -4,11 +4,11 @@
     "en": "Confirm your Riviqo signup"
   },
   "reset_password": {
-    "fr": "Reinitialisez votre mot de passe Riviqo",
+    "fr": "Réinitialisez votre mot de passe Riviqo",
     "en": "Reset your Riviqo password"
   },
   "confirm_email_change": {
-    "fr": "Confirmez votre changement d'email",
+    "fr": "Confirmez votre changement d'adresse email",
     "en": "Confirm your email change"
   }
 }

@@ -51,8 +51,10 @@ import AccountCreation from './pages/AccountCreation';
 import AuthCallback from './pages/AuthCallback';
 import BusinessDetails from './pages/BusinessDetails';
 import Annonces from './pages/Annonces';
+import Abonnement from './pages/Abonnement';
 import Billing from './pages/Billing';
 import Categories from './pages/Categories';
+import Checkout from './pages/Checkout';
 import CreateBusiness from './pages/CreateBusiness';
 import Dataroom from './pages/Dataroom';
 import FAQ from './pages/FAQ';
@@ -77,8 +79,10 @@ export const PAGES = {
     "AuthCallback": AuthCallback,
     "BusinessDetails": BusinessDetails,
     "Annonces": Annonces,
+    "Abonnement": Abonnement,
     "Billing": Billing,
     "Categories": Categories,
+    "Checkout": Checkout,
     "CreateBusiness": CreateBusiness,
     "Dataroom": Dataroom,
     "FAQ": FAQ,
