@@ -90,23 +90,33 @@ const AuthenticatedApp = () => {
       />
       {Object.entries(Pages).map(([path, Page]) => {
         const isPublic = PUBLIC_PAGES.includes(path);
+        const lowerPath = path.toLowerCase();
+        const needsLowerAlias = lowerPath !== path;
+        const element = isPublic ? (
+          <LayoutWrapper currentPageName={path}>
+            <Page />
+          </LayoutWrapper>
+        ) : (
+          <LayoutWrapper currentPageName={path}>
+            <ProtectedRoute page={<Page />} path={path} isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
+          </LayoutWrapper>
+        );
         
         return (
-          <Route
-            key={path}
-            path={`/${path}`}
-            element={
-              isPublic ? (
-                <LayoutWrapper currentPageName={path}>
-                  <Page />
-                </LayoutWrapper>
-              ) : (
-                <LayoutWrapper currentPageName={path}>
-                  <ProtectedRoute page={<Page />} path={path} isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
-                </LayoutWrapper>
-              )
-            }
-          />
+          <>
+            <Route
+              key={path}
+              path={`/${path}`}
+              element={element}
+            />
+            {needsLowerAlias ? (
+              <Route
+                key={`${path}-lower`}
+                path={`/${lowerPath}`}
+                element={element}
+              />
+            ) : null}
+          </>
         );
       })}
       {CheckoutPage ? (

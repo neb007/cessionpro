@@ -73,7 +73,9 @@ export const AuthProvider = ({ children }) => {
           .eq('id', session.user.id)
           .maybeSingle();
 
-        if (profileError && profileError.code !== '42703') throw profileError;
+        if (profileError && profileError.code !== '42703') {
+          console.warn('Profile check warning (non-blocking):', profileError);
+        }
 
         if (profile?.is_blocked) {
           await supabase.auth.signOut();
@@ -223,7 +225,9 @@ export const AuthProvider = ({ children }) => {
           .eq('id', data.user.id)
           .maybeSingle();
 
-        if (profileError && profileError.code !== '42703') throw profileError;
+        if (profileError && profileError.code !== '42703') {
+          console.warn('Profile check warning during login (non-blocking):', profileError);
+        }
 
         if (profile?.is_blocked) {
           await supabase.auth.signOut();
