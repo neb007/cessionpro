@@ -23,7 +23,15 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
-const ProtectedRoute = ({ page, path, isAuthenticated }) => {
+const ProtectedRoute = ({ page, path, isAuthenticated, isLoadingAuth }) => {
+  if (isLoadingAuth) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return <UserNotRegisteredError />;
   }
@@ -36,15 +44,6 @@ const AuthenticatedApp = () => {
   const AdminDashboardPage = Pages?.AdminDashboard ?? AdminDashboard;
   const AdminUsersPage = Pages?.AdminUsers ?? AdminUsers;
   const CheckoutPage = Pages?.Checkout;
-
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   // Handle authentication errors
   if (authError) {
@@ -69,7 +68,7 @@ const AuthenticatedApp = () => {
         path="/admin/annonces"
         element={
           <LayoutWrapper currentPageName="AdminAnnonces">
-            <ProtectedRoute page={<AdminAnnoncesPage />} path="AdminAnnonces" isAuthenticated={isAuthenticated} />
+            <ProtectedRoute page={<AdminAnnoncesPage />} path="AdminAnnonces" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
           </LayoutWrapper>
         }
       />
@@ -77,7 +76,7 @@ const AuthenticatedApp = () => {
         path="/admin/dashboard"
         element={
           <LayoutWrapper currentPageName="AdminDashboard">
-            <ProtectedRoute page={<AdminDashboardPage />} path="AdminDashboard" isAuthenticated={isAuthenticated} />
+            <ProtectedRoute page={<AdminDashboardPage />} path="AdminDashboard" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
           </LayoutWrapper>
         }
       />
@@ -85,7 +84,7 @@ const AuthenticatedApp = () => {
         path="/admin/users"
         element={
           <LayoutWrapper currentPageName="AdminUsers">
-            <ProtectedRoute page={<AdminUsersPage />} path="AdminUsers" isAuthenticated={isAuthenticated} />
+            <ProtectedRoute page={<AdminUsersPage />} path="AdminUsers" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
           </LayoutWrapper>
         }
       />
@@ -103,7 +102,7 @@ const AuthenticatedApp = () => {
                 </LayoutWrapper>
               ) : (
                 <LayoutWrapper currentPageName={path}>
-                  <ProtectedRoute page={<Page />} path={path} isAuthenticated={isAuthenticated} />
+                  <ProtectedRoute page={<Page />} path={path} isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
                 </LayoutWrapper>
               )
             }
@@ -115,7 +114,7 @@ const AuthenticatedApp = () => {
           path="/checkout"
           element={
             <LayoutWrapper currentPageName="Checkout">
-              <ProtectedRoute page={<CheckoutPage />} path="Checkout" isAuthenticated={isAuthenticated} />
+              <ProtectedRoute page={<CheckoutPage />} path="Checkout" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
             </LayoutWrapper>
           }
         />

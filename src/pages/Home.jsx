@@ -35,9 +35,21 @@ export default function Home() {
 
   const loadData = async () => {
     try {
-      const allBusinesses = await businessService.listBusinesses({ status: 'active' }, 'created_at');
-      setFeaturedBusinesses((allBusinesses || []).slice(0, 6));
-      setStats({ businesses: allBusinesses.length, users: 150 });
+      const [featured, businessesCount] = await Promise.all([
+        businessService.listBusinesses(
+          { status: 'active' },
+          'created_at',
+          {
+            limit: 6,
+            columns:
+              'id,title,company_name,description,sector,country,city,asking_price,currency,created_at,images,profile_type'
+          }
+        ),
+        businessService.countBusinesses({ status: 'active' })
+      ]);
+
+      setFeaturedBusinesses(featured || []);
+      setStats({ businesses: businessesCount || 0, users: 150 });
     } catch (e) {
       console.error(e);
     }

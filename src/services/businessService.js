@@ -49,6 +49,40 @@ export const businessService = {
     }
   },
 
+  // Count businesses (lightweight)
+  async countBusinesses(filters = {}) {
+    try {
+      let query = supabase
+        .from('businesses')
+        .select('id', { count: 'exact', head: true });
+
+      if (filters.sector) {
+        query = query.eq('sector', filters.sector);
+      }
+      if (filters.country) {
+        query = query.eq('country', filters.country);
+      }
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.minPrice && filters.maxPrice) {
+        query = query.gte('asking_price', filters.minPrice)
+          .lte('asking_price', filters.maxPrice);
+      }
+      if (filters.searchText) {
+        query = query.or(`title.ilike.%${filters.searchText}%,description.ilike.%${filters.searchText}%`);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+
+      return count || 0;
+    } catch (error) {
+      console.error('Error counting businesses:', error);
+      throw error;
+    }
+  },
+
   // Get single business by ID
   async getBusinessById(id) {
     try {
