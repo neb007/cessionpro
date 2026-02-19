@@ -17,7 +17,7 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // Pages that are public (no authentication required)
-const PUBLIC_PAGES = ['Home', 'Login', 'Register', 'AccountCreation', 'PasswordReset', 'AuthCallback'];
+const PUBLIC_PAGES = ['Home', 'Login', 'Register', 'AccountCreation', 'PasswordReset', 'AuthCallback', 'Checkout'];
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -114,7 +114,7 @@ const AuthenticatedApp = () => {
           path="/checkout"
           element={
             <LayoutWrapper currentPageName="Checkout">
-              <ProtectedRoute page={<CheckoutPage />} path="Checkout" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
+              <CheckoutPage />
             </LayoutWrapper>
           }
         />
