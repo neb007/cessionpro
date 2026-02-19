@@ -27,15 +27,14 @@ const isAbortLikeError = (error) => {
 };
 
 const resilientFetch = async (input, init = {}) => {
-  // If caller provides an already-aborted signal, do not retry.
-  if (init?.signal?.aborted) {
-    return fetch(input, init);
-  }
+  // Some environments repeatedly abort Supabase requests via provided signals.
+  // We intentionally ignore incoming signal to avoid systemic false-aborts in prod.
+  const { signal: _ignoredSignal, ...safeInit } = init || {};
 
   let lastError;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      return await fetch(input, init);
+      return await fetch(input, safeInit);
     } catch (error) {
       lastError = error;
       if (!isAbortLikeError(error) || attempt === 2) {

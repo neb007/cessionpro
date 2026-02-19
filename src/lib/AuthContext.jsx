@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
             .maybeSingle();
 
           if (profileError && profileError.code !== '42703') {
-            console.error('Profile check failed:', profileError);
+            console.warn('Profile check warning (auth state, non-blocking):', profileError);
           }
 
           if (!profileError && profile?.is_blocked) {

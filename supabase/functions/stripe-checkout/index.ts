@@ -14,6 +14,8 @@ type CheckoutBody = {
   checkoutType?: 'hosted' | 'elements';
 };
 
+const FORCED_ONE_SHOT_CODES = new Set(['smart_matching', 'sponsored_listing', 'data_room']);
+
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
 const APP_URL = (Deno.env.get('APP_URL') || 'https://riviqo.com').replace(/\/$/, '');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -187,7 +189,18 @@ serve(async (req) => {
       throw new Error('Some products are unavailable');
     }
 
-    const hasSubscriptionItems = products.some((p) => p.billing_mode === 'subscription');
+    const normalizedProducts = products.map((product) =>
+      FORCED_ONE_SHOT_CODES.has(product.product_code)
+        ? {
+            ...product,
+            billing_mode: 'payment',
+            billing_interval: null,
+            stripe_price_id: null
+          }
+        : product
+    );
+
+    const hasSubscriptionItems = normalizedProducts.some((p) => p.billing_mode === 'subscription');
     const mode: 'payment' | 'subscription' = hasSubscriptionItems ? 'subscription' : 'payment';
     const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
 
@@ -222,7 +235,7 @@ serve(async (req) => {
       );
     }
 
-    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = products.map((product) => {
+    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = normalizedProducts.map((product) => {
       const quantity = normalized.get(product.product_code) || 1;
 
       if (product.stripe_price_id) {
@@ -260,7 +273,7 @@ serve(async (req) => {
 
     if (checkoutType === 'elements') {
       if (mode === 'payment') {
-        const totalAmountCents = products.reduce((sum, product) => {
+        const totalAmountCents = normalizedProducts.reduce((sum, product) => {
           const qty = normalized.get(product.product_code) || 1;
           return sum + product.unit_amount_cents * qty;
         }, 0);
@@ -298,8 +311,8 @@ serve(async (req) => {
         });
       }
 
-      const recurringProducts = products.filter((p) => p.billing_mode === 'subscription');
-      const oneTimeProducts = products.filter((p) => p.billing_mode === 'payment');
+      const recurringProducts = normalizedProducts.filter((p) => p.billing_mode === 'subscription');
+      const oneTimeProducts = normalizedProducts.filter((p) => p.billing_mode === 'payment');
 
       const subscriptionItems: Stripe.SubscriptionCreateParams.Item[] = await Promise.all(
         recurringProducts.map(async (product) => {

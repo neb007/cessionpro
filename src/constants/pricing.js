@@ -100,7 +100,7 @@ export const PRICING = {
     smartMatching: {
       id: 'smart_matching',
       price: 39.99,
-      billingCycle: 'monthly',
+      billingCycle: 'oneTime',
       frenchLabel: 'Smart Matching Intelligent',
       englishLabel: 'Smart Matching AI',
       frenchDescription: 'Veille automatique quotidienne et alertes de nouveaux matchs',
@@ -116,7 +116,7 @@ export const PRICING = {
     dataRoom: {
       id: 'data_room',
       price: 19.99,
-      billingCycle: 'yearly',
+      billingCycle: 'oneTime',
       frenchLabel: 'Data Room Sécurisée',
       englishLabel: 'Secure Data Room',
       frenchDescription: 'Stockage des documents officiels (Bilans, Bail, etc.)',
@@ -152,7 +152,7 @@ export const PRICING = {
     sponsoredListing: {
       id: 'sponsored_listing',
       price: 29.99,
-      billingCycle: 'monthly',
+      billingCycle: 'oneTime',
       frenchLabel: 'Annonce sponsorisée',
       englishLabel: 'Sponsored listing',
       frenchDescription: 'Mettez votre annonce en avant pour plus de visibilité',
