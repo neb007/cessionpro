@@ -239,6 +239,12 @@ export const AuthProvider = ({ children }) => {
           });
           throw new Error('ACCOUNT_BLOCKED');
         }
+
+        // Optimistic auth state update to avoid UI staying blocked on /Login
+        // when auth state event is delayed in production environments.
+        setUser(data.user);
+        setIsAuthenticated(true);
+        setIsLoadingAuth(false);
       }
       return data;
     } catch (error) {
