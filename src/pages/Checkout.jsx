@@ -36,7 +36,7 @@ const PRICING_LABELS = (() => {
   }, {});
 })();
 
-function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mode }) {
+function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mode, onElementLoadError }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,7 +80,14 @@ function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mod
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-        <PaymentElement options={{ layout: 'tabs' }} />
+        <PaymentElement
+          options={{ layout: 'tabs' }}
+          onLoadError={(event) => {
+            const message = event?.error?.message || labels.genericError;
+            setErrorMessage(message);
+            onElementLoadError?.(message);
+          }}
+        />
       </div>
 
       <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-3 text-xs text-[#3B4759] flex items-center gap-2">
@@ -175,6 +182,7 @@ export default function Checkout() {
   const [checkoutData, setCheckoutData] = useState(null);
   const [checkoutPayload, setCheckoutPayload] = useState(null);
   const [isHostedFallbackLoading, setIsHostedFallbackLoading] = useState(false);
+  const [elementsLoadError, setElementsLoadError] = useState('');
 
   const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
   const stripePromise = useMemo(() => (stripeKey ? loadStripe(stripeKey) : null), [stripeKey]);
@@ -184,6 +192,7 @@ export default function Checkout() {
     try {
       setIsLoading(true);
       setErrorMessage('');
+      setElementsLoadError('');
 
       if (!stripeKey) {
         setErrorMessage(labels[language].missingStripeKey);
@@ -400,10 +409,10 @@ export default function Checkout() {
                     </Button>
                   </div>
                 </div>
-              ) : errorMessage || !checkoutData?.clientSecret ? (
+              ) : errorMessage || elementsLoadError || !checkoutData?.clientSecret ? (
                 <div className="space-y-4">
                   <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-                    {errorMessage || t.genericError}
+                    {errorMessage || elementsLoadError || t.genericError}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" className="rounded-full" onClick={bootstrapCheckout}>
@@ -433,6 +442,14 @@ export default function Checkout() {
                     amountTotalCents={checkoutData.amountTotalCents}
                     currency={checkoutData.currency}
                     mode={checkoutData.mode}
+                    onElementLoadError={(message) => {
+                      setElementsLoadError(message);
+                      toast({
+                        title: t.paymentUnavailable,
+                        description: message,
+                        variant: 'destructive'
+                      });
+                    }}
                   />
                 </Elements>
               )}
