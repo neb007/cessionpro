@@ -39,6 +39,12 @@ const getSupabaseClient = () => {
   });
 };
 
+const isStripeCustomerMissingError = (error: unknown) => {
+  const stripeError = error as { code?: string; message?: string };
+  const message = (stripeError?.message || '').toLowerCase();
+  return stripeError?.code === 'resource_missing' || message.includes('no such customer');
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -70,16 +76,71 @@ serve(async (req) => {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (!customerRow?.stripe_customer_id) {
-    return jsonResponse(404, { error: 'No Stripe customer found for this account' });
-  }
-
   try {
     const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
-    const portal = await stripe.billingPortal.sessions.create({
-      customer: customerRow.stripe_customer_id,
-      return_url: `${APP_URL}/Settings?tab=billing`
-    });
+
+    const createAndPersistCustomer = async () => {
+      const customer = await stripe.customers.create({
+        email: user.email || undefined,
+        name: user.user_metadata?.full_name || undefined,
+        metadata: {
+          user_id: user.id
+        }
+      });
+
+      await supabase.from('billing_customers').upsert(
+        {
+          user_id: user.id,
+          stripe_customer_id: customer.id,
+          email: user.email || null,
+          full_name: user.user_metadata?.full_name || null,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'user_id' }
+      );
+
+      return customer.id;
+    };
+
+    let stripeCustomerId = customerRow?.stripe_customer_id || null;
+    if (!stripeCustomerId) {
+      stripeCustomerId = await createAndPersistCustomer();
+    }
+
+    let portal;
+    try {
+      portal = await stripe.billingPortal.sessions.create({
+        customer: stripeCustomerId,
+        return_url: `${APP_URL}/Settings?tab=billing`
+      });
+    } catch (error) {
+      if (!isStripeCustomerMissingError(error)) {
+        throw error;
+      }
+
+      const previousCustomerId = stripeCustomerId;
+      stripeCustomerId = await createAndPersistCustomer();
+
+      await supabase.from('billing_security_events').insert({
+        user_id: user.id,
+        event_type: 'portal_customer_recreated',
+        ip:
+          req.headers.get('cf-connecting-ip') ||
+          req.headers.get('x-forwarded-for') ||
+          req.headers.get('x-real-ip') ||
+          null,
+        user_agent: req.headers.get('user-agent'),
+        details: {
+          previous_customer_id: previousCustomerId,
+          new_customer_id: stripeCustomerId
+        }
+      });
+
+      portal = await stripe.billingPortal.sessions.create({
+        customer: stripeCustomerId,
+        return_url: `${APP_URL}/Settings?tab=billing`
+      });
+    }
 
     await supabase.from('billing_security_events').insert({
       user_id: user.id,
@@ -91,7 +152,7 @@ serve(async (req) => {
         null,
       user_agent: req.headers.get('user-agent'),
       details: {
-        stripe_customer_id: customerRow.stripe_customer_id
+        stripe_customer_id: stripeCustomerId
       }
     });
 

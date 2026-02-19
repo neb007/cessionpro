@@ -61,6 +61,22 @@ const getClientIp = (req: Request) => {
   );
 };
 
+const isStripeCustomerMissingError = (error: unknown) => {
+  const stripeError = error as { code?: string; type?: string; message?: string };
+  const message = (stripeError?.message || '').toLowerCase();
+  return (
+    stripeError?.code === 'resource_missing' ||
+    message.includes('no such customer')
+  );
+};
+
+const getStripeKeyMode = () => {
+  if (!STRIPE_SECRET_KEY) return 'missing';
+  if (STRIPE_SECRET_KEY.startsWith('sk_test_')) return 'test';
+  if (STRIPE_SECRET_KEY.startsWith('sk_live_')) return 'live';
+  return 'unknown';
+};
+
 const logSecurityEvent = async (params: {
   supabase: ReturnType<typeof createClient>;
   userId: string;
@@ -145,6 +161,8 @@ serve(async (req) => {
   }
 
   const user = authData.user;
+  let diagStripeKeyMode = getStripeKeyMode();
+  let diagStoredCustomerId: string | null = null;
 
   try {
     const limited = await isRateLimited({
@@ -211,9 +229,23 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (customerRow?.stripe_customer_id) {
-      stripeCustomerId = customerRow.stripe_customer_id;
-    } else {
+    diagStoredCustomerId = customerRow?.stripe_customer_id || null;
+
+    await logSecurityEvent({
+      supabase,
+      userId: user.id,
+      eventType: 'checkout_customer_context',
+      req,
+      details: {
+        stripe_key_mode: diagStripeKeyMode,
+        has_stored_customer: Boolean(diagStoredCustomerId),
+        stored_customer_id: diagStoredCustomerId,
+        checkout_type: checkoutType,
+        checkout_mode: mode
+      }
+    });
+
+    const createAndPersistCustomer = async () => {
       const customer = await stripe.customers.create({
         email: user.email || undefined,
         name: user.user_metadata?.full_name || undefined,
@@ -221,7 +253,6 @@ serve(async (req) => {
           user_id: user.id
         }
       });
-      stripeCustomerId = customer.id;
 
       await supabase.from('billing_customers').upsert(
         {
@@ -233,6 +264,73 @@ serve(async (req) => {
         },
         { onConflict: 'user_id' }
       );
+
+      return customer.id;
+    };
+
+    if (customerRow?.stripe_customer_id) {
+      try {
+        await stripe.customers.retrieve(customerRow.stripe_customer_id);
+        stripeCustomerId = customerRow.stripe_customer_id;
+
+        await logSecurityEvent({
+          supabase,
+          userId: user.id,
+          eventType: 'checkout_customer_reused',
+          req,
+          details: {
+            stripe_key_mode: diagStripeKeyMode,
+            stripe_customer_id: stripeCustomerId
+          }
+        });
+      } catch (error) {
+        if (!isStripeCustomerMissingError(error)) {
+          throw error;
+        }
+
+        await logSecurityEvent({
+          supabase,
+          userId: user.id,
+          eventType: 'checkout_customer_missing_or_mode_mismatch',
+          req,
+          details: {
+            stripe_key_mode: diagStripeKeyMode,
+            stored_customer_id: customerRow.stripe_customer_id,
+            stripe_error_code: (error as { code?: string })?.code || null,
+            stripe_error_type: (error as { type?: string })?.type || null,
+            stripe_error_message: (error as Error)?.message || 'unknown'
+          }
+        });
+
+        // Stored customer belongs to another Stripe mode/account (test/live mismatch)
+        // or has been deleted. Recreate a fresh customer in current Stripe context.
+        stripeCustomerId = await createAndPersistCustomer();
+
+        await logSecurityEvent({
+          supabase,
+          userId: user.id,
+          eventType: 'checkout_customer_recreated',
+          req,
+          details: {
+            stripe_key_mode: diagStripeKeyMode,
+            previous_customer_id: customerRow.stripe_customer_id,
+            new_customer_id: stripeCustomerId
+          }
+        });
+      }
+    } else {
+      stripeCustomerId = await createAndPersistCustomer();
+
+      await logSecurityEvent({
+        supabase,
+        userId: user.id,
+        eventType: 'checkout_customer_created',
+        req,
+        details: {
+          stripe_key_mode: diagStripeKeyMode,
+          stripe_customer_id: stripeCustomerId
+        }
+      });
     }
 
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = normalizedProducts.map((product) => {
@@ -515,7 +613,13 @@ serve(async (req) => {
       userId: user.id,
       eventType: 'checkout_failed',
       req,
-      details: { message: (error as Error).message }
+      details: {
+        message: (error as Error).message,
+        stripe_key_mode: diagStripeKeyMode,
+        stored_customer_id: diagStoredCustomerId,
+        stripe_error_code: (error as { code?: string })?.code || null,
+        stripe_error_type: (error as { type?: string })?.type || null
+      }
     });
 
     return jsonResponse(400, {
