@@ -1,8 +1,27 @@
 import { supabase } from '@/api/supabaseClient';
 
 class BillingService {
+  _normalizeInvokeError(error) {
+    const rawMessage = (error?.message || '').toLowerCase();
+    const isAbortLike =
+      error?.name === 'AbortError' ||
+      rawMessage.includes('signal is aborted') ||
+      rawMessage.includes('aborted without reason') ||
+      rawMessage.includes('the operation was aborted');
+
+    if (isAbortLike) {
+      return new Error('La requête de paiement a été interrompue. Réessaie dans quelques secondes.');
+    }
+
+    return error;
+  }
+
   async _invokeWithTimeout(functionName, options, timeoutMs = 15000) {
-    const invokePromise = supabase.functions.invoke(functionName, options);
+    const invokePromise = supabase.functions
+      .invoke(functionName, options)
+      .catch((error) => {
+        throw this._normalizeInvokeError(error);
+      });
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error('La requête de paiement prend trop de temps. Réessaie dans quelques secondes.'));
@@ -40,6 +59,11 @@ class BillingService {
 
   async _extractFunctionError(error) {
     if (!error) return 'Unknown function error';
+
+    const normalized = this._normalizeInvokeError(error);
+    if (normalized?.message && normalized !== error) {
+      return normalized.message;
+    }
 
     if (error.context instanceof Response) {
       try {

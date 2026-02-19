@@ -128,7 +128,8 @@ export default function Checkout() {
         paymentUnavailable: 'Paiement indisponible',
         genericError: 'Impossible de confirmer le paiement.',
         missingPayload: 'Votre panier est vide ou expiré. Retournez sur Abonnement.',
-        missingStripeKey: 'La clé Stripe publique est absente (VITE_STRIPE_PUBLISHABLE_KEY).',
+        missingStripeKey:
+          'La clé Stripe publique est absente (VITE_STRIPE_PUBLISHABLE_KEY). Ajoutez-la dans les variables d’environnement Vercel (Production/Preview), puis redéployez.',
         back: 'Retour à Abonnement',
         refresh: 'Réessayer',
         paySectionTitle: 'Finaliser le paiement',
@@ -156,7 +157,8 @@ export default function Checkout() {
         paymentUnavailable: 'Payment unavailable',
         genericError: 'Unable to confirm payment.',
         missingPayload: 'Your cart is empty or expired. Please return to Subscription page.',
-        missingStripeKey: 'Missing Stripe publishable key (VITE_STRIPE_PUBLISHABLE_KEY).',
+        missingStripeKey:
+          'Missing Stripe publishable key (VITE_STRIPE_PUBLISHABLE_KEY). Add it to Vercel environment variables (Production/Preview), then redeploy.',
         back: 'Back to Subscription',
         refresh: 'Retry',
         paySectionTitle: 'Complete payment',
@@ -181,6 +183,11 @@ export default function Checkout() {
     try {
       setIsLoading(true);
       setErrorMessage('');
+
+      if (!stripeKey) {
+        setErrorMessage(labels[language].missingStripeKey);
+        return;
+      }
 
       const raw = sessionStorage.getItem(CHECKOUT_STORAGE_KEY);
       if (!raw) {
