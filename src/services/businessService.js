@@ -6,6 +6,32 @@ import { supabase } from '@/api/supabaseClient';
  */
 
 export const businessService = {
+  _isAbortError(error) {
+    const msg = (error?.message || '').toLowerCase();
+    return (
+      error?.name === 'AbortError' ||
+      msg.includes('signal is aborted') ||
+      msg.includes('aborted without reason') ||
+      msg.includes('the operation was aborted')
+    );
+  },
+
+  async _withAbortRetry(queryFactory, retries = 2) {
+    let lastError;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        return await queryFactory();
+      } catch (error) {
+        lastError = error;
+        if (!this._isAbortError(error) || attempt === retries) {
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+      }
+    }
+    throw lastError;
+  },
+
   _formatError(error, fallback = 'Une erreur est survenue') {
     const code = error?.code ? ` [${error.code}]` : '';
     const details = error?.details ? ` — ${error.details}` : '';
@@ -15,41 +41,47 @@ export const businessService = {
   // Get all businesses
   async listBusinesses(filters = {}, sortBy = 'created_at', options = {}) {
     try {
-      let query = supabase
-        .from('businesses')
-        .select(options.columns || '*');
+      const { data, error } = await this._withAbortRetry(async () => {
+        let query = supabase
+          .from('businesses')
+          .select(options.columns || '*');
 
-      // Apply filters
-      if (filters.sector) {
-        query = query.eq('sector', filters.sector);
-      }
-      if (filters.country) {
-        query = query.eq('country', filters.country);
-      }
-      if (filters.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters.minPrice && filters.maxPrice) {
-        query = query.gte('asking_price', filters.minPrice)
-          .lte('asking_price', filters.maxPrice);
-      }
-      if (filters.searchText) {
-        query = query.or(`title.ilike.%${filters.searchText}%,description.ilike.%${filters.searchText}%`);
-      }
+        // Apply filters
+        if (filters.sector) {
+          query = query.eq('sector', filters.sector);
+        }
+        if (filters.country) {
+          query = query.eq('country', filters.country);
+        }
+        if (filters.status) {
+          query = query.eq('status', filters.status);
+        }
+        if (filters.minPrice && filters.maxPrice) {
+          query = query.gte('asking_price', filters.minPrice)
+            .lte('asking_price', filters.maxPrice);
+        }
+        if (filters.searchText) {
+          query = query.or(`title.ilike.%${filters.searchText}%,description.ilike.%${filters.searchText}%`);
+        }
 
-      // Apply sorting
-      query = query.order(sortBy, { ascending: false });
-      if (options.limit && typeof options.offset === 'number') {
-        query = query.range(options.offset, options.offset + options.limit - 1);
-      } else if (options.limit) {
-        query = query.limit(options.limit);
-      }
+        // Apply sorting
+        query = query.order(sortBy, { ascending: false });
+        if (options.limit && typeof options.offset === 'number') {
+          query = query.range(options.offset, options.offset + options.limit - 1);
+        } else if (options.limit) {
+          query = query.limit(options.limit);
+        }
 
-      const { data, error } = await query;
+        return query;
+      });
       
       if (error) throw error;
       return data || [];
     } catch (error) {
+      if (this._isAbortError(error)) {
+        console.warn('Businesses query aborted after retries, returning empty list.');
+        return [];
+      }
       console.error('Error listing businesses:', error);
       throw new Error(this._formatError(error, 'Impossible de charger les annonces'));
     }
@@ -58,32 +90,38 @@ export const businessService = {
   // Count businesses (lightweight)
   async countBusinesses(filters = {}) {
     try {
-      let query = supabase
-        .from('businesses')
-        .select('id', { count: 'exact', head: true });
+      const { count, error } = await this._withAbortRetry(async () => {
+        let query = supabase
+          .from('businesses')
+          .select('id', { count: 'exact', head: true });
 
-      if (filters.sector) {
-        query = query.eq('sector', filters.sector);
-      }
-      if (filters.country) {
-        query = query.eq('country', filters.country);
-      }
-      if (filters.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters.minPrice && filters.maxPrice) {
-        query = query.gte('asking_price', filters.minPrice)
-          .lte('asking_price', filters.maxPrice);
-      }
-      if (filters.searchText) {
-        query = query.or(`title.ilike.%${filters.searchText}%,description.ilike.%${filters.searchText}%`);
-      }
+        if (filters.sector) {
+          query = query.eq('sector', filters.sector);
+        }
+        if (filters.country) {
+          query = query.eq('country', filters.country);
+        }
+        if (filters.status) {
+          query = query.eq('status', filters.status);
+        }
+        if (filters.minPrice && filters.maxPrice) {
+          query = query.gte('asking_price', filters.minPrice)
+            .lte('asking_price', filters.maxPrice);
+        }
+        if (filters.searchText) {
+          query = query.or(`title.ilike.%${filters.searchText}%,description.ilike.%${filters.searchText}%`);
+        }
 
-      const { count, error } = await query;
+        return query;
+      });
       if (error) throw error;
 
       return count || 0;
     } catch (error) {
+      if (this._isAbortError(error)) {
+        console.warn('Businesses count query aborted after retries, returning 0.');
+        return 0;
+      }
       console.error('Error counting businesses:', error);
       throw new Error(this._formatError(error, 'Impossible de compter les annonces'));
     }
