@@ -10,6 +10,7 @@ import { billingService } from '@/services/billingService';
 import { PRICING } from '@/constants/pricing';
 
 const CHECKOUT_STORAGE_KEY = 'riviqo_checkout_payload';
+const APP_CHECKOUT_RETURN_URL = 'https://riviqo.com';
 
 const formatMoney = (amountCents, currency = 'eur', language = 'fr') => {
   if (amountCents == null) return '-';
@@ -51,7 +52,7 @@ function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mod
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/Settings?tab=billing&checkout=success`
+        return_url: `${APP_CHECKOUT_RETURN_URL}/Settings?tab=billing&checkout=success`
       },
       redirect: 'if_required'
     });
