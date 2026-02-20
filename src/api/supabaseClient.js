@@ -16,6 +16,29 @@ const storageKey = `riviqo-auth-${getProjectRefFromUrl(supabaseUrl || '')}`;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const authLocks = new Map();
+
+const localAuthLock = async (name, acquireTimeout, fn) => {
+  const startedAt = Date.now();
+
+  while (authLocks.get(name)) {
+    if (acquireTimeout >= 0 && Date.now() - startedAt >= acquireTimeout) {
+      const timeoutError = Object.assign(new Error('Lock acquire timeout'), {
+        isAcquireTimeout: true
+      });
+      throw timeoutError;
+    }
+    await sleep(20);
+  }
+
+  authLocks.set(name, true);
+  try {
+    return await fn();
+  } finally {
+    authLocks.delete(name);
+  }
+};
+
 const isAbortLikeError = (error) => {
   const message = (error?.message || '').toLowerCase();
   return (
@@ -59,6 +82,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    lock: localAuthLock,
     storageKey,
     flowType: 'pkce'
   }
