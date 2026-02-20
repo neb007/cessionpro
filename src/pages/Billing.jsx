@@ -138,7 +138,7 @@ export default function Billing() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-0 py-4">
+    <div className="w-full max-w-none px-0 py-4">
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>

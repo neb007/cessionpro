@@ -84,11 +84,18 @@ export default function Home() {
               <Logo size="sm" showText={false} />
             </Link>
             <div className="flex items-center gap-4">
-              <Link to="/Login" className="text-gray-900 hover:text-gray-700 font-medium transition-colors px-4 py-2">
+              <Link
+                to="/Login"
+                className="text-gray-900 hover:text-gray-700 font-medium transition-colors px-4 py-2"
+                style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500, fontSize: '14px' }}
+              >
                 {language === 'fr' ? 'Se connecter' : 'Login'}
               </Link>
               <Link to="/AccountCreation">
-                <Button className="bg-gradient-to-r from-primary to-orange-500 hover:from-primary-hover hover:to-orange-600 text-white">
+                <Button
+                  className="bg-gradient-to-r from-primary to-orange-500 hover:from-primary-hover hover:to-orange-600 text-white"
+                  style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500, fontSize: '14px' }}
+                >
                   {language === 'fr' ? 'Créer un compte' : 'Sign up'}
                 </Button>
               </Link>

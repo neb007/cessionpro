@@ -398,7 +398,7 @@ export default function Profile() {
 
   return (
     <div className="py-4 lg:py-6">
-      <div className="max-w-3xl mx-auto px-0 sm:px-2 lg:px-4">
+      <div className="w-full max-w-none mx-0 px-0 sm:px-1 lg:px-2">
         <div className="space-y-6">
           {/* Logo Entreprise & Basic Info */}
           <Card className="border-0 shadow-sm">

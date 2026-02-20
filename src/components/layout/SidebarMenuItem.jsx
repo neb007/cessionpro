@@ -14,7 +14,7 @@ export default function SidebarMenuItem({
     <Link
       to={`/${page}`}
       onClick={onClick}
-      style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+      style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500, fontSize: '14px' }}
       className={`flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 group ${
         isActive
           ? 'bg-[#FF6B4A]/10 text-[#FF6B4A]'

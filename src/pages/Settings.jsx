@@ -53,15 +53,15 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 overflow-x-hidden">
-      <div className="mb-6">
+    <div className="w-full max-w-none mx-0 px-0 py-8 overflow-x-hidden">
+      <div className="mb-6 px-4 sm:px-6 lg:px-8">
         <h1 className="font-display text-2xl text-[#3B4759]">Paramètres</h1>
         <p className="text-sm text-[#111827]">
           Gérez votre profil, votre abonnement et votre facturation sans quitter cette page.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b border-gray-200 mb-6">
+      <div className="flex flex-nowrap sm:flex-wrap gap-2 border-b border-gray-200 mb-6 overflow-x-auto pb-1 px-4 sm:px-6 lg:px-8">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -69,7 +69,7 @@ export default function Settings() {
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 -mb-px ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
                 isActive
                   ? 'border-[#FF6B4A] text-[#FF6B4A] bg-orange-50'
                   : 'border-transparent text-[#111827] hover:text-[#3B4759]'
@@ -82,7 +82,7 @@ export default function Settings() {
         })}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 sm:p-6 overflow-x-hidden">
+      <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-3 sm:p-6 lg:p-8 overflow-x-hidden">
         {activeTab === 'profile' && <Profile />}
         {activeTab === 'pricing' && <Abonnement />}
         {activeTab === 'billing' && <Billing />}

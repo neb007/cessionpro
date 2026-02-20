@@ -216,7 +216,7 @@ export default function Sidebar({ user }) {
         </div>
 
         {/* Sidebar Content */}
-        <div className="p-0 flex flex-col h-full font-sans font-normal">
+        <div className="p-0 flex flex-col h-full font-sans text-sm font-medium">
           {/* Logo Section */}
           <div className="flex items-center justify-between px-4 py-4">
             <Link to="/" className="flex items-center gap-3">
@@ -240,7 +240,7 @@ export default function Sidebar({ user }) {
                     navigate(item.path);
                     handleMenuItemClick();
                   }}
-                  style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                  style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500, fontSize: '14px' }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm ${
                     currentPage === item.pageKey
                       ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-medium'
@@ -316,7 +316,7 @@ export default function Sidebar({ user }) {
                       navigate(tool.path);
                       handleMenuItemClick();
                     }}
-                    style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                    style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500, fontSize: '14px' }}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm ${
                       currentPage === tool.pageKey
                         ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-medium'
@@ -341,7 +341,7 @@ export default function Sidebar({ user }) {
                       <TooltipTrigger asChild>
                         <button
                           disabled
-                          style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 400 }}
+                          style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500, fontSize: '14px' }}
                           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#C0C5D4] cursor-not-allowed transition-all duration-200 text-sm"
                         >
                           <Lock className="w-5 h-5" />
@@ -380,7 +380,10 @@ export default function Sidebar({ user }) {
             <div className="h-px bg-gray-200 mb-3" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm text-[#111827] hover:bg-white/80 hover:text-[#3B4759] transition-colors">
+                <button
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm text-[#111827] hover:bg-white/80 hover:text-[#3B4759] transition-colors"
+                  style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500, fontSize: '14px' }}
+                >
                   <span className="flex items-center gap-2">
                     <Globe className="w-4 h-4" />
                     {language === 'fr' ? 'Langue' : 'Language'}
@@ -392,10 +395,10 @@ export default function Sidebar({ user }) {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => changeLanguage('fr')}>
+                <DropdownMenuItem onClick={() => changeLanguage('fr')} className="text-sm font-medium">
                   🇫🇷 Français
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => changeLanguage('en')}>
+                <DropdownMenuItem onClick={() => changeLanguage('en')} className="text-sm font-medium">
                   🇬🇧 English
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -407,6 +410,7 @@ export default function Sidebar({ user }) {
                 navigate('/');
               }}
               className="w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-xl text-sm text-[#111827] hover:bg-white/80 hover:text-[#3B4759] transition-colors"
+              style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500, fontSize: '14px' }}
             >
               <LogOut className="w-4 h-4" />
               {language === 'fr' ? 'Déconnexion' : 'Logout'}

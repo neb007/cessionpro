@@ -999,7 +999,7 @@ export default function Messages() {
 
   if (isConversationView) {
     return (
-      <div className="h-[calc(100vh-80px)] flex bg-background">
+      <div className="h-[calc(100vh-80px)] w-full min-w-0 flex bg-background overflow-hidden">
         <div className="flex-1 flex flex-col bg-background">
           {/* Chat Header */}
           <div className="bg-card border-b border-border px-4 py-3 sm:p-4 flex items-center gap-3 sm:gap-4 sticky top-0 z-10">
@@ -1373,9 +1373,9 @@ export default function Messages() {
   }
 
   return (
-    <div className="h-[calc(100vh-80px)] flex bg-background">
+    <div className="h-[calc(100vh-80px)] w-full min-w-0 flex bg-background overflow-hidden">
       {/* Conversations List */}
-      <div className="w-full bg-card border-r border-border flex flex-col">
+      <div className="w-full min-w-0 bg-card border-r border-border flex flex-col">
         <div className="px-4 sm:px-6 py-5 border-b border-border bg-card">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -1416,7 +1416,7 @@ export default function Messages() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1 bg-background">
+        <ScrollArea className="flex-1 bg-background min-w-0">
           {filteredConversations.length === 0 ? (
             <div className="p-8 text-center">
               <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -1424,15 +1424,17 @@ export default function Messages() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              <div className="hidden lg:grid grid-cols-[110px_160px_180px_1fr_110px_80px_90px_120px] gap-4 px-6 py-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-                <span>{language === 'fr' ? 'Date' : 'Date'}</span>
-                <span>{language === 'fr' ? 'Demandeur' : 'Requester'}</span>
-                <span>{language === 'fr' ? 'Sujet' : 'Subject'}</span>
-                <span>{language === 'fr' ? "Titre de l’annonce" : 'Listing'}</span>
-                <span>{language === 'fr' ? 'Type' : 'Type'}</span>
-                <span className="text-center">{language === 'fr' ? 'Non lus' : 'Unread'}</span>
-                <span className="text-center">{language === 'fr' ? 'Répondu' : 'Replied'}</span>
-                <span className="text-center">{language === 'fr' ? 'Actions' : 'Actions'}</span>
+              <div className="hidden lg:block overflow-x-auto">
+                <div className="min-w-[1080px] grid grid-cols-[110px_170px_190px_1fr_100px_80px_90px_120px] gap-3 px-4 xl:px-6 py-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+                  <span>{language === 'fr' ? 'Date' : 'Date'}</span>
+                  <span>{language === 'fr' ? 'Demandeur' : 'Requester'}</span>
+                  <span>{language === 'fr' ? 'Sujet' : 'Subject'}</span>
+                  <span>{language === 'fr' ? "Titre de l’annonce" : 'Listing'}</span>
+                  <span>{language === 'fr' ? 'Type' : 'Type'}</span>
+                  <span className="text-center">{language === 'fr' ? 'Non lus' : 'Unread'}</span>
+                  <span className="text-center">{language === 'fr' ? 'Répondu' : 'Replied'}</span>
+                  <span className="text-center">{language === 'fr' ? 'Actions' : 'Actions'}</span>
+                </div>
               </div>
               {filteredConversations.map((conv) => {
                 const isActive = selectedConversation?.id === conv.id;
@@ -1509,56 +1511,58 @@ export default function Messages() {
                       </div>
                     </div>
 
-                    <div className="hidden lg:grid grid-cols-[110px_160px_180px_1fr_110px_80px_90px_120px] gap-4 items-center px-6 py-4">
-                      <span className="text-sm text-muted-foreground">
-                        {formatConversationDate(conv.last_message_date || conv.updated_at)}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <DicebearAvatar email={otherParticipantId} name={otherLabel} size="sm" />
-                        <div className="min-w-0">
-                          <span className="text-sm font-medium text-foreground truncate block">{requesterName}</span>
-                          {requesterCompany && (
-                            <span className="text-xs text-muted-foreground truncate block">{requesterCompany}</span>
+                    <div className="hidden lg:block overflow-x-auto">
+                      <div className="min-w-[1080px] grid grid-cols-[110px_170px_190px_1fr_100px_80px_90px_120px] gap-3 items-center px-4 xl:px-6 py-4">
+                        <span className="text-sm text-muted-foreground">
+                          {formatConversationDate(conv.last_message_date || conv.updated_at)}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <DicebearAvatar email={otherParticipantId} name={otherLabel} size="sm" />
+                          <div className="min-w-0">
+                            <span className="text-sm font-medium text-foreground truncate block">{requesterName}</span>
+                            {requesterCompany && (
+                              <span className="text-xs text-muted-foreground truncate block">{requesterCompany}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground truncate">{subjectPreview}</p>
+                          {statusLabel && (
+                            <span className={`text-xs px-2 py-1 rounded-full ${statusTone}`}>
+                              {statusLabel}
+                            </span>
                           )}
                         </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground truncate">{subjectPreview}</p>
-                        {statusLabel && (
-                          <span className={`text-xs px-2 py-1 rounded-full ${statusTone}`}>
-                            {statusLabel}
+                        <span className="text-sm text-muted-foreground truncate">{businessTitle}</span>
+                        <Badge variant="secondary" className="text-xs w-fit">
+                          {typeLabel}
+                        </Badge>
+                        <div className="flex justify-center">
+                          {unread > 0 ? (
+                            <Badge className="bg-primary text-white text-xs">{unread}</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">0</span>
+                          )}
+                        </div>
+                        <div className="flex justify-center">
+                          <span className={`text-xs px-2 py-1 rounded-full ${replied ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                            {replied ? (language === 'fr' ? 'Oui' : 'Yes') : (language === 'fr' ? 'Non' : 'No')}
                           </span>
-                        )}
-                      </div>
-                      <span className="text-sm text-muted-foreground truncate">{businessTitle}</span>
-                      <Badge variant="secondary" className="text-xs w-fit">
-                        {typeLabel}
-                      </Badge>
-                      <div className="flex justify-center">
-                        {unread > 0 ? (
-                          <Badge className="bg-primary text-white text-xs">{unread}</Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">0</span>
-                        )}
-                      </div>
-                      <div className="flex justify-center">
-                        <span className={`text-xs px-2 py-1 rounded-full ${replied ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-                          {replied ? (language === 'fr' ? 'Oui' : 'Yes') : (language === 'fr' ? 'Non' : 'No')}
-                        </span>
-                      </div>
-                      <div className="flex justify-center">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={archivingConversationId === conv.id}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleArchiveConversation(conv);
-                          }}
-                        >
-                          {language === 'fr' ? 'Archiver' : 'Archive'}
-                        </Button>
+                        </div>
+                        <div className="flex justify-center">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={archivingConversationId === conv.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleArchiveConversation(conv);
+                            }}
+                          >
+                            {language === 'fr' ? 'Archiver' : 'Archive'}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </button>
