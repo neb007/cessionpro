@@ -79,7 +79,7 @@ function LayoutContent({ children, currentPageName }) {
           </main>
 
           {/* Footer */}
-          <footer className="bg-[#3B4759] text-[#8A98AD] py-16 mt-20 w-full">
+          <footer className={`bg-[#3B4759] text-[#8A98AD] py-16 w-full ${currentPageName === 'Messages' ? 'mt-0' : 'mt-20'}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div className="md:col-span-2">

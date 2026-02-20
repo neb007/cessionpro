@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -34,6 +34,7 @@ import { businessService } from '@/services/businessService';
 
 export default function Messages() {
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const messagesEndRef = useRef(null);
   const HIDDEN_CONTACT_ID = '8c14c80a-75d2-41b1-ab33-7fbabffec252';
   const MAX_MESSAGE_LENGTH = 2000;
@@ -45,7 +46,6 @@ export default function Messages() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [allMessages, setAllMessages] = useState([]);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [oldestMessageAt, setOldestMessageAt] = useState(null);
   const [typingParticipants, setTypingParticipants] = useState({});
@@ -107,16 +107,7 @@ export default function Messages() {
       selectedConversation.id,
       (newMessage) => {
         if (!newMessage) return;
-        setAllMessages((prev) => {
-          if (prev.some((msg) => msg.id === newMessage.id)) return prev;
-          const next = [...prev, newMessage].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-          return next;
-        });
-        setMessages((prev) => {
-          if (prev.some((msg) => msg.id === newMessage.id)) return prev;
-          const next = [...prev, newMessage].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-          return next;
-        });
+        setMessages((prev) => mergeMessagesById(prev, [newMessage], false));
         setShouldAutoScroll(true);
 
         if (newMessage.receiver_id === user?.id) {
@@ -139,7 +130,6 @@ export default function Messages() {
       selectedConversation.id,
       (updatedMessage) => {
         if (!updatedMessage) return;
-        setAllMessages((prev) => prev.map((msg) => msg.id === updatedMessage.id ? updatedMessage : msg));
         setMessages((prev) => prev.map((msg) => msg.id === updatedMessage.id ? updatedMessage : msg));
       }
     );
@@ -232,6 +222,34 @@ export default function Messages() {
     return normalized;
   };
 
+  const mergeMessagesById = (baseMessages = [], incomingMessages = [], prepend = false) => {
+    const map = new Map();
+    const ordered = prepend
+      ? [...incomingMessages, ...baseMessages]
+      : [...baseMessages, ...incomingMessages];
+
+    ordered.forEach((msg) => {
+      if (!msg?.id) return;
+      map.set(msg.id, msg);
+    });
+
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  };
+
+  const openConversation = (conv) => {
+    if (!conv?.id) return;
+    setSelectedConversation(conv);
+    setShowInbox(false);
+    navigate(createPageUrl(`Messages?conversation=${conv.id}`));
+  };
+
+  const closeConversation = () => {
+    setShowInbox(true);
+    navigate(createPageUrl('Messages'));
+  };
+
   const loadData = async () => {
     try {
       const { data: authData } = await supabase.auth.getUser();
@@ -292,7 +310,6 @@ export default function Messages() {
       const msgs = await messageService.listMessages(conversationId, {
         limit: MESSAGES_PAGE_SIZE
       });
-      setAllMessages(msgs);
       setMessages(msgs);
       setHasMoreMessages(msgs.length === MESSAGES_PAGE_SIZE);
       setOldestMessageAt(msgs[0]?.created_at || null);
@@ -353,14 +370,7 @@ export default function Messages() {
         return;
       }
 
-      setAllMessages((prev) => {
-        const merged = [...olderMessages, ...prev];
-        return merged;
-      });
-      setMessages((prev) => {
-        const merged = [...olderMessages, ...prev];
-        return merged;
-      });
+      setMessages((prev) => mergeMessagesById(prev, olderMessages, true));
       setOldestMessageAt(olderMessages[0]?.created_at || oldestMessageAt);
       setHasMoreMessages(olderMessages.length === MESSAGES_PAGE_SIZE);
       setShouldAutoScroll(false);
@@ -470,7 +480,7 @@ export default function Messages() {
               blocked_by: Array.isArray(updated.blocked_by) ? updated.blocked_by : blockedBy.concat(user.id)
             });
           }
-          setShowInbox(true);
+          closeConversation();
         }
       }
     } catch (error) {
@@ -558,15 +568,20 @@ export default function Messages() {
         ? selectedConversation.participant_2_id
         : selectedConversation.participant_1_id;
 
-      await messageService.sendMessage({
+      const sentMessage = await messageService.sendMessage({
         conversation_id: selectedConversation.id,
         receiver_id: otherParticipantId,
         content: newMessage,
         read: false
       });
 
+      if (sentMessage?.id) {
+        setMessages((prev) => mergeMessagesById(prev, [sentMessage], false));
+        setShouldAutoScroll(true);
+      }
+
       const normalizedUnreadCount = normalizeUnreadCount(selectedConversation);
-      await conversationService.updateConversation(selectedConversation.id, {
+      const updatedConversation = await conversationService.updateConversation(selectedConversation.id, {
         last_message: newMessage,
         last_message_date: new Date().toISOString(),
         unread_count: {
@@ -574,6 +589,10 @@ export default function Messages() {
           [otherParticipantId]: (normalizedUnreadCount?.[otherParticipantId] || 0) + 1
         }
       });
+
+      if (updatedConversation?.id) {
+        updateConversationState(updatedConversation);
+      }
 
       // Send immediate email notification (non-critical)
       try {
@@ -605,7 +624,6 @@ export default function Messages() {
       }
 
       setNewMessage('');
-      loadMessages(selectedConversation.id);
     } catch (e) {
       console.error(e);
       setSendError(
@@ -921,6 +939,24 @@ export default function Messages() {
     return conv?.business_title || conv?.subject || (language === 'fr' ? 'Conversation' : 'Conversation');
   };
 
+  const getNextStepLabel = (conv) => {
+    if (!conv) return '-';
+    if (conv.contact_status === 'pending') {
+      return language === 'fr' ? 'Accepter la discussion' : 'Accept conversation';
+    }
+
+    const stage = conv.deal_stage || 'contact';
+    const stageToNext = {
+      contact: language === 'fr' ? 'Passer NDA' : 'Move to NDA',
+      nda: language === 'fr' ? 'Signer NDA' : 'Sign NDA',
+      data_room: language === 'fr' ? 'Partager documents' : 'Share documents',
+      loi: language === 'fr' ? 'Finaliser LOI' : 'Finalize LOI',
+      closing: language === 'fr' ? 'Clôture en cours' : 'Closing in progress'
+    };
+
+    return stageToNext[stage] || '-';
+  };
+
   const getParticipantLabel = (participantId) => {
     const profile = participantProfiles?.[participantId];
     if (!profile) return language === 'fr' ? 'Contact inconnu' : 'Unknown contact';
@@ -944,30 +980,103 @@ export default function Messages() {
     return profile?.company_name || '';
   };
 
-  const filteredConversations = conversations.filter((conv) => {
-    const otherId = getOtherParticipantId(conv);
-    if (otherId === HIDDEN_CONTACT_ID) return false;
-    if (isConversationBlocked(conv)) return false;
-    const title = getConversationTitle(conv).toLowerCase();
-    const otherLabel = getParticipantLabel(otherId).toLowerCase();
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = title.includes(query) || otherLabel.includes(query);
-    if (!matchesSearch) return false;
-    if (conversationFilter === 'archived') {
-      return isConversationArchived(conv);
-    }
-    if (isConversationArchived(conv)) return false;
-    if (conversationFilter === 'unread') {
-      return (conv.unread_count?.[user?.id] || 0) > 0;
-    }
-    if (conversationFilter === 'pending') {
-      return conv.contact_status === 'pending';
-    }
-    if (conversationFilter === 'read') {
-      return (conv.unread_count?.[user?.id] || 0) === 0;
-    }
-    return true;
-  });
+  const filteredConversations = useMemo(() => {
+    return conversations.filter((conv) => {
+      const otherId = getOtherParticipantId(conv);
+      if (otherId === HIDDEN_CONTACT_ID) return false;
+      if (isConversationBlocked(conv)) return false;
+      const title = getConversationTitle(conv).toLowerCase();
+      const otherLabel = getParticipantLabel(otherId).toLowerCase();
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = title.includes(query) || otherLabel.includes(query);
+      if (!matchesSearch) return false;
+      if (conversationFilter === 'archived') {
+        return isConversationArchived(conv);
+      }
+      if (isConversationArchived(conv)) return false;
+      if (conversationFilter === 'unread') {
+        return (conv.unread_count?.[user?.id] || 0) > 0;
+      }
+      if (conversationFilter === 'pending') {
+        return conv.contact_status === 'pending';
+      }
+      if (conversationFilter === 'read') {
+        return (conv.unread_count?.[user?.id] || 0) === 0;
+      }
+      return true;
+    });
+  }, [conversations, searchQuery, conversationFilter, user?.id, participantProfiles, language]);
+
+  const inboxStats = useMemo(() => {
+    return conversations.reduce(
+      (acc, conv) => {
+        const unread = conv.unread_count?.[user?.id] || 0;
+        const archivedBy = Array.isArray(conv.archived_by) ? conv.archived_by : [];
+        if (unread > 0) acc.unread += unread;
+        if (conv.contact_status === 'pending') acc.pending += 1;
+        if (archivedBy.includes(user?.id)) acc.archived += 1;
+        return acc;
+      },
+      { unread: 0, pending: 0, archived: 0 }
+    );
+  }, [conversations, user?.id]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.localStorage.getItem('debugMessagingUx') !== '1') return;
+
+    const pendingForSeller =
+      selectedConversation?.contact_status !== 'accepted' &&
+      selectedConversation?.participant_2_id === user?.id;
+
+    console.debug('[MessagingUX:state]', {
+      screen: showInbox ? 'inbox' : 'conversation',
+      selectedConversationId: selectedConversation?.id || null,
+      messagesCount: messages.length,
+      conversationsCount: conversations.length,
+      filter: conversationFilter,
+      pendingForSeller,
+      dealStage: selectedConversation?.deal_stage || 'contact',
+      inboxStats
+    });
+  }, [
+    showInbox,
+    selectedConversation?.id,
+    selectedConversation?.contact_status,
+    selectedConversation?.deal_stage,
+    selectedConversation?.participant_2_id,
+    user?.id,
+    messages.length,
+    conversations.length,
+    conversationFilter,
+    inboxStats
+  ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.localStorage.getItem('debugMessagingUx') !== '1') return;
+
+    const inputBar = document.querySelector('[data-messages-input]');
+    const footer = document.querySelector('footer');
+    const main = document.querySelector('main');
+
+    if (!inputBar || !footer || !main) return;
+
+    const inputRect = inputBar.getBoundingClientRect();
+    const footerRect = footer.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const computedGap = Math.max(0, Math.round(footerRect.top - inputRect.bottom));
+
+    console.debug('[MessagingUX:layout-gap]', {
+      gapPx: computedGap,
+      inputBottom: Math.round(inputRect.bottom),
+      footerTop: Math.round(footerRect.top),
+      mainHeight: Math.round(mainRect.height),
+      viewportHeight: window.innerHeight,
+      showInbox,
+      isConversationView: Boolean(selectedConversation) && !showInbox
+    });
+  }, [showInbox, selectedConversation?.id, messages.length, sending]);
 
   if (loading) {
     return (
@@ -1005,8 +1114,7 @@ export default function Messages() {
           <div className="bg-card border-b border-border px-4 py-3 sm:p-4 flex items-center gap-3 sm:gap-4 sticky top-0 z-10">
             <button
               onClick={() => {
-                setShowInbox(true);
-                window.location.href = createPageUrl('Messages');
+                closeConversation();
               }}
               className="p-2 -ml-2 hover:bg-gray-100 rounded-lg"
             >
@@ -1092,13 +1200,13 @@ export default function Messages() {
                   </Button>
                 </div>
               )}
-              {allMessages.length === 0 && (
+              {messages.length === 0 && (
                 <div className="text-center text-sm text-muted-foreground py-10">
                   {language === 'fr' ? 'Aucun message pour le moment.' : 'No messages yet.'}
                 </div>
               )}
               <AnimatePresence initial={false}>
-                {messages.map((msg, idx) => {
+                {messages.map((msg) => {
                   const isOwn = msg.sender_id === user?.id;
                   const senderId = msg.sender_id;
                   const senderLabel = shouldShowProfile ? getParticipantLabel(senderId) : (language === 'fr' ? 'Utilisateur' : 'User');
@@ -1309,7 +1417,7 @@ export default function Messages() {
                   className="w-full"
                   onClick={() => {
                     if (selectedConversation?.business_id) {
-                      window.location.href = createPageUrl(`BusinessDetails?id=${selectedConversation.business_id}`);
+                      navigate(createPageUrl(`BusinessDetails?id=${selectedConversation.business_id}`));
                     }
                   }}
                 >
@@ -1320,7 +1428,7 @@ export default function Messages() {
           </div>
 
           {/* Input */}
-          <div className="bg-card border-t border-border px-4 py-3 sm:p-4 sticky bottom-0 z-10">
+          <div data-messages-input className="bg-card border-t border-border px-4 py-3 sm:p-4 sticky bottom-0 z-10">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1425,12 +1533,13 @@ export default function Messages() {
           ) : (
             <div className="divide-y divide-border">
               <div className="hidden lg:block overflow-x-auto">
-                <div className="min-w-[1080px] grid grid-cols-[110px_170px_190px_1fr_100px_80px_90px_120px] gap-3 px-4 xl:px-6 py-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+                <div className="min-w-[1200px] grid grid-cols-[110px_170px_190px_1fr_100px_140px_80px_90px_120px] gap-3 px-4 xl:px-6 py-3 text-[11px] uppercase tracking-widest text-muted-foreground">
                   <span>{language === 'fr' ? 'Date' : 'Date'}</span>
                   <span>{language === 'fr' ? 'Demandeur' : 'Requester'}</span>
                   <span>{language === 'fr' ? 'Sujet' : 'Subject'}</span>
                   <span>{language === 'fr' ? "Titre de l’annonce" : 'Listing'}</span>
                   <span>{language === 'fr' ? 'Type' : 'Type'}</span>
+                  <span>{language === 'fr' ? 'Étape' : 'Stage'}</span>
                   <span className="text-center">{language === 'fr' ? 'Non lus' : 'Unread'}</span>
                   <span className="text-center">{language === 'fr' ? 'Répondu' : 'Replied'}</span>
                   <span className="text-center">{language === 'fr' ? 'Actions' : 'Actions'}</span>
@@ -1453,15 +1562,13 @@ export default function Messages() {
                   ? (language === 'fr' ? 'Acquisition' : 'Acquisition')
                   : (language === 'fr' ? 'Cession' : 'Sale');
                 const statusTone = 'bg-warning/10 text-warning';
+                const stageLabel = getStageLabel(conv.deal_stage || 'contact');
+                const nextStepLabel = getNextStepLabel(conv);
                 
                 return (
                   <button
                     key={conv.id}
-                    onClick={() => {
-                      setSelectedConversation(conv);
-                      setShowInbox(false);
-                      window.location.href = createPageUrl(`Messages?conversation=${conv.id}`);
-                    }}
+                    onClick={() => openConversation(conv)}
                     className={`w-full text-left transition-colors group ${
                       isActive ? 'bg-primary/10' : 'hover:bg-muted/40'
                     }`}
@@ -1495,24 +1602,10 @@ export default function Messages() {
                           </span>
                         )}
                       </div>
-                      <div className="mt-3 flex items-center justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={archivingConversationId === conv.id}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleArchiveConversation(conv);
-                          }}
-                        >
-                          {language === 'fr' ? 'Archiver' : 'Archive'}
-                        </Button>
-                      </div>
                     </div>
 
                     <div className="hidden lg:block overflow-x-auto">
-                      <div className="min-w-[1080px] grid grid-cols-[110px_170px_190px_1fr_100px_80px_90px_120px] gap-3 items-center px-4 xl:px-6 py-4">
+                      <div className="min-w-[1200px] grid grid-cols-[110px_170px_190px_1fr_100px_140px_80px_90px_120px] gap-3 items-center px-4 xl:px-6 py-4">
                         <span className="text-sm text-muted-foreground">
                           {formatConversationDate(conv.last_message_date || conv.updated_at)}
                         </span>
@@ -1537,6 +1630,12 @@ export default function Messages() {
                         <Badge variant="secondary" className="text-xs w-fit">
                           {typeLabel}
                         </Badge>
+                        <div>
+                          <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium inline-block">
+                            {stageLabel}
+                          </span>
+                          <p className="text-[11px] text-muted-foreground mt-1 truncate">{nextStepLabel}</p>
+                        </div>
                         <div className="flex justify-center">
                           {unread > 0 ? (
                             <Badge className="bg-primary text-white text-xs">{unread}</Badge>
