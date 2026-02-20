@@ -1,6 +1,35 @@
 import { supabase } from '@/api/supabaseClient';
 
 class BillingService {
+  constructor() {
+    this._billingRuntimeTablesUnavailable = false;
+
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        this._billingRuntimeTablesUnavailable =
+          window.localStorage.getItem('riviqo_billing_runtime_unavailable') === '1';
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  _markBillingRuntimeTablesUnavailable() {
+    this._billingRuntimeTablesUnavailable = true;
+
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('riviqo_billing_runtime_unavailable', '1');
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  _sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   _isSchemaGapError(error) {
     const code = String(error?.code || '');
     const message = String(error?.message || '').toLowerCase();
@@ -16,55 +45,180 @@ class BillingService {
     );
   }
 
-  _normalizeInvokeError(error) {
-    const rawMessage = (error?.message || '').toLowerCase();
-    const isAbortLike =
+  _isAbortLikeError(error) {
+    const rawMessage = String(error?.message || '').toLowerCase();
+    return (
       error?.name === 'AbortError' ||
       rawMessage.includes('signal is aborted') ||
       rawMessage.includes('aborted without reason') ||
-      rawMessage.includes('the operation was aborted');
+      rawMessage.includes('the operation was aborted') ||
+      rawMessage.includes('operation was aborted')
+    );
+  }
 
-    if (isAbortLike) {
-      return new Error('La requête de paiement a été interrompue. Réessaie dans quelques secondes.');
+  async _callAuthWithAbortRetry(fn, retries = 2) {
+    let lastError;
+
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+
+        if (!this._isAbortLikeError(error) || attempt === retries) {
+          throw error;
+        }
+
+        await this._sleep(200 * (attempt + 1));
+      }
+    }
+
+    throw lastError;
+  }
+
+  _normalizeInvokeError(error) {
+    if (this._isAbortLikeError(error)) {
+      return this._toCheckoutError(
+        {
+          code: 'CHECKOUT_ABORTED',
+          message: 'La requête de paiement a été interrompue. Nouvelle tentative en cours…',
+          retryable: true,
+          action: 'HOSTED_FALLBACK'
+        },
+        'La requête de paiement a été interrompue. Nouvelle tentative en cours…'
+      );
     }
 
     return error;
   }
 
-  async _invokeWithTimeout(functionName, options, timeoutMs = 15000) {
+  _toCheckoutError(payload, fallbackMessage) {
+    return Object.assign(new Error(payload?.message || fallbackMessage || 'Checkout error'), {
+      code: payload?.code || null,
+      retryable: Boolean(payload?.retryable),
+      action: payload?.action || null,
+      details: payload?.details || null
+    });
+  }
+
+  _getCheckoutReturnOrigin() {
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return window.location.origin;
+    }
+
+    return null;
+  }
+
+  async _invokeWithTimeout(functionName, options, timeoutMs = 15000, actionOnAbort = 'RETRY') {
     const invokePromise = supabase.functions
       .invoke(functionName, options)
       .catch((error) => {
+        if (this._isAbortLikeError(error)) {
+          throw this._toCheckoutError(
+            {
+              code: 'CHECKOUT_ABORTED',
+              message: 'La requête de paiement a été interrompue. Nouvelle tentative en cours…',
+              retryable: true,
+              action: actionOnAbort
+            },
+            'La requête de paiement a été interrompue. Nouvelle tentative en cours…'
+          );
+        }
+
         throw this._normalizeInvokeError(error);
       });
+
+    let timeoutId;
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('La requête de paiement prend trop de temps. Réessaie dans quelques secondes.'));
+      timeoutId = setTimeout(() => {
+        reject(
+          this._toCheckoutError(
+            {
+              code: 'CHECKOUT_TIMEOUT',
+              message: 'La requête de paiement prend trop de temps. Réessaie dans quelques secondes.',
+              retryable: true,
+              action: 'RETRY'
+            },
+            'La requête de paiement prend trop de temps. Réessaie dans quelques secondes.'
+          )
+        );
       }, timeoutMs);
     });
 
-    return Promise.race([invokePromise, timeoutPromise]);
+    try {
+      return await Promise.race([invokePromise, timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      invokePromise.catch(() => {
+        // évite les "Uncaught (in promise)" si Promise.race a déjà été tranchée
+      });
+    }
   }
 
   async _getAccessTokenOrThrow() {
-    const { data, error } = await supabase.auth.getSession();
+    let sessionPayload;
+    try {
+      sessionPayload = await this._callAuthWithAbortRetry(() => supabase.auth.getSession(), 2);
+    } catch (error) {
+      if (this._isAbortLikeError(error)) {
+        throw this._toCheckoutError(
+          {
+            code: 'AUTH_ABORTED',
+            message: 'La session de paiement a été interrompue. Réessaie dans quelques secondes.',
+            retryable: true,
+            action: 'RETRY'
+          },
+          'La session de paiement a été interrompue. Réessaie dans quelques secondes.'
+        );
+      }
+      throw error;
+    }
+
+    const { data, error } = sessionPayload;
     if (error) {
-      throw new Error(error.message || 'Unable to read authentication session');
+      throw this._toCheckoutError(
+        {
+          code: 'AUTH_SESSION_READ_FAILED',
+          message: error.message || 'Unable to read authentication session',
+          retryable: true,
+          action: 'REAUTH'
+        },
+        'Unable to read authentication session'
+      );
     }
 
     const existingSession = data?.session;
-    if (!existingSession?.access_token) {
-      throw new Error('Vous devez être connecté pour lancer un paiement.');
-    }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(existingSession.access_token);
-    if (!userError && userData?.user) {
+    if (existingSession?.access_token) {
       return existingSession.access_token;
     }
 
-    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    let refreshedPayload;
+    try {
+      refreshedPayload = await this._callAuthWithAbortRetry(() => supabase.auth.refreshSession(), 2);
+    } catch (error) {
+      if (this._isAbortLikeError(error)) {
+        throw this._toCheckoutError(
+          {
+            code: 'AUTH_REFRESH_ABORTED',
+            message: 'Impossible de réactiver la session pour le paiement. Réessaie dans quelques secondes.',
+            retryable: true,
+            action: 'RETRY'
+          },
+          'Impossible de réactiver la session pour le paiement. Réessaie dans quelques secondes.'
+        );
+      }
+      throw error;
+    }
+
+    const { data: refreshed, error: refreshError } = refreshedPayload;
     if (refreshError || !refreshed?.session?.access_token) {
-      throw new Error(
+      throw this._toCheckoutError(
+        {
+          code: 'AUTH_SESSION_EXPIRED',
+          message: 'Session expirée ou invalide. Déconnectez-vous puis reconnectez-vous avant de payer.',
+          retryable: false,
+          action: 'REAUTH'
+        },
         'Session expirée ou invalide. Déconnectez-vous puis reconnectez-vous avant de payer.'
       );
     }
@@ -73,29 +227,83 @@ class BillingService {
   }
 
   async _extractFunctionError(error) {
-    if (!error) return 'Unknown function error';
+    const fallback = {
+      message: 'Unable to call edge function',
+      code: null,
+      retryable: false,
+      action: null,
+      details: null
+    };
+
+    if (!error) return fallback;
+
+    if (
+      error &&
+      (Object.prototype.hasOwnProperty.call(error, 'code') ||
+        Object.prototype.hasOwnProperty.call(error, 'action') ||
+        Object.prototype.hasOwnProperty.call(error, 'retryable'))
+    ) {
+      return {
+        message: error?.message || fallback.message,
+        code: error?.code || null,
+        retryable: Boolean(error?.retryable),
+        action: error?.action || null,
+        details: error?.details || null
+      };
+    }
 
     const normalized = this._normalizeInvokeError(error);
     if (normalized?.message && normalized !== error) {
-      return normalized.message;
+      return {
+        ...fallback,
+        message: normalized.message
+      };
     }
 
     if (error.context instanceof Response) {
       try {
         const payload = await error.context.json();
-        if (payload?.error) return payload.error;
-        if (payload?.message) return payload.message;
+
+        if (payload && typeof payload === 'object') {
+          const payloadError = payload.error;
+
+          if (payloadError && typeof payloadError === 'object') {
+            return {
+              message: payloadError.message || payload.message || fallback.message,
+              code: payloadError.code || payload.code || null,
+              retryable: Boolean(payloadError.retryable ?? payload.retryable),
+              action: payloadError.action || payload.action || null,
+              details: payloadError.details || payload.details || null
+            };
+          }
+
+          return {
+            message: payload.error || payload.message || fallback.message,
+            code: payload.code || null,
+            retryable: Boolean(payload.retryable),
+            action: payload.action || null,
+            details: payload.details || null
+          };
+        }
       } catch {
         try {
           const text = await error.context.text();
-          if (text) return text;
+          if (text) {
+            return {
+              ...fallback,
+              message: text
+            };
+          }
         } catch {
           // no-op
         }
       }
     }
 
-    return error.message || 'Unable to call edge function';
+    return {
+      ...fallback,
+      message: error.message || fallback.message
+    };
   }
 
   async createCheckoutSession({ items, language = 'fr' }) {
@@ -107,17 +315,26 @@ class BillingService {
       },
       body: {
         items,
-        language
+        language,
+        returnOrigin: this._getCheckoutReturnOrigin()
       }
-    });
+    }, 15000, 'RETRY');
 
     if (error) {
-      const detailedMessage = await this._extractFunctionError(error);
-      throw new Error(detailedMessage || 'Unable to create checkout session');
+      const detailed = await this._extractFunctionError(error);
+      throw this._toCheckoutError(detailed, 'Unable to create checkout session');
     }
 
     if (!data?.url) {
-      throw new Error('Checkout URL not returned by backend');
+      throw this._toCheckoutError(
+        {
+          message: 'Checkout URL not returned by backend',
+          code: 'CHECKOUT_URL_MISSING',
+          retryable: true,
+          action: 'RETRY'
+        },
+        'Checkout URL not returned by backend'
+      );
     }
 
     return data;
@@ -126,24 +343,48 @@ class BillingService {
   async createElementsSession({ items, language = 'fr' }) {
     const accessToken = await this._getAccessTokenOrThrow();
 
-    const { data, error } = await this._invokeWithTimeout('stripe-checkout', {
+    const invokeOptions = {
       headers: {
         Authorization: `Bearer ${accessToken}`
       },
       body: {
         items,
         language,
-        checkoutType: 'elements'
+        checkoutType: 'elements',
+        returnOrigin: this._getCheckoutReturnOrigin()
       }
-    });
+    };
+
+    let result;
+    try {
+      result = await this._invokeWithTimeout('stripe-checkout', invokeOptions, 15000, 'HOSTED_FALLBACK');
+    } catch (error) {
+      if (error?.code !== 'CHECKOUT_ABORTED') {
+        throw error;
+      }
+
+      // retry 1 fois avant fallback hosted
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      result = await this._invokeWithTimeout('stripe-checkout', invokeOptions, 15000, 'HOSTED_FALLBACK');
+    }
+
+    const { data, error } = result;
 
     if (error) {
-      const detailedMessage = await this._extractFunctionError(error);
-      throw new Error(detailedMessage || 'Unable to initialize custom checkout');
+      const detailed = await this._extractFunctionError(error);
+      throw this._toCheckoutError(detailed, 'Unable to initialize custom checkout');
     }
 
     if (!data?.clientSecret) {
-      throw new Error('Client secret not returned by backend');
+      throw this._toCheckoutError(
+        {
+          message: 'Client secret not returned by backend',
+          code: 'CLIENT_SECRET_MISSING',
+          retryable: true,
+          action: 'HOSTED_FALLBACK'
+        },
+        'Client secret not returned by backend'
+      );
     }
 
     return data;
@@ -160,12 +401,20 @@ class BillingService {
     });
 
     if (error) {
-      const detailedMessage = await this._extractFunctionError(error);
-      throw new Error(detailedMessage || 'Unable to open billing portal');
+      const detailed = await this._extractFunctionError(error);
+      throw this._toCheckoutError(detailed, 'Unable to open billing portal');
     }
 
     if (!data?.url) {
-      throw new Error('Portal URL not returned by backend');
+      throw this._toCheckoutError(
+        {
+          message: 'Portal URL not returned by backend',
+          code: 'PORTAL_URL_MISSING',
+          retryable: true,
+          action: 'RETRY'
+        },
+        'Portal URL not returned by backend'
+      );
     }
 
     return data;
@@ -216,6 +465,14 @@ class BillingService {
       throw new Error(profileError.message || 'Unable to load profile balances');
     }
 
+    if (this._billingRuntimeTablesUnavailable) {
+      return {
+        balances,
+        entitlements: [],
+        usageLogs: []
+      };
+    }
+
     const [{ data: entitlements, error: entitlementsError }, { data: usageLogs, error: usageError }] =
       await Promise.all([
         supabase
@@ -231,18 +488,25 @@ class BillingService {
           .limit(limitUsage)
       ]);
 
-    if (entitlementsError && !this._isSchemaGapError(entitlementsError)) {
+    const hasEntitlementsSchemaGap = this._isSchemaGapError(entitlementsError);
+    const hasUsageSchemaGap = this._isSchemaGapError(usageError);
+
+    if (hasEntitlementsSchemaGap || hasUsageSchemaGap) {
+      this._markBillingRuntimeTablesUnavailable();
+    }
+
+    if (entitlementsError && !hasEntitlementsSchemaGap) {
       throw new Error(entitlementsError.message || 'Unable to load active services');
     }
 
-    if (usageError && !this._isSchemaGapError(usageError)) {
+    if (usageError && !hasUsageSchemaGap) {
       throw new Error(usageError.message || 'Unable to load service usage logs');
     }
 
     return {
       balances,
-      entitlements: this._isSchemaGapError(entitlementsError) ? [] : (entitlements || []),
-      usageLogs: this._isSchemaGapError(usageError) ? [] : (usageLogs || [])
+      entitlements: hasEntitlementsSchemaGap ? [] : (entitlements || []),
+      usageLogs: hasUsageSchemaGap ? [] : (usageLogs || [])
     };
   }
 }

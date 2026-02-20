@@ -262,29 +262,49 @@ const applyPurchasedEntitlements = async (params: {
   let photosDelta = 0;
   let contactsDelta = 0;
 
+  const isMissingTableError = (error: unknown) => {
+    const err = error as { code?: string; message?: string; details?: string };
+    const code = String(err?.code || '');
+    const message = String(err?.message || '').toLowerCase();
+    const details = String(err?.details || '').toLowerCase();
+
+    return (
+      code === '42P01' ||
+      message.includes('does not exist') ||
+      message.includes('schema cache') ||
+      details.includes('schema cache')
+    );
+  };
+
   for (const code of itemCodes) {
     const mapped = mapCreditsFromProductCode(code);
     photosDelta += mapped.photos;
     contactsDelta += mapped.contacts;
 
-    await supabase.from('billing_entitlements').upsert(
-      {
-        user_id: userId,
-        product_code: code,
-        entitlement_type: mapped.feature ? 'feature' : 'credits',
-        quantity_total: mapped.feature ? null : (mapped.photos || mapped.contacts || 0),
-        quantity_remaining: mapped.feature ? null : (mapped.photos || mapped.contacts || 0),
-        status: 'active',
-        source_transaction_id: sourceTransactionId,
-        source_stripe_event_id: event.id,
-        activated_at: new Date().toISOString(),
-        metadata: {
-          grant_origin: event.type
+    try {
+      await supabase.from('billing_entitlements').upsert(
+        {
+          user_id: userId,
+          product_code: code,
+          entitlement_type: mapped.feature ? 'feature' : 'credits',
+          quantity_total: mapped.feature ? null : (mapped.photos || mapped.contacts || 0),
+          quantity_remaining: mapped.feature ? null : (mapped.photos || mapped.contacts || 0),
+          status: 'active',
+          source_transaction_id: sourceTransactionId,
+          source_stripe_event_id: event.id,
+          activated_at: new Date().toISOString(),
+          metadata: {
+            grant_origin: event.type
+          },
+          updated_at: new Date().toISOString()
         },
-        updated_at: new Date().toISOString()
-      },
-      { onConflict: 'user_id,product_code,source_stripe_event_id' }
-    );
+        { onConflict: 'user_id,product_code,source_stripe_event_id' }
+      );
+    } catch (error) {
+      if (!isMissingTableError(error)) {
+        throw error;
+      }
+    }
   }
 
   if (photosDelta > 0 || contactsDelta > 0) {

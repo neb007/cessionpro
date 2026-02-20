@@ -10,8 +10,41 @@ import { billingService } from '@/services/billingService';
 import { PRICING } from '@/constants/pricing';
 
 const CHECKOUT_STORAGE_KEY = 'riviqo_checkout_payload';
-const APP_CHECKOUT_RETURN_URL = 'https://riviqo.com';
+const APP_CHECKOUT_RETURN_URL_FALLBACK = 'https://riviqo.com';
 const CHECKOUT_SUCCESS_QUERY = 'checkout=success';
+
+const isCheckoutDebugEnabled = () => {
+  if (typeof window === 'undefined') return false;
+
+  const isDevMode = Boolean(import.meta.env.DEV);
+  const host = String(window.location.hostname || '').toLowerCase();
+  const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+
+  let forcedDebug = false;
+  try {
+    forcedDebug = window.localStorage?.getItem('riviqo_checkout_debug') === '1';
+  } catch {
+    // ignore storage access errors
+  }
+
+  return isDevMode || isLocalHost || forcedDebug;
+};
+
+const getCheckoutReturnOrigin = () => {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return APP_CHECKOUT_RETURN_URL_FALLBACK;
+};
+
+const normalizeCheckoutError = (error, fallbackMessage) => ({
+  message: error?.message || fallbackMessage,
+  code: error?.code || null,
+  action: error?.action || null,
+  retryable: Boolean(error?.retryable),
+  details: error?.details || null
+});
 
 const formatMoney = (amountCents, currency = 'eur', language = 'fr') => {
   if (amountCents == null) return '-';
@@ -37,26 +70,63 @@ const PRICING_LABELS = (() => {
   }, {});
 })();
 
-function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mode, onElementLoadError }) {
+function CheckoutPaymentForm({
+  labels,
+  language,
+  amountTotalCents,
+  currency,
+  mode,
+  onElementLoadError,
+  onConfirmPaymentError
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = async (event) => {
+    const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!stripe || !elements || isSubmitting) return;
+    if (!stripe || !elements || isSubmitting) {
+      if (isCheckoutDebugEnabled()) {
+        console.warn('[Checkout][confirmPayment][blocked]', {
+          hasStripe: Boolean(stripe),
+          hasElements: Boolean(elements),
+          isSubmitting
+        });
+      }
+      return;
+    }
 
     setIsSubmitting(true);
     setErrorMessage('');
 
+    const returnUrl = `${getCheckoutReturnOrigin()}/Settings?tab=pricing&${CHECKOUT_SUCCESS_QUERY}`;
+
+    if (isCheckoutDebugEnabled()) {
+      console.info('[Checkout][confirmPayment][start]', {
+        returnUrl,
+        hasStripe: Boolean(stripe),
+        hasElements: Boolean(elements)
+      });
+    }
+
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${APP_CHECKOUT_RETURN_URL}/Settings?tab=pricing&${CHECKOUT_SUCCESS_QUERY}`
+        return_url: returnUrl
       },
       redirect: 'if_required'
     });
+
+    if (isCheckoutDebugEnabled()) {
+      console.info('[Checkout][confirmPayment][result]', {
+        errorCode: error?.code || null,
+        errorType: error?.type || null,
+        errorMessage: error?.message || null,
+        paymentIntentStatus: paymentIntent?.status || null,
+        paymentIntentId: paymentIntent?.id || null
+      });
+    }
 
     if (error) {
       const message = error.message || labels.genericError;
@@ -66,6 +136,21 @@ function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mod
         description: message,
         variant: 'destructive'
       });
+
+      if (onConfirmPaymentError) {
+        try {
+          setIsSubmitting(false);
+          await onConfirmPaymentError({
+            errorCode: error?.code || null,
+            errorType: error?.type || null,
+            errorMessage: message
+          });
+          return;
+        } catch {
+          // no-op: keep default local error state
+        }
+      }
+
       setIsSubmitting(false);
       return;
     }
@@ -73,6 +158,21 @@ function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mod
     if (paymentIntent && ['succeeded', 'processing'].includes(paymentIntent.status)) {
       window.location.href = `/Settings?tab=pricing&${CHECKOUT_SUCCESS_QUERY}`;
       return;
+    }
+
+    if (paymentIntent && onConfirmPaymentError) {
+      try {
+        setIsSubmitting(false);
+        await onConfirmPaymentError({
+          errorCode: 'unexpected_payment_intent_status',
+          errorType: 'stripe_payment_intent_status',
+          errorMessage: labels.genericError,
+          paymentIntentStatus: paymentIntent.status || null
+        });
+        return;
+      } catch {
+        // no-op: keep default local error state
+      }
     }
 
     setIsSubmitting(false);
@@ -145,6 +245,11 @@ export default function Checkout() {
         paySectionTitle: 'Finaliser le paiement',
         paySectionSubtitle: 'Choisissez votre moyen de paiement puis confirmez.',
         activationHint: 'Activation estimée: quelques minutes après validation.'
+        ,
+        actionRetry: 'Réessayez dans quelques secondes.',
+        actionReauth: 'Reconnectez-vous puis relancez le paiement.',
+        actionHostedFallback: 'Nous lançons automatiquement le checkout hébergé Stripe.',
+        actionRefreshCart: 'Retournez sur Abonnement et recomposez votre panier.'
       },
       en: {
         title: 'Secure payment',
@@ -176,6 +281,11 @@ export default function Checkout() {
         paySectionTitle: 'Complete payment',
         paySectionSubtitle: 'Choose your payment method and confirm.',
         activationHint: 'Estimated activation: a few minutes after validation.'
+        ,
+        actionRetry: 'Please retry in a few seconds.',
+        actionReauth: 'Please sign in again before retrying payment.',
+        actionHostedFallback: 'We are automatically switching to Stripe hosted checkout.',
+        actionRefreshCart: 'Please return to Subscription and rebuild your cart.'
       }
     }),
     []
@@ -188,16 +298,36 @@ export default function Checkout() {
   const [checkoutPayload, setCheckoutPayload] = useState(null);
   const [isHostedFallbackLoading, setIsHostedFallbackLoading] = useState(false);
   const [elementsLoadError, setElementsLoadError] = useState('');
+  const [errorActionHint, setErrorActionHint] = useState('');
 
   const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
   const stripePromise = useMemo(() => (stripeKey ? loadStripe(stripeKey) : null), [stripeKey]);
   const t = labels[language] || labels.fr;
 
+  const getActionHint = (action) => {
+    if (action === 'REAUTH') return t.actionReauth;
+    if (action === 'HOSTED_FALLBACK') return t.actionHostedFallback;
+    if (action === 'REFRESH_CART') return t.actionRefreshCart;
+    if (action === 'RETRY') return t.actionRetry;
+    return '';
+  };
+
   const bootstrapCheckout = async () => {
+    let bootstrapPayload = null;
+
     try {
       setIsLoading(true);
       setErrorMessage('');
       setElementsLoadError('');
+      setErrorActionHint('');
+
+      if (isCheckoutDebugEnabled()) {
+        console.info('[Checkout][bootstrap][start]', {
+          href: typeof window !== 'undefined' ? window.location.href : null,
+          hostname: typeof window !== 'undefined' ? window.location.hostname : null,
+          hasStripeKey: Boolean(stripeKey)
+        });
+      }
 
       if (!stripeKey) {
         setErrorMessage(labels[language].missingStripeKey);
@@ -206,6 +336,11 @@ export default function Checkout() {
 
       const raw = sessionStorage.getItem(CHECKOUT_STORAGE_KEY);
       if (!raw) {
+        if (isCheckoutDebugEnabled()) {
+          console.warn('[Checkout][bootstrap][missing_payload]', {
+            storageKey: CHECKOUT_STORAGE_KEY
+          });
+        }
         setErrorMessage(t.missingPayload);
         return;
       }
@@ -214,10 +349,14 @@ export default function Checkout() {
       try {
         payload = JSON.parse(raw);
       } catch {
+        if (isCheckoutDebugEnabled()) {
+          console.warn('[Checkout][bootstrap][invalid_payload_json]');
+        }
         setErrorMessage(t.missingPayload);
         return;
       }
 
+      bootstrapPayload = payload;
       setCheckoutPayload(payload);
 
       const payloadLanguage = payload?.language === 'en' ? 'en' : 'fr';
@@ -225,6 +364,13 @@ export default function Checkout() {
 
       const isStale = Date.now() - Number(payload?.createdAt || 0) > 30 * 60 * 1000;
       if (!payload?.items?.length || isStale) {
+        if (isCheckoutDebugEnabled()) {
+          console.warn('[Checkout][bootstrap][stale_or_empty_payload]', {
+            hasItems: Boolean(payload?.items?.length),
+            isStale,
+            createdAt: payload?.createdAt || null
+          });
+        }
         setErrorMessage(labels[payloadLanguage].missingPayload);
         return;
       }
@@ -234,6 +380,16 @@ export default function Checkout() {
         language: payloadLanguage
       });
 
+      if (isCheckoutDebugEnabled()) {
+        console.info('[Checkout][bootstrap][elementsSession]', {
+          hasClientSecret: Boolean(data?.clientSecret),
+          mode: data?.mode || null,
+          currency: data?.currency || null,
+          amountTotalCents: data?.amountTotalCents || null,
+          stripeKeyPrefix: stripeKey ? String(stripeKey).slice(0, 12) : null
+        });
+      }
+
       if (!data?.clientSecret) {
         setErrorMessage(labels[payloadLanguage].genericError);
         return;
@@ -241,11 +397,31 @@ export default function Checkout() {
 
       setCheckoutData(data);
     } catch (error) {
-      const message = error?.message || labels[language].genericError;
-      setErrorMessage(message);
+      const checkoutError = normalizeCheckoutError(error, labels[language].genericError);
+
+      if (isCheckoutDebugEnabled()) {
+        console.error('[Checkout][bootstrap][error]', {
+          message: checkoutError.message,
+          code: checkoutError.code,
+          action: checkoutError.action,
+          retryable: checkoutError.retryable,
+          details: checkoutError.details,
+          stack: error?.stack || null
+        });
+      }
+
+      const fallbackPayload = bootstrapPayload || checkoutPayload;
+      if (checkoutError.action === 'HOSTED_FALLBACK' && fallbackPayload?.items?.length) {
+        setErrorActionHint(getActionHint(checkoutError.action));
+        await openHostedCheckout(fallbackPayload);
+        return;
+      }
+
+      setErrorMessage(checkoutError.message);
+      setErrorActionHint(getActionHint(checkoutError.action));
       toast({
         title: labels[language].paymentUnavailable,
-        description: message,
+        description: checkoutError.message,
         variant: 'destructive'
       });
     } finally {
@@ -253,15 +429,17 @@ export default function Checkout() {
     }
   };
 
-  const openHostedCheckout = async () => {
+  const openHostedCheckout = async (payloadOverride = null) => {
     try {
-      if (!checkoutPayload?.items?.length) {
+      const effectivePayload = payloadOverride || checkoutPayload;
+
+      if (!effectivePayload?.items?.length) {
         throw new Error(t.missingPayload);
       }
 
       setIsHostedFallbackLoading(true);
       const data = await billingService.createCheckoutSession({
-        items: checkoutPayload.items,
+        items: effectivePayload.items,
         language
       });
 
@@ -271,9 +449,21 @@ export default function Checkout() {
 
       window.location.href = data.url;
     } catch (error) {
+      const checkoutError = normalizeCheckoutError(error, t.genericError);
+      if (isCheckoutDebugEnabled()) {
+        console.error('[Checkout][hosted_fallback][error]', {
+          message: checkoutError.message,
+          code: checkoutError.code,
+          action: checkoutError.action,
+          retryable: checkoutError.retryable,
+          details: checkoutError.details
+        });
+      }
+      setErrorActionHint(getActionHint(checkoutError.action));
+
       toast({
         title: t.paymentUnavailable,
-        description: error?.message || t.genericError,
+        description: checkoutError.message,
         variant: 'destructive'
       });
       setIsHostedFallbackLoading(false);
@@ -419,6 +609,11 @@ export default function Checkout() {
                   <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
                     {errorMessage || elementsLoadError || t.genericError}
                   </div>
+                  {errorActionHint ? (
+                    <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
+                      {errorActionHint}
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" className="rounded-full" onClick={bootstrapCheckout}>
                       {t.refresh}
@@ -447,6 +642,16 @@ export default function Checkout() {
                     amountTotalCents={checkoutData.amountTotalCents}
                     currency={checkoutData.currency}
                     mode={checkoutData.mode}
+                     onConfirmPaymentError={async (ctx) => {
+                      if (isCheckoutDebugEnabled()) {
+                        console.warn('[Checkout][confirmPayment][fallback_to_hosted]', {
+                          ...ctx,
+                          reason: 'elements_confirm_failed_or_unexpected_status'
+                        });
+                      }
+
+                      await openHostedCheckout(checkoutPayload);
+                    }}
                     onElementLoadError={(message) => {
                       const normalized = (message || '').toLowerCase();
                       if (normalized.includes('client_secret provided does not match')) {

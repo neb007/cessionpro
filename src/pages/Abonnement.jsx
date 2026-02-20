@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, CheckCircle2, Loader2, Lock } from 'lucide-react';
+import { ChevronDown, CheckCircle2, Loader2, Lock, ArrowRight, Receipt, Sparkles } from 'lucide-react';
 
 const STORAGE_KEY = 'riviqo_checkout_payload';
 
@@ -34,7 +34,9 @@ export default function Abonnement() {
   const [cart, setCart] = useState([]);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [servicesLoading, setServicesLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [recentOrders, setRecentOrders] = useState([]);
   const [activeServices, setActiveServices] = useState({
     balances: { photos: 0, contacts: 0 },
     entitlements: [],
@@ -73,6 +75,9 @@ export default function Abonnement() {
       servicesLoadError: 'Impossible de charger vos services actifs.',
       paymentSuccessTitle: 'Paiement confirmé',
       paymentSuccessDescription: 'Merci pour votre commande. Votre paiement a été validé avec succès.',
+      paymentSuccessEmail: 'Un email de confirmation de commande vient d’être envoyé.',
+      paymentSuccessManage: 'Gérer mes services',
+      paymentSuccessBilling: 'Voir ma facture',
       photosService: 'Photos',
       contactsService: 'Contacts',
       smartMatchingService: 'Smart Matching',
@@ -82,7 +87,31 @@ export default function Abonnement() {
       statusActive: 'Actif',
       statusInactive: 'Inactif',
       statusLocked: 'Verrouillé',
-      soon: 'Bientôt disponible'
+      soon: 'Bientôt disponible',
+      manageTitle: 'Gérer mes services',
+      manageSubtitle: 'Où les utiliser et comment les piloter après achat.',
+      manageHistory: 'Historique & factures',
+      manageUseNow: 'Utiliser maintenant',
+      manageBuyNow: 'Choisir cette option',
+      usePhotosHint: 'Utilisable dans Mes annonces lors de l’ajout de photos.',
+      useContactsHint: 'Utilisable dans Leads pour contacter des profils.',
+      useSmartHint: 'Utilisable dans Smart Matching pour activer vos alertes.',
+      useSponsoredHint: 'Utilisable dans Mes annonces pour booster votre visibilité.',
+      useSoonHint: 'Service en préparation. Activation prochaine.',
+      recentOrdersTitle: 'Commandes récentes',
+      recentOrdersSubtitle: 'Retrouvez vos derniers achats et vos factures en un coup d’œil.',
+      recentOrdersEmpty: 'Aucune commande pour le moment.',
+      orderDate: 'Date',
+      orderAmount: 'Montant',
+      orderStatus: 'Statut',
+      orderInvoice: 'Facture',
+      orderOpenInvoice: 'Ouvrir',
+      orderItemsFallback: 'Service Riviqo',
+      orderStatusPaid: 'Payé',
+      orderStatusSucceeded: 'Payé',
+      orderStatusComplete: 'Terminé',
+      orderStatusPending: 'En attente',
+      orderStatusFailed: 'Échec'
     },
     en: {
       title: 'Order services',
@@ -115,6 +144,9 @@ export default function Abonnement() {
       servicesLoadError: 'Unable to load your active services.',
       paymentSuccessTitle: 'Payment confirmed',
       paymentSuccessDescription: 'Thank you for your order. Your payment has been successfully confirmed.',
+      paymentSuccessEmail: 'A purchase confirmation email has just been sent.',
+      paymentSuccessManage: 'Manage my services',
+      paymentSuccessBilling: 'View my invoice',
       photosService: 'Photos',
       contactsService: 'Contacts',
       smartMatchingService: 'Smart Matching',
@@ -124,7 +156,31 @@ export default function Abonnement() {
       statusActive: 'Active',
       statusInactive: 'Inactive',
       statusLocked: 'Locked',
-      soon: 'Coming soon'
+      soon: 'Coming soon',
+      manageTitle: 'Manage my services',
+      manageSubtitle: 'Where to use them and how to control them after purchase.',
+      manageHistory: 'History & invoices',
+      manageUseNow: 'Use now',
+      manageBuyNow: 'Choose this option',
+      usePhotosHint: 'Use it in My listings when adding photos.',
+      useContactsHint: 'Use it in Leads to contact profiles.',
+      useSmartHint: 'Use it in Smart Matching to enable alerts.',
+      useSponsoredHint: 'Use it in My listings to boost visibility.',
+      useSoonHint: 'Service in preparation. Activation coming soon.',
+      recentOrdersTitle: 'Recent orders',
+      recentOrdersSubtitle: 'Find your latest purchases and invoices at a glance.',
+      recentOrdersEmpty: 'No orders yet.',
+      orderDate: 'Date',
+      orderAmount: 'Amount',
+      orderStatus: 'Status',
+      orderInvoice: 'Invoice',
+      orderOpenInvoice: 'Open',
+      orderItemsFallback: 'Riviqo service',
+      orderStatusPaid: 'Paid',
+      orderStatusSucceeded: 'Paid',
+      orderStatusComplete: 'Complete',
+      orderStatusPending: 'Pending',
+      orderStatusFailed: 'Failed'
     }
   };
 
@@ -229,6 +285,72 @@ export default function Abonnement() {
     [activeFeatureCodes, activeServices?.balances?.contacts, activeServices?.balances?.photos, l]
   );
 
+  const serviceManagementItems = useMemo(
+    () => [
+      {
+        key: 'photos',
+        label: l.photosService,
+        status: Number(activeServices?.balances?.photos || 0) > 0 ? 'active' : 'inactive',
+        meta: `${Number(activeServices?.balances?.photos || 0)} ${l.creditsPhotos.toLowerCase()}`,
+        usageHint: l.usePhotosHint,
+        actionType: Number(activeServices?.balances?.photos || 0) > 0 ? 'use' : 'buy',
+        selectId: 'photos_pack5',
+        destination: '/MyListings'
+      },
+      {
+        key: 'contacts',
+        label: l.contactsService,
+        status: Number(activeServices?.balances?.contacts || 0) > 0 ? 'active' : 'inactive',
+        meta: `${Number(activeServices?.balances?.contacts || 0)} ${l.creditsContacts.toLowerCase()}`,
+        usageHint: l.useContactsHint,
+        actionType: Number(activeServices?.balances?.contacts || 0) > 0 ? 'use' : 'buy',
+        selectId: 'contact_unit',
+        destination: '/Leads'
+      },
+      {
+        key: 'smart_matching',
+        label: l.smartMatchingService,
+        status: activeFeatureCodes.has('smart_matching') ? 'active' : 'inactive',
+        meta: activeFeatureCodes.has('smart_matching') ? l.statusActive : l.statusInactive,
+        usageHint: l.useSmartHint,
+        actionType: activeFeatureCodes.has('smart_matching') ? 'use' : 'buy',
+        selectId: 'smart_matching',
+        destination: '/SmartMatching'
+      },
+      {
+        key: 'sponsored_listing',
+        label: l.sponsoredService,
+        status: activeFeatureCodes.has('sponsored_listing') ? 'active' : 'inactive',
+        meta: activeFeatureCodes.has('sponsored_listing') ? l.statusActive : l.statusInactive,
+        usageHint: l.useSponsoredHint,
+        actionType: activeFeatureCodes.has('sponsored_listing') ? 'use' : 'buy',
+        selectId: 'sponsored_listing',
+        destination: '/MyListings'
+      },
+      {
+        key: 'data_room',
+        label: l.dataRoomService,
+        status: 'locked',
+        meta: l.soon,
+        usageHint: l.useSoonHint,
+        actionType: 'none',
+        selectId: null,
+        destination: null
+      },
+      {
+        key: 'nda_protection',
+        label: l.ndaService,
+        status: 'locked',
+        meta: l.soon,
+        usageHint: l.useSoonHint,
+        actionType: 'none',
+        selectId: null,
+        destination: null
+      }
+    ],
+    [activeFeatureCodes, activeServices?.balances?.contacts, activeServices?.balances?.photos, l]
+  );
+
   const serviceStatusClass = (status, selected) => {
     const base =
       'rounded-full border px-3 py-2 text-left transition-all duration-200 min-w-[150px] flex-shrink-0';
@@ -253,6 +375,82 @@ export default function Abonnement() {
     setSelectedId(item.selectId);
   };
 
+  const scrollToComposer = () => {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('order-composer');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const scrollToManagement = () => {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('service-management');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const goToBillingHistory = () => {
+    window.location.href = '/Settings?tab=billing';
+  };
+
+  const handleManageAction = (item) => {
+    if (!item) return;
+
+    if (item.actionType === 'use' && item.destination) {
+      window.location.href = item.destination;
+      return;
+    }
+
+    if (item.actionType === 'buy' && item.selectId) {
+      setSelectedId(item.selectId);
+      scrollToComposer();
+    }
+  };
+
+  const formatOrderDate = (dateValue) => {
+    if (!dateValue) return '-';
+    return new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'fr-FR', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(dateValue));
+  };
+
+  const formatOrderStatus = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'paid') return l.orderStatusPaid;
+    if (normalized === 'succeeded') return l.orderStatusSucceeded;
+    if (normalized === 'complete') return l.orderStatusComplete;
+    if (normalized === 'pending' || normalized === 'processing') return l.orderStatusPending;
+    if (normalized === 'failed' || normalized === 'canceled') return l.orderStatusFailed;
+    return status || '-';
+  };
+
+  const getStatusBadgeClass = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'paid' || normalized === 'succeeded' || normalized === 'complete') {
+      return 'bg-success/15 text-success';
+    }
+    if (normalized === 'failed' || normalized === 'canceled') {
+      return 'bg-red-100 text-red-700';
+    }
+    return 'bg-gray-100 text-muted-foreground';
+  };
+
+  const productLabelByCode = useMemo(
+    () =>
+      options.reduce((acc, option) => {
+        acc[option.id] = language === 'fr' ? option.frenchLabel : option.englishLabel;
+        return acc;
+      }, {}),
+    [language, options]
+  );
+
+  const formatOrderItems = (codes) => {
+    if (!Array.isArray(codes) || codes.length === 0) return l.orderItemsFallback;
+    return codes
+      .slice(0, 2)
+      .map((code) => productLabelByCode[code] || code)
+      .join(' • ');
+  };
+
   const loadActiveServices = async () => {
     try {
       setServicesLoading(true);
@@ -275,8 +473,21 @@ export default function Abonnement() {
     }
   };
 
+  const loadRecentOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const data = await billingService.getMyTransactions(6);
+      setRecentOrders(data || []);
+    } catch {
+      setRecentOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadActiveServices();
+    loadRecentOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -294,6 +505,7 @@ export default function Abonnement() {
   useEffect(() => {
     if (!showPaymentSuccess) return;
     loadActiveServices();
+    loadRecentOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPaymentSuccess]);
 
@@ -357,6 +569,17 @@ export default function Abonnement() {
             {l.paymentSuccessTitle}
           </p>
           <p className="text-sm text-foreground mt-1">{l.paymentSuccessDescription}</p>
+          <p className="text-xs text-muted-foreground mt-1">{l.paymentSuccessEmail}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" className="rounded-full" onClick={scrollToManagement}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              {l.paymentSuccessManage}
+            </Button>
+            <Button className="rounded-full bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white" onClick={goToBillingHistory}>
+              <Receipt className="w-4 h-4 mr-2" />
+              {l.paymentSuccessBilling}
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -429,7 +652,68 @@ export default function Abonnement() {
         <p className="text-sm text-muted-foreground mt-1">{l.subtitle}</p>
       </div>
 
-      <div className="border border-gray-200 rounded-2xl bg-white p-4 sm:p-5 space-y-4 shadow-sm">
+      <section id="service-management" className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">{l.manageTitle}</h3>
+            <p className="text-xs text-muted-foreground">{l.manageSubtitle}</p>
+          </div>
+          <button
+            type="button"
+            className="text-xs text-[#FF6B4A] font-medium inline-flex items-center gap-1"
+            onClick={goToBillingHistory}
+          >
+            {l.manageHistory}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="divide-y divide-gray-100">
+          {serviceManagementItems.map((item) => (
+            <div key={item.key} className="py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{item.usageHint}</p>
+                <p className="text-xs text-muted-foreground mt-1">{item.meta}</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    item.status === 'locked'
+                      ? 'bg-gray-200 text-gray-600'
+                      : item.status === 'active'
+                        ? 'bg-success/15 text-success'
+                        : 'bg-gray-100 text-muted-foreground'
+                  }`}
+                >
+                  {item.status === 'locked'
+                    ? l.statusLocked
+                    : item.status === 'active'
+                      ? l.statusActive
+                      : l.statusInactive}
+                </span>
+
+                {item.actionType !== 'none' ? (
+                  <Button
+                    variant={item.actionType === 'use' ? 'default' : 'outline'}
+                    className={`rounded-full ${
+                      item.actionType === 'use'
+                        ? 'bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white'
+                        : ''
+                    }`}
+                    onClick={() => handleManageAction(item)}
+                  >
+                    {item.actionType === 'use' ? l.manageUseNow : l.manageBuyNow}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div id="order-composer" className="border border-gray-200 rounded-2xl bg-white p-4 sm:p-5 space-y-4 shadow-sm">
         <div className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground">{l.chooseService}</p>
           <DropdownMenu>
@@ -617,6 +901,67 @@ export default function Abonnement() {
       </div>
 
       <section className="space-y-2">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">{l.recentOrdersTitle}</h3>
+              <p className="text-xs text-muted-foreground">{l.recentOrdersSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              className="text-xs text-[#FF6B4A] font-medium inline-flex items-center gap-1"
+              onClick={goToBillingHistory}
+            >
+              {l.manageHistory}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {ordersLoading ? (
+            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground py-1">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {language === 'fr' ? 'Chargement des commandes…' : 'Loading orders...'}
+            </div>
+          ) : recentOrders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{l.recentOrdersEmpty}</p>
+          ) : (
+            <div className="space-y-2">
+              {recentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="rounded-xl border border-gray-100 px-3 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{formatOrderItems(order.item_codes)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {l.orderDate}: {formatOrderDate(order.created_at)}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <span className="text-sm font-semibold text-foreground">
+                      {formatPrice(Number(order.amount_paid_cents || 0) / 100, language)}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${getStatusBadgeClass(order.status)}`}>
+                      {formatOrderStatus(order.status)}
+                    </span>
+                    {order.invoice_url ? (
+                      <a
+                        href={order.invoice_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-[#FF6B4A] font-medium"
+                      >
+                        {l.orderInvoice}: {l.orderOpenInvoice}
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <h3 className="text-sm font-semibold text-foreground">{l.usageTitle}</h3>
         {(activeServices.usageLogs || []).length === 0 ? (
           <p className="text-sm text-muted-foreground">{l.noUsage}</p>

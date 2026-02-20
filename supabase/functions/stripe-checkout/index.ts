@@ -11,12 +11,20 @@ type CheckoutBody = {
   items?: CheckoutItem[];
   language?: 'fr' | 'en';
   checkoutType?: 'hosted' | 'elements';
+  returnOrigin?: string;
 };
 
 const FORCED_ONE_SHOT_CODES = new Set(['smart_matching', 'sponsored_listing', 'data_room']);
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
 const APP_URL = (Deno.env.get('APP_URL') || 'https://riviqo.com').replace(/\/$/, '');
+const APP_ORIGIN = (() => {
+  try {
+    return new URL(APP_URL).origin;
+  } catch {
+    return 'https://riviqo.com';
+  }
+})();
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -34,6 +42,44 @@ const jsonResponse = (status: number, body: Record<string, unknown>) =>
       ...corsHeaders
     }
   });
+
+const checkoutError = (params: {
+  code: string;
+  message: string;
+  retryable?: boolean;
+  action?: string;
+  details?: Record<string, unknown>;
+}) => ({
+  error: {
+    code: params.code,
+    message: params.message,
+    retryable: Boolean(params.retryable),
+    action: params.action || null,
+    details: params.details || {}
+  }
+});
+
+const sanitizeReturnOrigin = (rawOrigin: string | null | undefined) => {
+  if (!rawOrigin) return null;
+
+  try {
+    const originUrl = new URL(rawOrigin);
+    if (!['http:', 'https:'].includes(originUrl.protocol)) return null;
+
+    const normalized = originUrl.origin.replace(/\/$/, '');
+    const hostname = originUrl.hostname.toLowerCase();
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isAppOrigin = normalized === APP_ORIGIN;
+
+    if (!isLocalhost && !isAppOrigin) {
+      return null;
+    }
+
+    return normalized;
+  } catch {
+    return null;
+  }
+};
 
 const getBearerToken = (req: Request) => {
   const authHeader = req.headers.get('Authorization') || '';
@@ -115,28 +161,68 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return jsonResponse(405, { error: 'Method not allowed' });
+    return jsonResponse(
+      405,
+      checkoutError({
+        code: 'METHOD_NOT_ALLOWED',
+        message: 'Method not allowed',
+        retryable: false,
+        action: 'CONTACT_SUPPORT'
+      })
+    );
   }
 
   if (!STRIPE_SECRET_KEY) {
-    return jsonResponse(500, { error: 'Missing STRIPE_SECRET_KEY' });
+    return jsonResponse(
+      500,
+      checkoutError({
+        code: 'STRIPE_CONFIG_MISSING',
+        message: 'Missing STRIPE_SECRET_KEY',
+        retryable: false,
+        action: 'CONTACT_SUPPORT'
+      })
+    );
   }
 
   const token = getBearerToken(req);
   if (!token) {
-    return jsonResponse(401, { error: 'Missing authorization token' });
+    return jsonResponse(
+      401,
+      checkoutError({
+        code: 'AUTH_TOKEN_MISSING',
+        message: 'Missing authorization token',
+        retryable: false,
+        action: 'REAUTH'
+      })
+    );
   }
 
   let payload: CheckoutBody;
   try {
     payload = await req.json();
   } catch {
-    return jsonResponse(400, { error: 'Invalid JSON body' });
+    return jsonResponse(
+      400,
+      checkoutError({
+        code: 'INVALID_JSON_BODY',
+        message: 'Invalid JSON body',
+        retryable: true,
+        action: 'RETRY'
+      })
+    );
   }
 
   const items = Array.isArray(payload.items) ? payload.items : [];
   if (items.length === 0) {
-    return jsonResponse(400, { error: 'Missing items' });
+    return jsonResponse(
+      400,
+      checkoutError({
+        code: 'CHECKOUT_ITEMS_MISSING',
+        message: 'Missing items',
+        retryable: false,
+        action: 'REFRESH_CART'
+      })
+    );
   }
 
   const normalized = new Map<string, number>();
@@ -148,15 +234,33 @@ Deno.serve(async (req) => {
   }
 
   if (normalized.size === 0) {
-    return jsonResponse(400, { error: 'No valid items provided' });
+    return jsonResponse(
+      400,
+      checkoutError({
+        code: 'CHECKOUT_ITEMS_INVALID',
+        message: 'No valid items provided',
+        retryable: false,
+        action: 'REFRESH_CART'
+      })
+    );
   }
 
   const language: 'fr' | 'en' = payload.language === 'en' ? 'en' : 'fr';
   const checkoutType: 'hosted' | 'elements' = payload.checkoutType === 'elements' ? 'elements' : 'hosted';
+  const clientReturnOrigin = sanitizeReturnOrigin(payload.returnOrigin);
+  const checkoutReturnBase = clientReturnOrigin || APP_URL;
   const supabase = getSupabaseClient();
   const { data: authData, error: authError } = await supabase.auth.getUser(token);
   if (authError || !authData?.user) {
-    return jsonResponse(401, { error: 'Invalid auth token' });
+    return jsonResponse(
+      401,
+      checkoutError({
+        code: 'AUTH_TOKEN_INVALID',
+        message: 'Invalid auth token',
+        retryable: false,
+        action: 'REAUTH'
+      })
+    );
   }
 
   const user = authData.user;
@@ -178,7 +282,15 @@ Deno.serve(async (req) => {
         req,
         details: { itemCount: normalized.size }
       });
-      return jsonResponse(429, { error: 'Too many checkout attempts' });
+      return jsonResponse(
+        429,
+        checkoutError({
+          code: 'CHECKOUT_RATE_LIMITED',
+          message: 'Too many checkout attempts',
+          retryable: true,
+          action: 'RETRY'
+        })
+      );
     }
 
     await logSecurityEvent({
@@ -235,14 +347,15 @@ Deno.serve(async (req) => {
       userId: user.id,
       eventType: 'checkout_customer_context',
       req,
-      details: {
-        stripe_key_mode: diagStripeKeyMode,
-        has_stored_customer: Boolean(diagStoredCustomerId),
-        stored_customer_id: diagStoredCustomerId,
-        checkout_type: checkoutType,
-        checkout_mode: mode
-      }
-    });
+        details: {
+          stripe_key_mode: diagStripeKeyMode,
+          has_stored_customer: Boolean(diagStoredCustomerId),
+          stored_customer_id: diagStoredCustomerId,
+          checkout_type: checkoutType,
+          checkout_mode: mode,
+          checkout_return_base: checkoutReturnBase
+        }
+      });
 
     const createAndPersistCustomer = async () => {
       const customer = await stripe.customers.create({
@@ -545,8 +658,8 @@ Deno.serve(async (req) => {
       mode,
       customer: stripeCustomerId,
       line_items,
-      success_url: `${APP_URL}/Settings?tab=billing&checkout=success`,
-      cancel_url: `${APP_URL}/Settings?tab=pricing&checkout=canceled`,
+      success_url: `${checkoutReturnBase}/Settings?tab=billing&checkout=success`,
+      cancel_url: `${checkoutReturnBase}/Settings?tab=pricing&checkout=canceled`,
       locale: language === 'fr' ? 'fr' : 'en',
       submit_type: mode === 'subscription' ? 'subscribe' : 'pay',
       payment_method_types: ['card'],
@@ -621,8 +734,19 @@ Deno.serve(async (req) => {
       }
     });
 
-    return jsonResponse(400, {
-      error: (error as Error).message
-    });
+    return jsonResponse(
+      400,
+      checkoutError({
+        code: 'CHECKOUT_FAILED',
+        message: (error as Error).message,
+        retryable: true,
+        action: checkoutType === 'elements' ? 'HOSTED_FALLBACK' : 'RETRY',
+        details: {
+          stripe_key_mode: diagStripeKeyMode,
+          stored_customer_id: diagStoredCustomerId,
+          checkout_type: checkoutType
+        }
+      })
+    );
   }
 });
