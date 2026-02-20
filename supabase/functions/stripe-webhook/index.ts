@@ -1,15 +1,17 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import Stripe from 'https://esm.sh/stripe@16.12.0?target=deno';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import Stripe from 'npm:stripe@16.12.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 type PurchaseEmailPayload = {
   customerName: string;
   customerEmail: string;
+  itemCodes: string[];
   productName: string;
   amount: string;
   currency: string;
   invoiceUrl: string | null;
+  sourceId: string;
+  idempotencyKey: string;
 };
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
@@ -47,8 +49,8 @@ const formatAmount = (amount: number | null | undefined) => {
 const buildPurchaseEmail = (language: 'fr' | 'en', payload: PurchaseEmailPayload) => {
   const isFr = language === 'fr';
   const subject = isFr
-    ? 'Confirmation de votre achat Riviqo'
-    : 'Your Riviqo purchase confirmation';
+    ? 'Confirmation de commande Riviqo'
+    : 'Riviqo order confirmation';
 
   const html = `
     <!doctype html>
@@ -70,19 +72,19 @@ const buildPurchaseEmail = (language: 'fr' | 'en', payload: PurchaseEmailPayload
                 <tr>
                   <td style="padding:28px;font-family:Arial,sans-serif;color:#111111;">
                     <h2 style="margin:0 0 12px;font-size:20px;">${
-                      isFr ? 'Merci pour votre achat' : 'Thanks for your purchase'
+                      isFr ? 'Merci pour votre confiance' : 'Thank you for your trust'
                     }</h2>
                     <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#2b2b2b;">${
                       isFr
-                        ? `Bonjour ${payload.customerName}, votre paiement a ete confirme.`
-                        : `Hello ${payload.customerName}, your payment has been confirmed.`
+                        ? `Bonjour ${payload.customerName}, nous vous confirmons que votre paiement a bien ete recu et que vos services sont en cours d activation.`
+                        : `Hello ${payload.customerName}, we confirm that your payment has been received and your services are being activated.`
                     }</p>
                     <div style="margin:12px 0 18px;padding:12px;background:#f3f4f6;border-radius:8px;font-size:13px;color:#3a3a3a;">
                       <div><strong>${isFr ? 'Produit' : 'Product'}:</strong> ${payload.productName}</div>
                       <div style="margin-top:8px;"><strong>${isFr ? 'Montant' : 'Amount'}:</strong> ${payload.amount} ${payload.currency.toUpperCase()}</div>
                     </div>
                     <a href="${payload.invoiceUrl || `${APP_URL}/Settings?tab=billing`}" style="display:inline-block;padding:12px 18px;background:#111111;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;">
-                      ${isFr ? 'Voir la facture' : 'View invoice'}
+                      ${isFr ? 'Voir mes services' : 'View my services'}
                     </a>
                   </td>
                 </tr>
@@ -129,6 +131,179 @@ const getLanguageFromEvent = (event: Stripe.Event): 'fr' | 'en' => {
   return metadata?.language === 'en' ? 'en' : 'fr';
 };
 
+const getPurchaseSourceId = (event: Stripe.Event) => {
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    return session.id;
+  }
+
+  if (event.type === 'invoice.payment_succeeded') {
+    const invoice = event.data.object as Stripe.Invoice;
+    return invoice.id;
+  }
+
+  return event.id;
+};
+
+const mapCreditsFromProductCode = (productCode: string) => {
+  const normalized = (productCode || '').toLowerCase();
+  if (normalized === 'photos_pack5') return { photos: 5, contacts: 0, feature: false };
+  if (normalized === 'photos_pack15') return { photos: 15, contacts: 0, feature: false };
+  if (normalized === 'contact_unit') return { photos: 0, contacts: 1, feature: false };
+  if (normalized === 'contact_pack5') return { photos: 0, contacts: 5, feature: false };
+  if (normalized === 'contact_pack8') return { photos: 0, contacts: 8, feature: false };
+  if (normalized === 'contact_pack10') return { photos: 0, contacts: 10, feature: false };
+  if (normalized === 'smart_matching') return { photos: 0, contacts: 0, feature: true };
+  if (normalized === 'sponsored_listing') return { photos: 0, contacts: 0, feature: true };
+  if (normalized === 'data_room') return { photos: 0, contacts: 0, feature: true };
+  return { photos: 0, contacts: 0, feature: false };
+};
+
+const createEmailDispatchToken = async (params: {
+  supabase: ReturnType<typeof createClient>;
+  actorId: string;
+  recipientEmail: string;
+  sourceId: string;
+  idempotencyKey: string;
+}) => {
+  const { data: existing } = await params.supabase
+    .from('email_dispatch_logs')
+    .select('id, status')
+    .eq('idempotency_key', params.idempotencyKey)
+    .eq('status', 'sent')
+    .limit(1)
+    .maybeSingle();
+
+  if (existing?.id) {
+    return { shouldSend: false };
+  }
+
+  await params.supabase.from('email_dispatch_logs').insert({
+    actor_id: params.actorId,
+    event_type: 'purchase_confirmation',
+    recipient_email: params.recipientEmail,
+    source_id: params.sourceId,
+    idempotency_key: params.idempotencyKey,
+    status: 'skipped',
+    error: 'processing'
+  });
+
+  return { shouldSend: true };
+};
+
+const finalizeEmailDispatchLog = async (params: {
+  supabase: ReturnType<typeof createClient>;
+  idempotencyKey: string;
+  status: 'sent' | 'failed' | 'skipped';
+  error?: string | null;
+}) => {
+  await params.supabase
+    .from('email_dispatch_logs')
+    .update({
+      status: params.status,
+      error: params.error || null
+    })
+    .eq('idempotency_key', params.idempotencyKey)
+    .eq('event_type', 'purchase_confirmation')
+    .eq('status', 'skipped')
+    .eq('error', 'processing');
+};
+
+const applyPurchasedEntitlements = async (params: {
+  supabase: ReturnType<typeof createClient>;
+  event: Stripe.Event;
+}) => {
+  const { supabase, event } = params;
+
+  if (event.type !== 'checkout.session.completed' && event.type !== 'invoice.payment_succeeded') {
+    return;
+  }
+
+  let userId: string | null = null;
+  let itemCodes: string[] = [];
+  let sourceTransactionId: string | null = null;
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    userId = session.metadata?.user_id || session.client_reference_id || null;
+    itemCodes = (session.metadata?.item_codes || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const { data: txn } = await supabase
+      .from('billing_transactions')
+      .select('id')
+      .eq('stripe_checkout_session_id', session.id)
+      .maybeSingle();
+    sourceTransactionId = txn?.id || null;
+  }
+
+  if (event.type === 'invoice.payment_succeeded') {
+    const invoice = event.data.object as Stripe.Invoice;
+    userId = invoice.metadata?.user_id || null;
+    itemCodes = (invoice.metadata?.item_codes || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const { data: txn } = await supabase
+      .from('billing_transactions')
+      .select('id')
+      .eq('stripe_invoice_id', invoice.id)
+      .maybeSingle();
+    sourceTransactionId = txn?.id || null;
+  }
+
+  if (!userId || itemCodes.length === 0) {
+    return;
+  }
+
+  let photosDelta = 0;
+  let contactsDelta = 0;
+
+  for (const code of itemCodes) {
+    const mapped = mapCreditsFromProductCode(code);
+    photosDelta += mapped.photos;
+    contactsDelta += mapped.contacts;
+
+    await supabase.from('billing_entitlements').upsert(
+      {
+        user_id: userId,
+        product_code: code,
+        entitlement_type: mapped.feature ? 'feature' : 'credits',
+        quantity_total: mapped.feature ? null : (mapped.photos || mapped.contacts || 0),
+        quantity_remaining: mapped.feature ? null : (mapped.photos || mapped.contacts || 0),
+        status: 'active',
+        source_transaction_id: sourceTransactionId,
+        source_stripe_event_id: event.id,
+        activated_at: new Date().toISOString(),
+        metadata: {
+          grant_origin: event.type
+        },
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'user_id,product_code,source_stripe_event_id' }
+    );
+  }
+
+  if (photosDelta > 0 || contactsDelta > 0) {
+    const { data: profileRow } = await supabase
+      .from('profiles')
+      .select('photos_remaining_balance, contact_credits_balance')
+      .eq('id', userId)
+      .maybeSingle();
+
+    await supabase
+      .from('profiles')
+      .update({
+        photos_remaining_balance: Number(profileRow?.photos_remaining_balance || 0) + photosDelta,
+        contact_credits_balance: Number(profileRow?.contact_credits_balance || 0) + contactsDelta
+      })
+      .eq('id', userId);
+  }
+};
+
 const resolvePurchasePayload = async (
   stripe: Stripe,
   event: Stripe.Event
@@ -150,10 +325,16 @@ const resolvePurchasePayload = async (
     return {
       customerName: session.customer_details?.name || 'Client',
       customerEmail,
+      itemCodes: (session.metadata?.item_codes || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
       productName,
       amount: formatAmount(session.amount_total),
       currency: (session.currency || 'eur').toUpperCase(),
-      invoiceUrl: null
+      invoiceUrl: null,
+      sourceId: session.id,
+      idempotencyKey: `purchase_confirmation:${session.id}`
     };
   }
 
@@ -166,10 +347,16 @@ const resolvePurchasePayload = async (
     return {
       customerName: invoice.customer_name || 'Client',
       customerEmail,
+      itemCodes: (invoice.metadata?.item_codes || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
       productName: lineItem?.description || 'Riviqo subscription',
       amount: formatAmount(invoice.amount_paid),
       currency: (invoice.currency || 'eur').toUpperCase(),
-      invoiceUrl: invoice.hosted_invoice_url || null
+      invoiceUrl: invoice.hosted_invoice_url || null,
+      sourceId: invoice.id,
+      idempotencyKey: `purchase_confirmation:${invoice.id}`
     };
   }
 
@@ -343,7 +530,7 @@ const upsertSubscription = async (params: {
   );
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return jsonResponse(405, { error: 'Method not allowed' });
   }
@@ -419,13 +606,40 @@ serve(async (req) => {
   try {
     await upsertTransaction({ supabase, event });
     await upsertSubscription({ supabase, event });
+    await applyPurchasedEntitlements({ supabase, event });
 
     if (event.type === 'checkout.session.completed' || event.type === 'invoice.payment_succeeded') {
       const payload = await resolvePurchasePayload(stripe, event);
       if (payload) {
-        const language = getLanguageFromEvent(event);
-        const { subject, html } = buildPurchaseEmail(language, payload);
-        await sendViaResend(payload.customerEmail, subject, html);
+        const sourceId = payload.sourceId || getPurchaseSourceId(event);
+        const emailLock = await createEmailDispatchToken({
+          supabase,
+          actorId: '00000000-0000-0000-0000-000000000000',
+          recipientEmail: payload.customerEmail,
+          sourceId,
+          idempotencyKey: payload.idempotencyKey || `purchase_confirmation:${sourceId}`
+        });
+
+        if (emailLock.shouldSend) {
+          try {
+            const language = getLanguageFromEvent(event);
+            const { subject, html } = buildPurchaseEmail(language, payload);
+            await sendViaResend(payload.customerEmail, subject, html);
+            await finalizeEmailDispatchLog({
+              supabase,
+              idempotencyKey: payload.idempotencyKey || `purchase_confirmation:${sourceId}`,
+              status: 'sent'
+            });
+          } catch (error) {
+            await finalizeEmailDispatchLog({
+              supabase,
+              idempotencyKey: payload.idempotencyKey || `purchase_confirmation:${sourceId}`,
+              status: 'failed',
+              error: (error as Error).message
+            });
+            throw error;
+          }
+        }
       }
     }
 

@@ -1,7 +1,6 @@
 // @ts-nocheck
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import Stripe from 'https://esm.sh/stripe@16.12.0?target=deno';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import Stripe from 'npm:stripe@16.12.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 type CheckoutItem = {
   code: string;
@@ -110,7 +109,7 @@ const isRateLimited = async (params: {
   return (count || 0) >= params.limitPerMinute;
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }

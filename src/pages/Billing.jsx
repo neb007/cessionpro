@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { billingService } from '@/services/billingService';
+import { useSearchParams } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 
 const formatMoney = (amountCents, currency = 'eur', language = 'fr') => {
   if (amountCents == null) return '-';
@@ -23,7 +25,9 @@ const formatDate = (dateValue, language = 'fr') => {
 
 export default function Billing() {
   const { language } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
@@ -45,7 +49,10 @@ export default function Billing() {
             invoice: 'Invoice',
             openInvoice: 'Open',
             secure: 'Secure payment by Stripe',
-            loading: 'Loading billing data...'
+            loading: 'Loading billing data...',
+            paymentSuccessTitle: 'Payment confirmed',
+            paymentSuccessDescription:
+              'Thank you for your order. Your payment has been successfully confirmed.'
           }
         : {
             title: 'Facturation',
@@ -61,10 +68,24 @@ export default function Billing() {
             invoice: 'Facture',
             openInvoice: 'Ouvrir',
             secure: 'Paiement sécurisé par Stripe',
-            loading: 'Chargement des données de facturation...'
+            loading: 'Chargement des données de facturation...',
+            paymentSuccessTitle: 'Paiement confirmé',
+            paymentSuccessDescription:
+              'Merci pour votre commande. Votre paiement a été validé avec succès.'
           },
     [language]
   );
+
+  const checkoutStatus = searchParams.get('checkout');
+
+  useEffect(() => {
+    if (checkoutStatus !== 'success') return;
+    setShowPaymentSuccess(true);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('checkout');
+    setSearchParams(nextParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkoutStatus]);
 
   const loadBilling = async () => {
     try {
@@ -132,6 +153,16 @@ export default function Billing() {
             {labels.manage}
           </Button>
         </div>
+
+        {showPaymentSuccess ? (
+          <div className="rounded-2xl border border-success/20 bg-success/10 p-4 mb-6">
+            <p className="text-sm font-semibold text-success inline-flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              {labels.paymentSuccessTitle}
+            </p>
+            <p className="text-sm text-foreground mt-1">{labels.paymentSuccessDescription}</p>
+          </div>
+        ) : null}
 
         <div className="rounded-2xl border border-[#FF6B4A]/20 bg-orange-50/40 p-4 mb-6">
           <p className="text-xs text-[#3B4759]">🔒 {labels.secure}</p>

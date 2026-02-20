@@ -186,15 +186,15 @@ export default function Sidebar({ user }) {
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
           onClick={closeMobile}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 w-56 border-r border-gray-200 transition-transform duration-300 z-50 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 left-0 h-screen w-56 border-r border-gray-200 transition-transform duration-300 z-50 ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
         style={{ backgroundColor: '#FBFBF9', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
@@ -205,7 +205,7 @@ export default function Sidebar({ user }) {
         `}</style>
 
         {/* Mobile Close Button */}
-        <div className="lg:hidden sticky top-0 flex items-center justify-between p-4 border-b border-gray-100" style={{ backgroundColor: '#FBFBF9' }}>
+        <div className="md:hidden sticky top-0 flex items-center justify-between p-4 border-b border-gray-100" style={{ backgroundColor: '#FBFBF9' }}>
           <span className="font-display font-bold text-lg text-[#3B4759]">Menu</span>
           <button
             className="inline-flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors p-2"

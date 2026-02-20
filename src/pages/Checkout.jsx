@@ -11,6 +11,7 @@ import { PRICING } from '@/constants/pricing';
 
 const CHECKOUT_STORAGE_KEY = 'riviqo_checkout_payload';
 const APP_CHECKOUT_RETURN_URL = 'https://riviqo.com';
+const CHECKOUT_SUCCESS_QUERY = 'checkout=success';
 
 const formatMoney = (amountCents, currency = 'eur', language = 'fr') => {
   if (amountCents == null) return '-';
@@ -52,7 +53,7 @@ function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mod
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${APP_CHECKOUT_RETURN_URL}/Settings?tab=billing&checkout=success`
+        return_url: `${APP_CHECKOUT_RETURN_URL}/Settings?tab=pricing&${CHECKOUT_SUCCESS_QUERY}`
       },
       redirect: 'if_required'
     });
@@ -70,7 +71,7 @@ function CheckoutPaymentForm({ labels, language, amountTotalCents, currency, mod
     }
 
     if (paymentIntent && ['succeeded', 'processing'].includes(paymentIntent.status)) {
-      window.location.href = '/Settings?tab=billing&checkout=success';
+      window.location.href = `/Settings?tab=pricing&${CHECKOUT_SUCCESS_QUERY}`;
       return;
     }
 

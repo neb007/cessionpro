@@ -1,6 +1,21 @@
 import { supabase } from '@/api/supabaseClient';
 
 class BillingService {
+  _isSchemaGapError(error) {
+    const code = String(error?.code || '');
+    const message = String(error?.message || '').toLowerCase();
+    const details = String(error?.details || '').toLowerCase();
+
+    return (
+      code === '42P01' ||
+      code === '42703' ||
+      message.includes('could not find the table') ||
+      message.includes('schema cache') ||
+      message.includes('does not exist') ||
+      details.includes('schema cache')
+    );
+  }
+
   _normalizeInvokeError(error) {
     const rawMessage = (error?.message || '').toLowerCase();
     const isAbortLike =
@@ -182,6 +197,53 @@ class BillingService {
     }
 
     return data || [];
+  }
+
+  async getMyActiveServices(limitUsage = 30) {
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('photos_remaining_balance, contact_credits_balance')
+      .single();
+
+    const balances = this._isSchemaGapError(profileError)
+      ? { photos: 0, contacts: 0 }
+      : {
+          photos: Number(profileData?.photos_remaining_balance || 0),
+          contacts: Number(profileData?.contact_credits_balance || 0)
+        };
+
+    if (profileError && !this._isSchemaGapError(profileError)) {
+      throw new Error(profileError.message || 'Unable to load profile balances');
+    }
+
+    const [{ data: entitlements, error: entitlementsError }, { data: usageLogs, error: usageError }] =
+      await Promise.all([
+        supabase
+          .from('billing_entitlements')
+          .select(
+            'id, product_code, entitlement_type, quantity_total, quantity_remaining, status, activated_at, expires_at, metadata, updated_at'
+          )
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('billing_usage_logs')
+          .select('id, product_code, usage_type, quantity, context_type, context_id, metadata, created_at')
+          .order('created_at', { ascending: false })
+          .limit(limitUsage)
+      ]);
+
+    if (entitlementsError && !this._isSchemaGapError(entitlementsError)) {
+      throw new Error(entitlementsError.message || 'Unable to load active services');
+    }
+
+    if (usageError && !this._isSchemaGapError(usageError)) {
+      throw new Error(usageError.message || 'Unable to load service usage logs');
+    }
+
+    return {
+      balances,
+      entitlements: this._isSchemaGapError(entitlementsError) ? [] : (entitlements || []),
+      usageLogs: this._isSchemaGapError(usageError) ? [] : (usageLogs || [])
+    };
   }
 }
 

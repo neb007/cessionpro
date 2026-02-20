@@ -42,7 +42,7 @@ export default function Home() {
           {
             limit: 6,
             columns:
-              'id,title,company_name,description,sector,country,city,asking_price,currency,created_at,images,profile_type'
+              'id,title,description,sector,country,location,asking_price,annual_revenue,created_at,images,seller_id,status,views_count'
           }
         ),
         businessService.countBusinesses({ status: 'active' })

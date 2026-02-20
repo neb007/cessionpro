@@ -2,14 +2,17 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { LanguageProvider, useLanguage } from '@/components/i18n/LanguageContext';
-import { SidebarProvider } from '@/lib/SidebarContext';
+import { SidebarProvider, useSidebar } from '@/lib/SidebarContext';
 import { useAuth } from '@/lib/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import Logo from '@/components/Logo';
+import { Menu } from 'lucide-react';
 
 function LayoutContent({ children, currentPageName }) {
   const { t, language, changeLanguage } = useLanguage();
   const { user, logout } = useAuth();
+  const { toggleMobile, isMobileOpen } = useSidebar();
+  const shouldRenderSidebar = currentPageName !== 'Home' && currentPageName !== 'Login' && currentPageName !== 'Register';
 
   const handleLogout = () => {
     logout(false);
@@ -56,10 +59,24 @@ function LayoutContent({ children, currentPageName }) {
       `}</style>
 
       {/* Main Content */}
-      <div className="flex min-h-screen">
-        {user && currentPageName !== 'Home' && <Sidebar user={user} />}
-        <div className="flex-1 w-full">
-          <main className="flex-1 w-full px-0 sm:px-0 md:px-0 lg:px-0 ml-0">{children}</main>
+      <div className="min-h-screen overflow-x-hidden">
+        {shouldRenderSidebar && <Sidebar user={user} />}
+
+        {shouldRenderSidebar && !isMobileOpen ? (
+          <button
+            type="button"
+            onClick={toggleMobile}
+            className="md:hidden fixed left-3 top-3 z-[60] inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-[#3B4759] shadow-sm backdrop-blur"
+            aria-label="Ouvrir le menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        ) : null}
+
+        <div className={`${shouldRenderSidebar ? 'md:pl-56' : ''}`}>
+          <main className={`min-w-0 w-full px-0 sm:px-0 md:px-0 lg:px-0 ml-0 ${shouldRenderSidebar ? 'pt-12 md:pt-0' : ''}`}>
+            {children}
+          </main>
         </div>
       </div>
 
