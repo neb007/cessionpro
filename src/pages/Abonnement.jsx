@@ -65,6 +65,7 @@ export default function Abonnement() {
       servicesTitle: 'Mes packs achetés',
       servicesSubtitle: 'Résumé des packs achetés sur votre compte.',
       photosPacksPurchased: 'Packs photos',
+      contactsPacksPurchased: 'Packs contacts',
       sponsoredPacksPurchased: 'Packs annonces sponsorisées',
       smartMatchingPurchased: 'Packs Smart Matching',
       packsPurchasedSuffix: 'achetés',
@@ -113,6 +114,7 @@ export default function Abonnement() {
       servicesTitle: 'My purchased packs',
       servicesSubtitle: 'Summary of packs purchased on your account.',
       photosPacksPurchased: 'Photo packs',
+      contactsPacksPurchased: 'Contact packs',
       sponsoredPacksPurchased: 'Sponsored listing packs',
       smartMatchingPurchased: 'Smart Matching packs',
       packsPurchasedSuffix: 'purchased',
@@ -169,6 +171,7 @@ export default function Abonnement() {
   const purchasedCounters = useMemo(() => {
     const base = {
       photoPacks: 0,
+      contactPacks: 0,
       sponsoredPacks: 0,
       smartMatchingPacks: 0
     };
@@ -180,6 +183,10 @@ export default function Abonnement() {
 
       if (code === 'photos_pack5' || code === 'photos_pack15') {
         acc.photoPacks += 1;
+      }
+
+      if (code === 'contact_unit' || code === 'contact_pack5' || code === 'contact_pack8' || code === 'contact_pack10') {
+        acc.contactPacks += 1;
       }
 
       if (code === 'sponsored_listing') {
@@ -336,10 +343,16 @@ export default function Abonnement() {
             {language === 'fr' ? 'Chargement des services…' : 'Loading services...'}
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs text-muted-foreground">{l.photosPacksPurchased}</p>
               <p className="text-2xl font-semibold text-foreground mt-1">{purchasedCounters.photoPacks}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{l.packsPurchasedSuffix}</p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-xs text-muted-foreground">{l.contactsPacksPurchased}</p>
+              <p className="text-2xl font-semibold text-foreground mt-1">{purchasedCounters.contactPacks}</p>
               <p className="text-[11px] text-muted-foreground mt-1">{l.packsPurchasedSuffix}</p>
             </div>
 
