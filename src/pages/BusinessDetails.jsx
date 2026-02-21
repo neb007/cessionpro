@@ -6,6 +6,7 @@ import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { recordPageView, getUniqueViewCount } from '@/services/pageViewService';
+import { sponsorshipService } from '@/services/sponsorshipService';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +75,8 @@ export default function BusinessDetails() {
   const [viewCount, setViewCount] = useState(0);
   const [businessLogo, setBusinessLogo] = useState(null);
   const [sellerFallbackLogo, setSellerFallbackLogo] = useState(null);
+  const [featuredLabel, setFeaturedLabel] = useState(language === 'fr' ? 'À la une' : 'Featured');
+  const [isFeatured, setIsFeatured] = useState(false);
   const shouldShowLogo = Boolean(businessLogo?.logo_url || sellerFallbackLogo);
   const displayLogoUrl = businessLogo?.logo_url || sellerFallbackLogo;
 
@@ -86,6 +89,39 @@ export default function BusinessDetails() {
       loadBusinessLogo();
     }
   }, [business?.id]);
+
+  useEffect(() => {
+    if (!business?.id) return;
+
+    let cancelled = false;
+
+    const loadSponsorship = async () => {
+      try {
+        const rows = await sponsorshipService.getActiveSponsorships({ businessIds: [business.id] });
+        if (cancelled) return;
+
+        const row = rows?.[0];
+        if (row) {
+          setIsFeatured(true);
+          setFeaturedLabel(row.display_label || (language === 'fr' ? 'À la une' : 'Featured'));
+        } else {
+          setIsFeatured(false);
+          setFeaturedLabel(language === 'fr' ? 'À la une' : 'Featured');
+        }
+      } catch {
+        if (!cancelled) {
+          setIsFeatured(false);
+          setFeaturedLabel(language === 'fr' ? 'À la une' : 'Featured');
+        }
+      }
+    };
+
+    loadSponsorship();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [business?.id, language]);
 
   useEffect(() => {
     if (authUser) {
@@ -318,6 +354,13 @@ export default function BusinessDetails() {
               <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
                 {business.title}
               </h1>
+              {isFeatured && (
+                <div className="mb-3">
+                  <Badge className="bg-[#FFF4EF] text-[#B5472F] border border-[#FFD8CC]">
+                    {featuredLabel}
+                  </Badge>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs flex-1">
                   <span 

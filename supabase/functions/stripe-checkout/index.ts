@@ -81,6 +81,11 @@ const sanitizeReturnOrigin = (rawOrigin: string | null | undefined) => {
   }
 };
 
+const serializeItemQuantities = (normalized: Map<string, number>) =>
+  [...normalized.entries()]
+    .map(([code, quantity]) => `${code}:${quantity}`)
+    .join(',');
+
 const getBearerToken = (req: Request) => {
   const authHeader = req.headers.get('Authorization') || '';
   if (!authHeader.startsWith('Bearer ')) return null;
@@ -228,9 +233,11 @@ Deno.serve(async (req) => {
   const normalized = new Map<string, number>();
   for (const item of items) {
     const code = (item?.code || '').trim();
-    const quantity = Math.max(1, Math.min(Number(item?.quantity || 1), 20));
+    const maxQuantity = code === 'sponsored_listing' ? 365 : 20;
+    const quantity = Math.max(1, Math.min(Number(item?.quantity || 1), maxQuantity));
     if (!code) continue;
-    normalized.set(code, (normalized.get(code) || 0) + quantity);
+    const next = Math.min((normalized.get(code) || 0) + quantity, maxQuantity);
+    normalized.set(code, next);
   }
 
   if (normalized.size === 0) {
@@ -302,6 +309,7 @@ Deno.serve(async (req) => {
     });
 
     const codes = [...normalized.keys()];
+    const itemQuantitiesMetadata = serializeItemQuantities(normalized);
     const { data: products, error: productsError } = await supabase
       .from('billing_products')
       .select(
@@ -498,7 +506,9 @@ Deno.serve(async (req) => {
             user_id: user.id,
             language,
             item_codes: codes.join(','),
-            checkout_type: 'elements'
+            item_quantities: itemQuantitiesMetadata,
+            checkout_type: 'elements',
+            checkout_mode: 'payment'
           }
         });
 
@@ -604,7 +614,9 @@ Deno.serve(async (req) => {
           user_id: user.id,
           language,
           item_codes: codes.join(','),
-          checkout_type: 'elements'
+          item_quantities: itemQuantitiesMetadata,
+          checkout_type: 'elements',
+          checkout_mode: 'subscription'
         },
         expand: ['latest_invoice.payment_intent']
       });
@@ -671,7 +683,9 @@ Deno.serve(async (req) => {
       metadata: {
         user_id: user.id,
         language,
-        item_codes: codes.join(',')
+        item_codes: codes.join(','),
+        item_quantities: itemQuantitiesMetadata,
+        checkout_mode: mode
       },
       custom_text: {
         submit: {

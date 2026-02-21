@@ -112,15 +112,7 @@ export default function Messages() {
 
         if (newMessage.receiver_id === user?.id) {
           messageService.updateMessage(newMessage.id, { read: true })
-            .then(() => {
-              const normalizedUnread = normalizeUnreadCount(selectedConversation);
-              return conversationService.updateConversation(selectedConversation.id, {
-                unread_count: {
-                  ...normalizedUnread,
-                  [user?.id]: 0
-                }
-              });
-            })
+            .then(() => persistUnreadResetForConversation(selectedConversation, selectedConversation.id))
             .catch((error) => console.warn('Failed to update read receipt:', error));
         }
       }
@@ -220,6 +212,36 @@ export default function Messages() {
       }
     });
     return normalized;
+  };
+
+  const persistUnreadResetForConversation = async (conv, conversationId) => {
+    if (!conversationId || !user?.id) return null;
+
+    const normalizedUnreadCount = normalizeUnreadCount(conv);
+    const nextUnreadCount = {
+      ...normalizedUnreadCount,
+      [user.id]: 0
+    };
+
+    const updated = await conversationService.updateConversation(conversationId, {
+      unread_count: nextUnreadCount
+    });
+
+    const mergedUpdated = updated
+      ? {
+          ...updated,
+          unread_count: {
+            ...(updated.unread_count || {}),
+            [user.id]: 0
+          }
+        }
+      : {
+          id: conversationId,
+          unread_count: nextUnreadCount
+        };
+
+    updateConversationState(mergedUpdated);
+    return mergedUpdated;
   };
 
   const mergeMessagesById = (baseMessages = [], incomingMessages = [], prepend = false) => {
@@ -341,14 +363,8 @@ export default function Messages() {
       }
 
       // Update conversation unread count
-      if (selectedConversation) {
-        const normalizedUnreadCount = normalizeUnreadCount(selectedConversation);
-        await conversationService.updateConversation(conversationId, {
-          unread_count: {
-            ...normalizedUnreadCount,
-            [user?.id]: 0
-          }
-        });
+      if (selectedConversation && user?.id) {
+        await persistUnreadResetForConversation(selectedConversation, conversationId);
       }
     } catch (e) {
       console.error(e);
@@ -422,10 +438,18 @@ export default function Messages() {
     return archivedBy.includes(user.id);
   };
 
-  const isConversationBlocked = (conv) => {
+  const getConversationBlockedBy = (conv) => {
+    if (!conv) return [];
+    return Array.isArray(conv.blocked_by) ? conv.blocked_by : [];
+  };
+
+  const isConversationBlockedByCurrentUser = (conv) => {
     if (!conv || !user?.id) return false;
-    const blockedBy = Array.isArray(conv.blocked_by) ? conv.blocked_by : [];
-    return blockedBy.includes(user.id);
+    return getConversationBlockedBy(conv).includes(user.id);
+  };
+
+  const isConversationReadOnly = (conv) => {
+    return getConversationBlockedBy(conv).length > 0;
   };
 
   const handleArchiveConversation = async (conv) => {
@@ -458,11 +482,44 @@ export default function Messages() {
     setArchivingConversationId(null);
   };
 
+  const handleUnarchiveConversation = async (conv) => {
+    if (!conv?.id || !user?.id) return;
+    setArchivingConversationId(conv.id);
+    try {
+      const archivedBy = Array.isArray(conv.archived_by) ? conv.archived_by : [];
+      if (!archivedBy.includes(user.id)) return;
+
+      const nextArchivedBy = archivedBy.filter((id) => id !== user.id);
+      const updated = await conversationService.updateConversation(conv.id, {
+        archived_by: nextArchivedBy
+      });
+
+      const normalizedArchivedBy = Array.isArray(updated?.archived_by) ? updated.archived_by : nextArchivedBy;
+
+      setConversations((prev) => prev.map((item) => item.id === conv.id ? {
+        ...item,
+        ...(updated || {}),
+        archived_by: normalizedArchivedBy
+      } : item));
+
+      if (selectedConversation?.id === conv.id) {
+        setSelectedConversation((prev) => prev ? {
+          ...prev,
+          ...(updated || {}),
+          archived_by: normalizedArchivedBy
+        } : prev);
+      }
+    } catch (error) {
+      console.error('Failed to unarchive conversation:', error);
+    }
+    setArchivingConversationId(null);
+  };
+
   const handleBlockConversation = async (conv) => {
     if (!conv?.id || !user?.id) return;
     setBlockingConversationId(conv.id);
     try {
-      const blockedBy = Array.isArray(conv.blocked_by) ? conv.blocked_by : [];
+      const blockedBy = getConversationBlockedBy(conv);
       if (!blockedBy.includes(user.id)) {
         const updated = await conversationService.updateConversation(conv.id, {
           blocked_by: [...blockedBy, user.id]
@@ -480,11 +537,43 @@ export default function Messages() {
               blocked_by: Array.isArray(updated.blocked_by) ? updated.blocked_by : blockedBy.concat(user.id)
             });
           }
-          closeConversation();
         }
       }
     } catch (error) {
       console.error('Failed to block conversation:', error);
+    }
+    setBlockingConversationId(null);
+  };
+
+  const handleUnblockConversation = async (conv) => {
+    if (!conv?.id || !user?.id) return;
+    setBlockingConversationId(conv.id);
+    try {
+      const blockedBy = getConversationBlockedBy(conv);
+      if (!blockedBy.includes(user.id)) return;
+
+      const nextBlockedBy = blockedBy.filter((id) => id !== user.id);
+      const updated = await conversationService.updateConversation(conv.id, {
+        blocked_by: nextBlockedBy
+      });
+
+      const normalizedBlockedBy = Array.isArray(updated?.blocked_by) ? updated.blocked_by : nextBlockedBy;
+
+      setConversations((prev) => prev.map((item) => item.id === conv.id ? {
+        ...item,
+        ...(updated || {}),
+        blocked_by: normalizedBlockedBy
+      } : item));
+
+      if (selectedConversation?.id === conv.id) {
+        setSelectedConversation((prev) => prev ? {
+          ...prev,
+          ...(updated || {}),
+          blocked_by: normalizedBlockedBy
+        } : prev);
+      }
+    } catch (error) {
+      console.error('Failed to unblock conversation:', error);
     }
     setBlockingConversationId(null);
   };
@@ -536,7 +625,7 @@ export default function Messages() {
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
-    if (isSelectedConversationBlocked) return;
+    if (isSelectedConversationReadOnly) return;
     if (newMessage.length > MAX_MESSAGE_LENGTH) {
       setMessageError(
         language === 'fr'
@@ -984,7 +1073,6 @@ export default function Messages() {
     return conversations.filter((conv) => {
       const otherId = getOtherParticipantId(conv);
       if (otherId === HIDDEN_CONTACT_ID) return false;
-      if (isConversationBlocked(conv)) return false;
       const title = getConversationTitle(conv).toLowerCase();
       const otherLabel = getParticipantLabel(otherId).toLowerCase();
       const query = searchQuery.toLowerCase();
@@ -1094,7 +1182,8 @@ export default function Messages() {
   const isConversationAccepted = selectedConversation?.contact_status === 'accepted';
   const shouldShowProfile = isConversationAccepted;
   const isConversationView = Boolean(selectedConversation) && !showInbox;
-  const isSelectedConversationBlocked = isConversationBlocked(selectedConversation);
+  const isSelectedConversationReadOnly = isConversationReadOnly(selectedConversation);
+  const isSelectedConversationBlockedByCurrentUser = isConversationBlockedByCurrentUser(selectedConversation);
 
   if (isConversationView && getOtherParticipantId(selectedConversation) === HIDDEN_CONTACT_ID) {
     return (
@@ -1108,8 +1197,8 @@ export default function Messages() {
 
   if (isConversationView) {
     return (
-      <div className="h-[calc(100vh-80px)] w-full min-w-0 flex bg-background overflow-hidden">
-        <div className="flex-1 flex flex-col bg-background">
+      <div className="h-[calc(100vh-80px)] min-h-0 w-full min-w-0 flex bg-background overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col bg-background">
           {/* Chat Header */}
           <div className="bg-card border-b border-border px-4 py-3 sm:p-4 flex items-center gap-3 sm:gap-4 sticky top-0 z-10">
             <button
@@ -1140,25 +1229,48 @@ export default function Messages() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={blockingConversationId === selectedConversation?.id}
-                onClick={() => handleBlockConversation(selectedConversation)}
-                className="text-red-600 border-red-200 hover:bg-red-50"
-              >
-                {language === 'fr' ? 'Bloquer' : 'Block'}
-              </Button>
+              {isSelectedConversationReadOnly ? (
+                isSelectedConversationBlockedByCurrentUser ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={blockingConversationId === selectedConversation?.id}
+                    onClick={() => handleUnblockConversation(selectedConversation)}
+                    className="text-green-700 border-green-200 hover:bg-green-50"
+                  >
+                    {language === 'fr' ? 'Débloquer' : 'Unblock'}
+                  </Button>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">
+                    {language === 'fr' ? 'Conversation bloquée' : 'Conversation blocked'}
+                  </Badge>
+                )
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={blockingConversationId === selectedConversation?.id}
+                  onClick={() => handleBlockConversation(selectedConversation)}
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  {language === 'fr' ? 'Bloquer' : 'Block'}
+                </Button>
+              )}
             </div>
           </div>
 
-          {isSelectedConversationBlocked && (
+          {isSelectedConversationReadOnly && (
             <div className="bg-red-50 border-b border-red-100 px-4 py-3">
               <p className="text-sm text-red-600">
-                {language === 'fr'
-                  ? 'Vous avez bloqué ce contact. Les messages sont désactivés.'
-                  : 'You blocked this contact. Messaging is disabled.'}
+                {isSelectedConversationBlockedByCurrentUser
+                  ? (language === 'fr'
+                    ? 'Vous avez bloqué ce contact. Conversation en lecture seule. Débloquez pour réactiver la messagerie.'
+                    : 'You blocked this contact. Conversation is read-only. Unblock to re-enable messaging.')
+                  : (language === 'fr'
+                    ? 'Ce contact vous a bloqué. Conversation en lecture seule jusqu’au déblocage.'
+                    : 'This contact blocked you. Conversation is read-only until unblocked.')}
               </p>
             </div>
           )}
@@ -1184,8 +1296,8 @@ export default function Messages() {
           )}
 
           {/* Messages */}
-          <div className="flex-1 flex">
-            <ScrollArea className="flex-1 px-4 py-4 sm:p-4 bg-background">
+          <div className="flex-1 min-h-0 flex">
+            <ScrollArea className="flex-1 min-h-0 px-4 py-4 sm:p-4 bg-background">
               <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5">
               {hasMoreMessages && (
                 <div className="flex justify-center">
@@ -1442,7 +1554,7 @@ export default function Messages() {
                   onChange={handleMessageChange}
                   placeholder={t('type_message')}
                   className="flex-1"
-                  disabled={sending || isSelectedConversationBlocked || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
+                  disabled={sending || isSelectedConversationReadOnly || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
                 />
                 <div className="flex items-center justify-between mt-1 text-[11px] sm:text-xs text-muted-foreground">
                   <span>
@@ -1464,7 +1576,7 @@ export default function Messages() {
               </div>
               <Button
                 type="submit"
-                disabled={!newMessage.trim() || sending || !!messageError || isSelectedConversationBlocked || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
+                disabled={!newMessage.trim() || sending || !!messageError || isSelectedConversationReadOnly || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
                 className="bg-primary hover:bg-primary/90"
               >
                 {sending ? (
@@ -1481,9 +1593,9 @@ export default function Messages() {
   }
 
   return (
-    <div className="h-[calc(100vh-80px)] w-full min-w-0 flex bg-background overflow-hidden">
+    <div className="h-[calc(100vh-80px)] min-h-0 w-full min-w-0 flex bg-background overflow-hidden">
       {/* Conversations List */}
-      <div className="w-full min-w-0 bg-card border-r border-border flex flex-col">
+      <div className="w-full min-w-0 bg-card border-r border-border flex flex-col min-h-0">
         <div className="px-4 sm:px-6 py-5 border-b border-border bg-card">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -1524,7 +1636,7 @@ export default function Messages() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1 bg-background min-w-0">
+        <ScrollArea className="flex-1 bg-background min-w-0 min-h-0">
           {filteredConversations.length === 0 ? (
             <div className="p-8 text-center">
               <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -1594,13 +1706,30 @@ export default function Messages() {
                           )}
                         </div>
                       </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                        <span className="truncate max-w-[60%]">{businessTitle}</span>
-                        {statusLabel && (
-                          <span className={`px-2 py-1 rounded-full text-[10px] ${statusTone}`}>
-                            {statusLabel}
-                          </span>
-                        )}
+                      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground gap-2">
+                        <span className="truncate max-w-[55%]">{businessTitle}</span>
+                        <div className="flex items-center gap-2">
+                          {statusLabel && (
+                            <span className={`px-2 py-1 rounded-full text-[10px] ${statusTone}`}>
+                              {statusLabel}
+                            </span>
+                          )}
+                          {conversationFilter === 'archived' && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={archivingConversationId === conv.id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleUnarchiveConversation(conv);
+                              }}
+                              className="h-7 px-2 text-[11px]"
+                            >
+                              {language === 'fr' ? 'Désarchiver' : 'Unarchive'}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1649,18 +1778,33 @@ export default function Messages() {
                           </span>
                         </div>
                         <div className="flex justify-center">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={archivingConversationId === conv.id}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleArchiveConversation(conv);
-                            }}
-                          >
-                            {language === 'fr' ? 'Archiver' : 'Archive'}
-                          </Button>
+                          {conversationFilter === 'archived' ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={archivingConversationId === conv.id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleUnarchiveConversation(conv);
+                              }}
+                            >
+                              {language === 'fr' ? 'Désarchiver' : 'Unarchive'}
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={archivingConversationId === conv.id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleArchiveConversation(conv);
+                              }}
+                            >
+                              {language === 'fr' ? 'Archiver' : 'Archive'}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>

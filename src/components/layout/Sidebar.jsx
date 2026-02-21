@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   Briefcase,
@@ -68,37 +68,39 @@ export default function Sidebar({ user }) {
 
   const currentPage = getCurrentPage();
 
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .or(`participant_1_id.eq.${user.id},participant_2_id.eq.${user.id}`)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      const myConvs = conversations || [];
+
+      // Calculate total unread (robust numeric parsing)
+      const total = myConvs.reduce((sum, conv) => {
+        const rawUnread = conv?.unread_count?.[user.id];
+        const unread = Number(rawUnread ?? 0);
+        return sum + (Number.isFinite(unread) ? unread : 0);
+      }, 0);
+
+      setUnreadCount(total);
+      localStorage.setItem(`unread_messages_${user.id}`, total.toString());
+    } catch (error) {
+      console.error('Error calculating unread count:', error);
+    }
+  }, [user?.id]);
+
   // Load unread message count with real-time updates
   useEffect(() => {
     if (!user?.id) return;
-
-    const fetchUnreadCount = async () => {
-      try {
-        const { data: conversations, error } = await supabase
-          .from('conversations')
-          .select('*')
-          .or(`participant_1_id.eq.${user.id},participant_2_id.eq.${user.id}`)
-          .order('updated_at', { ascending: false });
-
-        if (error) {
-          throw error;
-        }
-
-        const myConvs = conversations || [];
-        
-        // Calculate total unread
-        const total = myConvs.reduce((sum, conv) => {
-          const unread = conv.unread_count?.[user.id] || 0;
-          return sum + unread;
-        }, 0);
-        
-        setUnreadCount(total);
-        // Store in localStorage for persistence
-        localStorage.setItem(`unread_messages_${user.id}`, total.toString());
-      } catch (error) {
-        console.error('Error calculating unread count:', error);
-      }
-    };
 
     // Initial load
     fetchUnreadCount();
@@ -113,7 +115,19 @@ export default function Sidebar({ user }) {
         supabase.removeChannel(realtimeSubscription);
       }
     };
-  }, [user?.id]);
+  }, [user?.id, fetchUnreadCount]);
+
+  // Ensure badge refreshes when opening/messages navigation changes.
+  useEffect(() => {
+    if (!user?.id) return;
+    if (location.pathname.toLowerCase() !== '/messages') return;
+
+    const timeoutId = setTimeout(() => {
+      fetchUnreadCount();
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [location.pathname, location.search, user?.id, fetchUnreadCount]);
 
   // Navigation items - EXPLORER section
   const explorerItems = [

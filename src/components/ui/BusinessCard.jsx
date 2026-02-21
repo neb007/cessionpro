@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { MapPin, Heart, MessageCircle, CheckCircle2, Eye, TrendingUp } from 'lucide-react';
+import { MapPin, Heart, MessageCircle, CheckCircle2, Eye, TrendingUp, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -29,7 +29,14 @@ const sectorColors = {
   other: 'bg-gray-100 text-muted-foreground',
 };
 
-export default function BusinessCard({ business, isFavorite, onToggleFavorite, fetchSellerLogo = true }) {
+export default function BusinessCard({
+  business,
+  isFavorite,
+  onToggleFavorite,
+  fetchSellerLogo = true,
+  isFeatured = false,
+  featuredLabel = 'À la une'
+}) {
   const { t, language } = useLanguage();
   const { user: authUser } = useAuth();
   const [showMessageModal, setShowMessageModal] = useState(false);
@@ -109,6 +116,9 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite, f
       className="h-full"
     >
       <Card className="group overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full flex flex-col rounded-2xl">
+        {isFeatured && (
+          <div className="absolute inset-0 rounded-2xl ring-1 ring-[#FF6B4A]/40 pointer-events-none" />
+        )}
         {/* Image Section with Category and Views */}
         <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
           <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)}>
@@ -121,9 +131,16 @@ export default function BusinessCard({ business, isFavorite, onToggleFavorite, f
           
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+          {isFeatured && (
+            <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFF4EF] text-[#B5472F] border border-[#FFD8CC] text-[11px] font-semibold">
+              <Flame className="w-3.5 h-3.5" />
+              <span>{featuredLabel}</span>
+            </div>
+          )}
           
           {/* Views badge on image */}
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium">
+          <div className={`absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium ${isFeatured ? 'mt-9' : ''}`}>
             <Eye className="w-4 h-4" />
             <span className="font-mono">{business.views_count || 0}</span>
           </div>

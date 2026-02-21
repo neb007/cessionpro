@@ -10,6 +10,7 @@ import SortControl from '@/components/annonces/SortControl';
 import FilterBarDesktop from '@/components/annonces/FilterBarDesktop';
 import FilterSheetMobile from '@/components/annonces/FilterSheetMobile';
 import ActiveFilterChips from '@/components/annonces/ActiveFilterChips';
+import { sponsorshipService } from '@/services/sponsorshipService';
 import {
   Sheet,
   SheetContent,
@@ -191,6 +192,7 @@ export default function Businesses() {
   const isFetchingRef = useRef(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [mobileSortOpen, setMobileSortOpen] = useState(false);
+  const [sponsorshipByBusinessId, setSponsorshipByBusinessId] = useState({});
   
   const [listingType, setListingType] = useState('all');
   const [filtersState, setFiltersState] = useState(() => ({ ...DEFAULT_FILTERS }));
@@ -421,6 +423,69 @@ export default function Businesses() {
     (filtersState.budgetMin && Number(filtersState.budgetMin) > 0) ||
     (filtersState.budgetMax && Number(filtersState.budgetMax) < 5000000);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSponsorships = async () => {
+      const ids = sortedBusinesses.map((item) => item.id).filter(Boolean);
+      if (ids.length === 0) {
+        if (!cancelled) setSponsorshipByBusinessId({});
+        return;
+      }
+
+      try {
+        const rows = await sponsorshipService.getActiveSponsorships({ businessIds: ids });
+        if (cancelled) return;
+
+        const map = (rows || []).reduce((acc, row) => {
+          if (!acc[row.business_id]) {
+            acc[row.business_id] = row;
+          }
+          return acc;
+        }, {});
+
+        setSponsorshipByBusinessId(map);
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error loading sponsorships:', error);
+          setSponsorshipByBusinessId({});
+        }
+      }
+    };
+
+    loadSponsorships();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sortedBusinesses]);
+
+  const listingBuckets = useMemo(() => {
+    const featured = [];
+    const organic = [];
+    const featuredSellerSet = new Set();
+
+    sortedBusinesses.forEach((business) => {
+      const sponsorship = sponsorshipByBusinessId[business.id];
+      const isFeatured = Boolean(sponsorship);
+      const featuredLabel = sponsorship?.display_label || (language === 'fr' ? 'À la une' : 'Featured');
+      const enrichedBusiness = { ...business, isFeatured, featuredLabel };
+
+      if (isFeatured && featured.length < 3) {
+        const sellerKey = business.seller_id || business.id;
+        if (!featuredSellerSet.has(sellerKey)) {
+          featuredSellerSet.add(sellerKey);
+          featured.push(enrichedBusiness);
+          return;
+        }
+      }
+
+      organic.push(enrichedBusiness);
+    });
+
+    return { featured, organic };
+  }, [sortedBusinesses, sponsorshipByBusinessId, language]);
+
   return (
     <div className="min-h-screen py-6 lg:py-8 bg-[#FAF9F7]">
       <div className="w-full px-5">
@@ -546,30 +611,71 @@ export default function Businesses() {
             </Button>
           </div>
         ) : (
-          <motion.div
-            layout
-            className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6"
-          >
-            <AnimatePresence mode="popLayout">
-              {sortedBusinesses.map((business) => (
-                <motion.div
-                  key={business.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="relative"
-                >
-                  <BusinessCard
-                    business={business}
-                    isFavorite={favorites.includes(business.id)}
-                    onToggleFavorite={toggleFavorite}
-                    fetchSellerLogo={false}
-                  />
+          <div className="space-y-6 mt-6">
+            {listingBuckets.featured.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-lg sm:text-xl font-semibold text-gray-900">
+                    {language === 'fr' ? 'Annonces à la une' : 'Featured listings'}
+                  </h2>
+                  <span className="text-xs text-gray-500">
+                    {language === 'fr' ? 'Visibilité renforcée' : 'Boosted visibility'}
+                  </span>
+                </div>
+
+                <motion.div layout className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  <AnimatePresence mode="popLayout">
+                    {listingBuckets.featured.map((business) => (
+                      <motion.div
+                        key={`featured-${business.id}`}
+                        layout
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="relative"
+                      >
+                        <BusinessCard
+                          business={business}
+                          isFavorite={favorites.includes(business.id)}
+                          onToggleFavorite={toggleFavorite}
+                          fetchSellerLogo={false}
+                          isFeatured={business.isFeatured}
+                          featuredLabel={business.featuredLabel}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+              </section>
+            )}
+
+            <motion.div
+              layout
+              className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+            >
+              <AnimatePresence mode="popLayout">
+                {listingBuckets.organic.map((business) => (
+                  <motion.div
+                    key={`organic-${business.id}`}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="relative"
+                  >
+                    <BusinessCard
+                      business={business}
+                      isFavorite={favorites.includes(business.id)}
+                      onToggleFavorite={toggleFavorite}
+                      fetchSellerLogo={false}
+                      isFeatured={business.isFeatured}
+                      featuredLabel={business.featuredLabel}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </div>
         )}
         <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
           {loadingMore && (

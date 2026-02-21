@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
+import { sponsorshipService } from '@/services/sponsorshipService';
 
 const statusConfig = {
   active: { label: 'active', color: 'bg-green-100 text-green-700', icon: CheckCircle },
@@ -56,6 +57,13 @@ export default function MyListings() {
   const [editingId, setEditingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [duplicating, setDuplicating] = useState(null);
+  const [availableFeaturedSlots, setAvailableFeaturedSlots] = useState(0);
+  const [sponsorshipByBusinessId, setSponsorshipByBusinessId] = useState({});
+  const [featuredKpi, setFeaturedKpi] = useState({
+    activeFeaturedCount: 0,
+    activations: 0
+  });
+  const [featuredDaysByListing, setFeaturedDaysByListing] = useState({});
 
   useEffect(() => {
     loadData();
@@ -86,6 +94,23 @@ export default function MyListings() {
         { seller_id: user.id }
       );
       console.log('Loaded listings:', listings);
+
+      const [slots, sponsorships, kpi] = await Promise.all([
+        sponsorshipService.getMyAvailableSponsoredSlots(user.id).catch(() => 0),
+        sponsorshipService.getMySponsorships(user.id).catch(() => []),
+        sponsorshipService.getMyFeaturedKpi(user.id).catch(() => ({ activeFeaturedCount: 0, activations: 0 }))
+      ]);
+
+      const sponsorshipMap = (sponsorships || []).reduce((acc, item) => {
+        if (item?.business_id && item.status === 'active' && new Date(item.ends_at).getTime() > Date.now()) {
+          acc[item.business_id] = item;
+        }
+        return acc;
+      }, {});
+
+      setAvailableFeaturedSlots(Number(slots || 0));
+      setFeaturedKpi(kpi || { activeFeaturedCount: 0, activations: 0 });
+      setSponsorshipByBusinessId(sponsorshipMap);
       
       // Just load listings - don't try to update missing references since that column may not exist
       setMyListings(listings || []);
@@ -198,6 +223,61 @@ export default function MyListings() {
   const totalViews = myListings.reduce((sum, l) => sum + (l.views_count || 0), 0);
   const activeListings = myListings.filter(l => l.status === 'active').length;
 
+  const handleActivateFeatured = async (listing) => {
+    try {
+      setUpdating(prev => ({ ...prev, [listing.id]: 'featuring' }));
+      const requestedDays = Math.max(1, Math.min(Number(featuredDaysByListing[listing.id] || 30), 365));
+      await sponsorshipService.activateSponsoredListingForDays(listing.id, requestedDays);
+
+      const [slots, sponsorships, kpi] = await Promise.all([
+        sponsorshipService.getMyAvailableSponsoredSlots(user?.id).catch(() => 0),
+        sponsorshipService.getMySponsorships(user?.id).catch(() => []),
+        sponsorshipService.getMyFeaturedKpi(user?.id).catch(() => ({ activeFeaturedCount: 0, activations: 0 }))
+      ]);
+
+      const sponsorshipMap = (sponsorships || []).reduce((acc, item) => {
+        if (item?.business_id && item.status === 'active' && new Date(item.ends_at).getTime() > Date.now()) {
+          acc[item.business_id] = item;
+        }
+        return acc;
+      }, {});
+
+      setAvailableFeaturedSlots(Number(slots || 0));
+      setFeaturedKpi(kpi || { activeFeaturedCount: 0, activations: 0 });
+      setSponsorshipByBusinessId(sponsorshipMap);
+
+      alert(
+        language === 'fr'
+          ? `Annonce activée en À la une pour ${requestedDays} jour(s).`
+          : `Listing activated as featured for ${requestedDays} day(s).`
+      );
+    } catch (error) {
+      const msg = String(error?.message || '');
+      if (msg.includes('BILLING_RUNTIME_UNAVAILABLE')) {
+        alert(
+          language === 'fr'
+            ? 'La facturation sponsorisée n’est pas encore activée sur cet environnement.'
+            : 'Sponsored billing is not enabled on this environment yet.'
+        );
+      } else
+      if (msg.includes('NO_SPONSORED_DAYS_AVAILABLE') || msg.includes('NO_SPONSORED_SLOT_AVAILABLE')) {
+        alert(
+          language === 'fr'
+            ? 'Vous n’avez pas assez de jours sponsorisés disponibles.'
+            : 'You do not have enough sponsored days available.'
+        );
+      } else if (msg.includes('BUSINESS_ALREADY_FEATURED')) {
+        alert(language === 'fr' ? 'Cette annonce est déjà À la une.' : 'This listing is already featured.');
+      } else if (msg.includes('BUSINESS_NOT_ACTIVE')) {
+        alert(language === 'fr' ? 'L’annonce doit être active pour être mise À la une.' : 'Listing must be active to be featured.');
+      } else {
+        alert(language === 'fr' ? 'Impossible d’activer l’annonce.' : 'Unable to activate listing.');
+      }
+    } finally {
+      setUpdating(prev => ({ ...prev, [listing.id]: null }));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -217,6 +297,16 @@ export default function MyListings() {
             </h1>
             <p className="text-gray-500">
               {myListings.length} {language === 'fr' ? 'annonce(s)' : 'listing(s)'} • {activeListings} {language === 'fr' ? 'actif(s)' : 'active'} • 👁 {totalViews} {language === 'fr' ? 'vues' : 'views'}
+            </p>
+            <p className="text-xs text-[#B5472F] mt-1">
+              {language === 'fr'
+                ? `Jours À la une disponibles : ${availableFeaturedSlots}`
+                : `Featured days available: ${availableFeaturedSlots}`}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {language === 'fr'
+                ? `Actives: ${featuredKpi.activeFeaturedCount} • Activations totales: ${featuredKpi.activations}`
+                : `Active: ${featuredKpi.activeFeaturedCount} • Total activations: ${featuredKpi.activations}`}
             </p>
           </div>
           <Button onClick={() => navigate(createPageUrl('CreateBusiness'))} className="bg-gradient-to-r from-primary to-blue-600">
@@ -264,6 +354,10 @@ export default function MyListings() {
               {filteredListings.map((listing) => {
                 const status = statusConfig[listing.status] || statusConfig.active;
                 const StatusIcon = status.icon;
+                const activeSponsorship = sponsorshipByBusinessId[listing.id];
+                const isFeatured = Boolean(activeSponsorship);
+                const requestedDays = Math.max(1, Math.min(Number(featuredDaysByListing[listing.id] || 30), 365));
+                const hasEnoughDays = availableFeaturedSlots >= requestedDays;
                 
                 return (
                   <motion.div
@@ -288,6 +382,11 @@ export default function MyListings() {
                             <StatusIcon className="w-3 h-3 mr-1" />
                             {t(status.label)}
                           </Badge>
+                          {isFeatured && (
+                            <Badge className="mt-2 bg-[#FFF4EF] text-[#B5472F] border border-[#FFD8CC] text-[10px]">
+                              {activeSponsorship.display_label || (language === 'fr' ? 'À la une' : 'Featured')}
+                            </Badge>
+                          )}
                         </div>
 
                         {/* Views */}
@@ -357,7 +456,48 @@ export default function MyListings() {
                         </div>
 
                         {/* Actions - Option B: All buttons visible */}
-                        <div className="mt-auto grid grid-cols-5 gap-2">
+                        <div className="mt-auto grid grid-cols-6 gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white"
+                            onClick={() => handleActivateFeatured(listing)}
+                            disabled={
+                              updating[listing.id] ||
+                              listing.status !== 'active' ||
+                              isFeatured ||
+                              availableFeaturedSlots <= 0 ||
+                              !hasEnoughDays
+                            }
+                            title={
+                              isFeatured
+                                ? (language === 'fr' ? 'Déjà À la une' : 'Already featured')
+                                : !hasEnoughDays
+                                ? (language === 'fr' ? 'Pas assez de jours disponibles' : 'Not enough days available')
+                                : (language === 'fr' ? 'Activer À la une' : 'Activate featured')
+                            }
+                          >
+                            {updating[listing.id] === 'featuring'
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : (language === 'fr' ? 'À la une' : 'Featured')}
+                          </Button>
+
+                          {!isFeatured && (
+                            <input
+                              type="number"
+                              min={1}
+                              max={365}
+                              value={featuredDaysByListing[listing.id] || 30}
+                              onChange={(e) =>
+                                setFeaturedDaysByListing((prev) => ({
+                                  ...prev,
+                                  [listing.id]: Math.max(1, Math.min(365, Number(e.target.value || 1)))
+                                }))
+                              }
+                              className="h-9 rounded-md border border-gray-200 px-2 text-xs"
+                              title={language === 'fr' ? 'Nombre de jours À la une' : 'Number of featured days'}
+                            />
+                          )}
+
                           <Button 
                             size="sm" 
                             className="bg-blue-600 hover:bg-blue-700 text-white"

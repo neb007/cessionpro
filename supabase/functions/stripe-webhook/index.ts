@@ -145,18 +145,38 @@ const getPurchaseSourceId = (event: Stripe.Event) => {
   return event.id;
 };
 
-const mapCreditsFromProductCode = (productCode: string) => {
+const parseItemQuantities = (raw: string | null | undefined) => {
+  const quantities = new Map<string, number>();
+  const value = String(raw || '').trim();
+  if (!value) return quantities;
+
+  for (const token of value.split(',')) {
+    const [codeRaw, qtyRaw] = token.split(':');
+    const code = String(codeRaw || '').trim();
+    if (!code) continue;
+
+    const parsedQty = Number(qtyRaw || 1);
+    const quantity = Number.isFinite(parsedQty) ? Math.max(1, Math.floor(parsedQty)) : 1;
+    quantities.set(code, quantity);
+  }
+
+  return quantities;
+};
+
+const mapCreditsFromProductCode = (productCode: string, quantity = 1) => {
   const normalized = (productCode || '').toLowerCase();
-  if (normalized === 'photos_pack5') return { photos: 5, contacts: 0, feature: false };
-  if (normalized === 'photos_pack15') return { photos: 15, contacts: 0, feature: false };
-  if (normalized === 'contact_unit') return { photos: 0, contacts: 1, feature: false };
-  if (normalized === 'contact_pack5') return { photos: 0, contacts: 5, feature: false };
-  if (normalized === 'contact_pack8') return { photos: 0, contacts: 8, feature: false };
-  if (normalized === 'contact_pack10') return { photos: 0, contacts: 10, feature: false };
-  if (normalized === 'smart_matching') return { photos: 0, contacts: 0, feature: true };
-  if (normalized === 'sponsored_listing') return { photos: 0, contacts: 0, feature: true };
-  if (normalized === 'data_room') return { photos: 0, contacts: 0, feature: true };
-  return { photos: 0, contacts: 0, feature: false };
+  const qty = Math.max(1, Math.floor(Number(quantity || 1)));
+
+  if (normalized === 'photos_pack5') return { photos: 5 * qty, contacts: 0, feature: false, entitlementType: 'credits', quantityTotal: 5 * qty };
+  if (normalized === 'photos_pack15') return { photos: 15 * qty, contacts: 0, feature: false, entitlementType: 'credits', quantityTotal: 15 * qty };
+  if (normalized === 'contact_unit') return { photos: 0, contacts: 1 * qty, feature: false, entitlementType: 'credits', quantityTotal: 1 * qty };
+  if (normalized === 'contact_pack5') return { photos: 0, contacts: 5 * qty, feature: false, entitlementType: 'credits', quantityTotal: 5 * qty };
+  if (normalized === 'contact_pack8') return { photos: 0, contacts: 8 * qty, feature: false, entitlementType: 'credits', quantityTotal: 8 * qty };
+  if (normalized === 'contact_pack10') return { photos: 0, contacts: 10 * qty, feature: false, entitlementType: 'credits', quantityTotal: 10 * qty };
+  if (normalized === 'sponsored_listing') return { photos: 0, contacts: 0, feature: false, entitlementType: 'credits', quantityTotal: qty };
+  if (normalized === 'smart_matching') return { photos: 0, contacts: 0, feature: true, entitlementType: 'feature', quantityTotal: null };
+  if (normalized === 'data_room') return { photos: 0, contacts: 0, feature: true, entitlementType: 'feature', quantityTotal: null };
+  return { photos: 0, contacts: 0, feature: false, entitlementType: 'credits', quantityTotal: 0 };
 };
 
 const createEmailDispatchToken = async (params: {
@@ -215,12 +235,17 @@ const applyPurchasedEntitlements = async (params: {
 }) => {
   const { supabase, event } = params;
 
-  if (event.type !== 'checkout.session.completed' && event.type !== 'invoice.payment_succeeded') {
+  if (
+    event.type !== 'checkout.session.completed' &&
+    event.type !== 'invoice.payment_succeeded' &&
+    event.type !== 'payment_intent.succeeded'
+  ) {
     return;
   }
 
   let userId: string | null = null;
   let itemCodes: string[] = [];
+  let itemQuantities = new Map<string, number>();
   let sourceTransactionId: string | null = null;
 
   if (event.type === 'checkout.session.completed') {
@@ -230,6 +255,7 @@ const applyPurchasedEntitlements = async (params: {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+    itemQuantities = parseItemQuantities(session.metadata?.item_quantities || '');
 
     const { data: txn } = await supabase
       .from('billing_transactions')
@@ -246,11 +272,45 @@ const applyPurchasedEntitlements = async (params: {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+    itemQuantities = parseItemQuantities(invoice.metadata?.item_quantities || '');
 
     const { data: txn } = await supabase
       .from('billing_transactions')
       .select('id')
       .eq('stripe_invoice_id', invoice.id)
+      .maybeSingle();
+    sourceTransactionId = txn?.id || null;
+  }
+
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    const checkoutType = String(paymentIntent.metadata?.checkout_type || '').toLowerCase();
+
+    if (checkoutType !== 'elements') {
+      return;
+    }
+
+    userId = paymentIntent.metadata?.user_id || null;
+
+    if (!userId && typeof paymentIntent.customer === 'string') {
+      const { data: customerRow } = await supabase
+        .from('billing_customers')
+        .select('user_id')
+        .eq('stripe_customer_id', paymentIntent.customer)
+        .maybeSingle();
+      userId = customerRow?.user_id || null;
+    }
+
+    itemCodes = (paymentIntent.metadata?.item_codes || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    itemQuantities = parseItemQuantities(paymentIntent.metadata?.item_quantities || '');
+
+    const { data: txn } = await supabase
+      .from('billing_transactions')
+      .select('id')
+      .eq('stripe_payment_intent_id', paymentIntent.id)
       .maybeSingle();
     sourceTransactionId = txn?.id || null;
   }
@@ -277,7 +337,8 @@ const applyPurchasedEntitlements = async (params: {
   };
 
   for (const code of itemCodes) {
-    const mapped = mapCreditsFromProductCode(code);
+    const quantity = itemQuantities.get(code) || 1;
+    const mapped = mapCreditsFromProductCode(code, quantity);
     photosDelta += mapped.photos;
     contactsDelta += mapped.contacts;
 
@@ -286,15 +347,16 @@ const applyPurchasedEntitlements = async (params: {
         {
           user_id: userId,
           product_code: code,
-          entitlement_type: mapped.feature ? 'feature' : 'credits',
-          quantity_total: mapped.feature ? null : (mapped.photos || mapped.contacts || 0),
-          quantity_remaining: mapped.feature ? null : (mapped.photos || mapped.contacts || 0),
+          entitlement_type: mapped.entitlementType,
+          quantity_total: mapped.feature ? null : mapped.quantityTotal,
+          quantity_remaining: mapped.feature ? null : mapped.quantityTotal,
           status: 'active',
           source_transaction_id: sourceTransactionId,
           source_stripe_event_id: event.id,
           activated_at: new Date().toISOString(),
           metadata: {
-            grant_origin: event.type
+            grant_origin: event.type,
+            purchase_quantity: quantity
           },
           updated_at: new Date().toISOString()
         },

@@ -151,15 +151,15 @@ export const PRICING = {
 
     sponsoredListing: {
       id: 'sponsored_listing',
-      price: 29.99,
+      price: 1.0,
       billingCycle: 'oneTime',
-      frenchLabel: 'Annonce sponsorisée',
-      englishLabel: 'Sponsored listing',
-      frenchDescription: 'Mettez votre annonce en avant pour plus de visibilité',
-      englishDescription: 'Boost your listing for more visibility',
+      frenchLabel: 'Annonce à la une (1 jour)',
+      englishLabel: 'Featured listing (1 day)',
+      frenchDescription: 'Choisissez le nombre de jours de mise à la une (1€ / jour)',
+      englishDescription: 'Choose how many featured days you want (1€ / day)',
       features: {
-        fr: ['Mise en avant dans les résultats', 'Priorité d’affichage', 'Visibilité accrue'],
-        en: ['Featured in search results', 'Priority placement', 'Increased visibility']
+        fr: ['1€ par jour', 'Mise en avant dans les résultats', 'Activation depuis Mes annonces'],
+        en: ['1€ per day', 'Featured in search results', 'Activation from My listings']
       },
       icon: 'star'
     }

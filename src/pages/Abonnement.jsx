@@ -51,6 +51,7 @@ export default function Abonnement() {
       categoryContacts: 'Packs Contacts',
       details: 'Détails',
       quantity: 'Quantité',
+      days: 'Jours',
       orderNow: 'Commander',
       addToOrder: 'Ajouter à la commande',
       selectedTitle: 'Services sélectionnés',
@@ -66,9 +67,10 @@ export default function Abonnement() {
       servicesSubtitle: 'Résumé des packs achetés sur votre compte.',
       photosPacksPurchased: 'Packs photos',
       contactsPacksPurchased: 'Packs contacts',
-      sponsoredPacksPurchased: 'Packs annonces sponsorisées',
+      sponsoredPacksPurchased: 'Jours sponsorisés achetés',
       smartMatchingPurchased: 'Packs Smart Matching',
       packsPurchasedSuffix: 'achetés',
+      daysRemainingSuffix: 'jours restants',
       servicesLoadError: 'Impossible de charger vos services actifs.',
       paymentSuccessTitle: 'Paiement confirmé',
       paymentSuccessDescription: 'Merci pour votre commande. Votre paiement a été validé avec succès.',
@@ -100,6 +102,7 @@ export default function Abonnement() {
       categoryContacts: 'Contact Packs',
       details: 'Details',
       quantity: 'Quantity',
+      days: 'Days',
       orderNow: 'Order now',
       addToOrder: 'Add to order',
       selectedTitle: 'Selected services',
@@ -115,9 +118,10 @@ export default function Abonnement() {
       servicesSubtitle: 'Summary of packs purchased on your account.',
       photosPacksPurchased: 'Photo packs',
       contactsPacksPurchased: 'Contact packs',
-      sponsoredPacksPurchased: 'Sponsored listing packs',
+      sponsoredPacksPurchased: 'Sponsored days purchased',
       smartMatchingPurchased: 'Smart Matching packs',
       packsPurchasedSuffix: 'purchased',
+      daysRemainingSuffix: 'days remaining',
       servicesLoadError: 'Unable to load your active services.',
       paymentSuccessTitle: 'Payment confirmed',
       paymentSuccessDescription: 'Thank you for your order. Your payment has been successfully confirmed.',
@@ -151,7 +155,8 @@ export default function Abonnement() {
   const getQty = (id) => Math.max(1, Number(quantities[id] || 1));
 
   const setQty = (id, qty) => {
-    const next = Math.max(1, Math.min(20, Number(qty || 1)));
+    const maxQty = id === 'sponsored_listing' ? 365 : 20;
+    const next = Math.max(1, Math.min(maxQty, Number(qty || 1)));
     setQuantities((prev) => ({ ...prev, [id]: next }));
   };
 
@@ -172,7 +177,8 @@ export default function Abonnement() {
     const base = {
       photoPacks: 0,
       contactPacks: 0,
-      sponsoredPacks: 0,
+      sponsoredDaysPurchased: 0,
+      sponsoredDaysRemaining: 0,
       smartMatchingPacks: 0
     };
 
@@ -190,7 +196,9 @@ export default function Abonnement() {
       }
 
       if (code === 'sponsored_listing') {
-        acc.sponsoredPacks += 1;
+        const fallbackDays = item?.entitlement_type === 'feature' ? 30 : 0;
+        acc.sponsoredDaysPurchased += Math.max(0, Number(item?.quantity_total ?? fallbackDays));
+        acc.sponsoredDaysRemaining += Math.max(0, Number(item?.quantity_remaining || 0));
       }
 
       if (code === 'smart_matching') {
@@ -358,8 +366,10 @@ export default function Abonnement() {
 
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-xs text-muted-foreground">{l.sponsoredPacksPurchased}</p>
-              <p className="text-2xl font-semibold text-foreground mt-1">{purchasedCounters.sponsoredPacks}</p>
-              <p className="text-[11px] text-muted-foreground mt-1">{l.packsPurchasedSuffix}</p>
+              <p className="text-2xl font-semibold text-foreground mt-1">{purchasedCounters.sponsoredDaysPurchased}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {purchasedCounters.sponsoredDaysRemaining} {l.daysRemainingSuffix}
+              </p>
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -480,7 +490,9 @@ export default function Abonnement() {
 
             <div className="flex flex-wrap items-end justify-between gap-3 pt-1">
               <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-1">{l.quantity}</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">
+                  {selectedOption.id === 'sponsored_listing' ? l.days : l.quantity}
+                </p>
                 <div className="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden">
                   <button
                     type="button"
