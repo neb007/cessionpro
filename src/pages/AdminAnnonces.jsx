@@ -86,6 +86,7 @@ export default function AdminAnnonces() {
       'buyer_profile_type',
       'buyer_notes',
       'business_type_sought',
+      'seller_business_type',
       'buyer_document_url',
       'buyer_document_name'
     ],

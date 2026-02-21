@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { User, CreditCard, Receipt } from 'lucide-react';
+import { User, CreditCard, Receipt, Bell } from 'lucide-react';
 import Profile from './Profile';
 import Abonnement from './Abonnement';
 import Billing from './Billing';
+import SmartMatchingNotifications from './SmartMatchingNotifications';
 
 const tabs = [
   {
@@ -20,6 +21,11 @@ const tabs = [
     key: 'billing',
     label: 'Facturation',
     icon: Receipt
+  },
+  {
+    key: 'smartmatching-notifications',
+    label: 'Notification Smart Matching',
+    icon: Bell
   }
 ];
 
@@ -32,6 +38,15 @@ const resolveSettingsTab = (tabValue) => {
 
   if (normalized === 'billing' || normalized === 'facturation') {
     return 'billing';
+  }
+
+  if (
+    normalized === 'smartmatching-notifications' ||
+    normalized === 'smartmatching_notifications' ||
+    normalized === 'notification-smart-matching' ||
+    normalized === 'notifications-smart-matching'
+  ) {
+    return 'smartmatching-notifications';
   }
 
   return 'profile';
@@ -86,6 +101,7 @@ export default function Settings() {
         {activeTab === 'profile' && <Profile />}
         {activeTab === 'pricing' && <Abonnement />}
         {activeTab === 'billing' && <Billing />}
+        {activeTab === 'smartmatching-notifications' && <SmartMatchingNotifications />}
       </div>
     </div>
   );

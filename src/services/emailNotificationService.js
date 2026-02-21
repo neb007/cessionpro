@@ -22,7 +22,7 @@ class EmailNotificationService {
         language = 'fr'
       } = data;
 
-      const { data, error } = await supabase.functions.invoke('send-email', {
+      const { data: response, error } = await supabase.functions.invoke('send-email', {
         body: {
           type: 'message',
           recipientId,
@@ -40,7 +40,7 @@ class EmailNotificationService {
       }
 
       console.log('[Email] Message notification sent to:', recipientId);
-      return data;
+      return response;
     } catch (error) {
       console.error('[Email] Error sending notification:', error);
       // Don't throw - email notifications are non-critical
@@ -170,6 +170,42 @@ class EmailNotificationService {
       return data;
     } catch (error) {
       console.error('[Email] Error triggering smart match notification:', error);
+    }
+  }
+
+  /**
+   * Send Smart Matching digest email
+   */
+  async sendSmartMatchingDigest({
+    recipientId,
+    frequency = 'daily',
+    matchCount = 0,
+    matches = [],
+    sourceId,
+    idempotencyKey,
+    language = 'fr'
+  }) {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          type: 'smartmatching_digest',
+          recipientId,
+          frequency,
+          matchCount,
+          matches,
+          sourceId,
+          idempotencyKey,
+          language
+        }
+      });
+
+      if (error) {
+        throw new Error(`Smart Matching digest failed: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[Email] Error sending Smart Matching digest:', error);
     }
   }
 

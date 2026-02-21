@@ -81,6 +81,15 @@
       ],
       "description": "Raison de la vente"
     },
+    "seller_business_type": {
+      "type": "string",
+      "enum": [
+        "entreprise",
+        "fond_de_commerce",
+        "franchise"
+      ],
+      "description": "Type de cession proposée"
+    },
     "assets_included": {
       "type": "array",
       "items": {

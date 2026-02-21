@@ -7,7 +7,8 @@ type SendEmailBody = {
     | 'listing_published'
     | 'deal_stage_update'
     | 'document_shared'
-    | 'nda_signed';
+    | 'nda_signed'
+    | 'smartmatching_digest';
   recipientId?: string;
   conversationId?: string;
   listingId?: string;
@@ -19,6 +20,15 @@ type SendEmailBody = {
   sourceId?: string;
   idempotencyKey?: string;
   language?: 'fr' | 'en';
+  frequency?: 'daily' | 'weekly' | 'disabled';
+  matchCount?: number;
+  matches?: Array<{
+    title?: string;
+    score?: number;
+    budget?: string;
+    location?: string;
+    detailsUrl?: string;
+  }>;
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
@@ -153,9 +163,29 @@ const buildSubjectAndHtml = (
     documentName?: string;
     signerName?: string;
     language: 'fr' | 'en';
+    frequency?: 'daily' | 'weekly' | 'disabled';
+    matchCount?: number;
+    matches?: Array<{
+      title?: string;
+      score?: number;
+      budget?: string;
+      location?: string;
+      detailsUrl?: string;
+    }>;
   }
 ) => {
-  const { senderName, messagePreview, listingTitle, dealStage, documentName, signerName, language } = data;
+  const {
+    senderName,
+    messagePreview,
+    listingTitle,
+    dealStage,
+    documentName,
+    signerName,
+    language,
+    frequency,
+    matchCount,
+    matches
+  } = data;
   const isFr = language === 'fr';
 
   const baseStyles = `
@@ -353,6 +383,91 @@ const buildSubjectAndHtml = (
     return { subject, html };
   }
 
+  if (type === 'smartmatching_digest') {
+    const safeMatches = (matches || []).slice(0, 8);
+    const safeCount = Number(matchCount || safeMatches.length || 0);
+    const frequencyLabel =
+      frequency === 'weekly'
+        ? (isFr ? 'hebdomadaire' : 'weekly')
+        : (isFr ? 'quotidienne' : 'daily');
+
+    const subject = isFr
+      ? 'Nouveaux matchs Smart Matching disponibles'
+      : 'New Smart Matching opportunities available';
+    const title = isFr
+      ? 'Votre récap Smart Matching'
+      : 'Your Smart Matching digest';
+    const intro = isFr
+      ? `Nous avons détecté ${safeCount} nouveau${safeCount > 1 ? 'x' : ''} match${safeCount > 1 ? 's' : ''} compatible${safeCount > 1 ? 's' : ''}.`
+      : `We found ${safeCount} new compatible match${safeCount > 1 ? 'es' : ''}.`;
+    const ctaLabel = isFr ? 'Ouvrir Smart Matching' : 'Open Smart Matching';
+    const settingsLabel = isFr ? 'Gérer mes notifications' : 'Manage my notifications';
+    const emptyState = isFr
+      ? 'Aucun détail de match disponible pour le moment.'
+      : 'No match details available at the moment.';
+    const footerNote = isFr
+      ? `Fréquence active: ${frequencyLabel}. Aucun email n'est envoyé sans nouveau match.`
+      : `Active frequency: ${frequencyLabel}. No email is sent without new matches.`;
+
+    const cards = safeMatches.length
+      ? safeMatches
+          .map((item) => {
+            const titleLine = item.title || (isFr ? 'Annonce sans titre' : 'Untitled listing');
+            const scoreLine = Number.isFinite(item.score)
+              ? `${isFr ? 'Score' : 'Score'}: ${item.score}%`
+              : '';
+            const budgetLine = item.budget ? `${isFr ? 'Budget' : 'Budget'}: ${item.budget}` : '';
+            const locationLine = item.location ? `${isFr ? 'Localisation' : 'Location'}: ${item.location}` : '';
+            const detailUrl = item.detailsUrl || `${APP_URL}/SmartMatching`;
+
+            return `
+              <div class="meta" style="margin-bottom:12px;">
+                <div><strong>${titleLine}</strong></div>
+                ${scoreLine ? `<div style="margin-top:6px;">${scoreLine}</div>` : ''}
+                ${budgetLine ? `<div style="margin-top:4px;">${budgetLine}</div>` : ''}
+                ${locationLine ? `<div style="margin-top:4px;">${locationLine}</div>` : ''}
+                <div style="margin-top:10px;">
+                  <a class="button" href="${detailUrl}" style="padding:8px 12px; font-size:12px;">${isFr ? 'Voir l\'annonce' : 'View listing'}</a>
+                </div>
+              </div>
+            `;
+          })
+          .join('')
+      : `<div class="meta">${emptyState}</div>`;
+
+    const html = `
+      <!doctype html>
+      <html lang="${isFr ? 'fr' : 'en'}">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <style>${baseStyles}</style>
+        </head>
+        <body>
+          <div class="wrap">
+            <div class="container">
+              <div class="header">
+                <h1>Riviqo • Smart Matching</h1>
+              </div>
+              <div class="content">
+                <h2>${title}</h2>
+                <p>${intro}</p>
+                ${cards}
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top: 8px;">
+                  <a class="button" href="${APP_URL}/SmartMatching">${ctaLabel}</a>
+                  <a class="button" href="${APP_URL}/Settings?tab=smartmatching-notifications" style="background:#374151;">${settingsLabel}</a>
+                </div>
+              </div>
+              <div class="footer">${footerNote}</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return { subject, html };
+  }
+
   const subject = isFr
     ? 'Votre annonce est publiee'
     : 'Your listing is published';
@@ -492,6 +607,25 @@ serve(async (req) => {
     }
   }
 
+  if (payload.type === 'smartmatching_digest') {
+    if (!recipientId) {
+      return jsonResponse(400, { error: 'Missing recipientId' });
+    }
+    if (!Array.isArray(payload.matches) || payload.matches.length === 0) {
+      await logEmailDispatch({
+        supabase,
+        actorId,
+        eventType: payload.type,
+        recipientId,
+        sourceId: payload.sourceId,
+        idempotencyKey: payload.idempotencyKey,
+        status: 'skipped',
+        error: 'no_matches'
+      });
+      return jsonResponse(200, { skipped: true, reason: 'no_matches' });
+    }
+  }
+
   if (payload.listingId) {
     const { data: listing, error: listingError } = await supabase
       .from('businesses')
@@ -606,7 +740,10 @@ serve(async (req) => {
     dealStage: payload.dealStage,
     documentName: payload.documentName,
     signerName: payload.signerName,
-    language
+    language,
+    frequency: payload.frequency,
+    matchCount: payload.matchCount,
+    matches: payload.matches
   });
 
   try {

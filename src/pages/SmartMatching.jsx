@@ -4,6 +4,7 @@ import {
   ArrowUpDown,
   BarChart3,
   Calendar,
+  Heart,
   Lock,
   MapPin,
   Search,
@@ -20,6 +21,7 @@ import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { billingService } from '@/services/billingService';
+import { favoriteService } from '@/services/favoriteService';
 import { toast } from '@/components/ui/use-toast';
 import { createPageUrl } from '@/utils';
 
@@ -33,6 +35,14 @@ const SECTORS = [
   { value: 'construction', label: 'Construction' },
   { value: 'transport', label: 'Transport' },
   { value: 'agriculture', label: 'Agriculture' },
+  { value: 'real_estate', label: 'Immobilier' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'ecommerce', label: 'E-commerce' },
+  { value: 'beauty', label: 'Beauté' },
+  { value: 'education', label: 'Éducation' },
+  { value: 'events', label: 'Événementiel' },
+  { value: 'logistics', label: 'Logistique' },
+  { value: 'food_beverage', label: 'Alimentaire & Boissons' },
   { value: 'other', label: 'Autre' },
 ];
 
@@ -65,8 +75,14 @@ const DEFAULT_CRITERIA = {
   maxCA: '',
   minEBITDA: '',
   maxEBITDA: '',
-  minScore: '45',
+  buyerSectorsInterested: [],
+  buyerLocations: [],
+  buyerProfileType: '',
+  businessTypeSought: '',
+  sellerBusinessType: '',
 };
+
+const SMART_MATCHING_MIN_SCORE = 60;
 
 const SMART_MATCHING_PREVIEW_DATA = {
   buyer: [
@@ -322,6 +338,7 @@ export default function SmartMatching() {
   const [showSectorDropdown, setShowSectorDropdown] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState([]);
 
   const [smartMatchingMode, setSmartMatchingMode] = useState(
     user?.user_metadata?.role === 'seller' ? 'seller' : 'buyer'
@@ -404,6 +421,11 @@ export default function SmartMatching() {
     let count = 0;
     if (criteria.sectors.length > 0) count += 1;
     if (criteria.locations.length > 0) count += 1;
+    if (criteria.buyerSectorsInterested?.length > 0) count += 1;
+    if (criteria.buyerLocations?.length > 0) count += 1;
+    if (criteria.buyerProfileType) count += 1;
+    if (criteria.businessTypeSought) count += 1;
+    if (criteria.sellerBusinessType) count += 1;
     if (isRangeActive(criteria.minPrice, criteria.maxPrice)) count += 1;
     if (isRangeActive(criteria.minEmployees, criteria.maxEmployees)) count += 1;
     if (isRangeActive(criteria.minYear, criteria.maxYear)) count += 1;
@@ -504,6 +526,24 @@ export default function SmartMatching() {
   }, [user]);
 
   useEffect(() => {
+    const loadFavorites = async () => {
+      if (!user?.id) {
+        setFavoriteIds([]);
+        return;
+      }
+
+      try {
+        const favorites = await favoriteService.listFavorites();
+        setFavoriteIds((favorites || []).map((fav) => fav.business_id).filter(Boolean));
+      } catch {
+        setFavoriteIds([]);
+      }
+    };
+
+    loadFavorites();
+  }, [user?.id]);
+
+  useEffect(() => {
     const saved = localStorage.getItem(getStorageKey(smartMatchingMode));
     if (!saved) return;
 
@@ -527,15 +567,22 @@ export default function SmartMatching() {
       const highlights = [];
       const missingFields = [];
 
-      if (criteria.sectors.length > 0) {
+      const sectorCriteria = smartMatchingMode === 'seller'
+        ? (criteria.buyerSectorsInterested?.length ? criteria.buyerSectorsInterested : criteria.sectors)
+        : criteria.sectors;
+
+      if (sectorCriteria.length > 0) {
         const weight = 24;
         totalWeight += weight;
 
-        const listingSector = normalize(listing.sector);
-        if (!listingSector) {
+        const listingSectorBlob = smartMatchingMode === 'seller'
+          ? normalize((Array.isArray(listing.buyer_sectors_interested) ? listing.buyer_sectors_interested : []).join(' '))
+          : normalize(listing.sector);
+
+        if (!listingSectorBlob) {
           missingFields.push(language === 'fr' ? 'secteur' : 'sector');
         } else {
-          const matched = criteria.sectors.some((sector) => listingSector.includes(normalize(sector)));
+          const matched = sectorCriteria.some((sector) => listingSectorBlob.includes(normalize(sector)));
           if (matched) {
             points += weight;
             matchedCriteria += 1;
@@ -544,18 +591,22 @@ export default function SmartMatching() {
         }
       }
 
-      if (criteria.locations.length > 0) {
+      const locationCriteria = smartMatchingMode === 'seller'
+        ? (criteria.buyerLocations?.length ? criteria.buyerLocations : criteria.locations)
+        : criteria.locations;
+
+      if (locationCriteria.length > 0) {
         const weight = 16;
         totalWeight += weight;
 
-        const listingLocationBlob = normalize(
-          [listing.location, listing.region, listing.country].filter(Boolean).join(' ')
-        );
+        const listingLocationBlob = smartMatchingMode === 'seller'
+          ? normalize((Array.isArray(listing.buyer_locations) ? listing.buyer_locations : []).join(' '))
+          : normalize([listing.location, listing.region, listing.country].filter(Boolean).join(' '));
 
         if (!listingLocationBlob) {
           missingFields.push(language === 'fr' ? 'localisation' : 'location');
         } else {
-          const matched = criteria.locations.some((locValue) => {
+          const matched = locationCriteria.some((locValue) => {
             const option = LOCATIONS.find((loc) => normalize(loc.value) === normalize(locValue));
             const probes = [locValue, option?.label].filter(Boolean).map(normalize);
             return probes.some((probe) => listingLocationBlob.includes(probe));
@@ -566,6 +617,48 @@ export default function SmartMatching() {
             matchedCriteria += 1;
             highlights.push(language === 'fr' ? 'Zone géographique cohérente' : 'Geographic fit');
           }
+        }
+      }
+
+      if (smartMatchingMode === 'seller' && criteria.buyerProfileType) {
+        const weight = 8;
+        totalWeight += weight;
+
+        const listingBuyerProfileType = normalize(listing.buyer_profile_type);
+        if (!listingBuyerProfileType) {
+          missingFields.push(language === 'fr' ? 'profil acquéreur' : 'buyer profile');
+        } else if (listingBuyerProfileType === normalize(criteria.buyerProfileType)) {
+          points += weight;
+          matchedCriteria += 1;
+          highlights.push(language === 'fr' ? 'Profil acquéreur aligné' : 'Buyer profile aligned');
+        }
+      }
+
+      if (smartMatchingMode === 'seller' && criteria.businessTypeSought) {
+        const weight = 8;
+        totalWeight += weight;
+
+        const listingBusinessTypeSought = normalize(listing.business_type_sought);
+        if (!listingBusinessTypeSought) {
+          missingFields.push(language === 'fr' ? 'type recherché' : 'sought type');
+        } else if (listingBusinessTypeSought === normalize(criteria.businessTypeSought)) {
+          points += weight;
+          matchedCriteria += 1;
+          highlights.push(language === 'fr' ? 'Type de cession recherché aligné' : 'Sought business type aligned');
+        }
+      }
+
+      if (smartMatchingMode === 'buyer' && criteria.sellerBusinessType) {
+        const weight = 8;
+        totalWeight += weight;
+
+        const listingSellerBusinessType = normalize(listing.seller_business_type || listing.business_type);
+        if (!listingSellerBusinessType) {
+          missingFields.push(language === 'fr' ? 'type de cession' : 'sell-side type');
+        } else if (listingSellerBusinessType === normalize(criteria.sellerBusinessType)) {
+          points += weight;
+          matchedCriteria += 1;
+          highlights.push(language === 'fr' ? 'Type de cession compatible' : 'Sell-side business type aligned');
         }
       }
 
@@ -702,7 +795,6 @@ export default function SmartMatching() {
       setSearching(true);
 
       const targetType = smartMatchingMode === 'buyer' ? 'cession' : 'acquisition';
-      const minScore = Number(criteria.minScore) || 0;
 
       let results = (allListings || [])
         .filter((listing) => listing.type === targetType)
@@ -716,7 +808,7 @@ export default function SmartMatching() {
             matchBudget: getListingBudget(listing, smartMatchingMode),
           };
         })
-        .filter((listing) => listing.smartMatchScore >= minScore);
+        .filter((listing) => listing.smartMatchScore >= SMART_MATCHING_MIN_SCORE);
 
       results.sort((a, b) => {
         if (sortBy === 'score_asc') {
@@ -755,7 +847,7 @@ export default function SmartMatching() {
       setHasSearched(true);
       setSearching(false);
     },
-    [accessStatus, allListings, criteria.minScore, getMatchAnalysis, language, smartMatchingMode, sortBy, user?.id]
+    [accessStatus, allListings, getMatchAnalysis, language, smartMatchingMode, sortBy, user?.id]
   );
 
   useEffect(() => {
@@ -896,6 +988,35 @@ export default function SmartMatching() {
     setSmartMatchingMode(mode);
     setMatchedListings([]);
     setHasSearched(false);
+  };
+
+  const handleToggleFavorite = async (listingId) => {
+    if (!user?.id) {
+      window.location.href = '/login';
+      return;
+    }
+
+    try {
+      await favoriteService.toggleFavorite(listingId);
+      setFavoriteIds((prev) =>
+        prev.includes(listingId)
+          ? prev.filter((id) => id !== listingId)
+          : [...prev, listingId]
+      );
+      toast({
+        title: language === 'fr' ? 'Favoris mis à jour' : 'Favorites updated',
+        description: language === 'fr'
+          ? 'Votre sélection Smart Matching a été enregistrée.'
+          : 'Your Smart Matching selection has been saved.',
+      });
+    } catch {
+      toast({
+        title: language === 'fr' ? 'Action impossible' : 'Action unavailable',
+        description: language === 'fr'
+          ? 'Impossible de mettre à jour les favoris pour le moment.'
+          : 'Unable to update favorites right now.',
+      });
+    }
   };
 
   const isPreviewMode = isDiscoveryAccess;
@@ -1252,18 +1373,11 @@ export default function SmartMatching() {
                 </div>
 
                 <div className="border-t border-gray-200 pt-3">
-                  <label className="block text-xs font-semibold text-[#3B4759] mb-2">
-                    {language === 'fr' ? 'Score minimum requis' : 'Minimum match score'}: {criteria.minScore}%
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="95"
-                    step="5"
-                    value={criteria.minScore}
-                    onChange={(e) => handleChange('minScore', e.target.value)}
-                    className="w-full accent-[#FF6B4A]"
-                  />
+                  <p className="text-xs text-[#6B7280]">
+                    {language === 'fr'
+                      ? `Le moteur Smart Matching affiche automatiquement les annonces entre ${SMART_MATCHING_MIN_SCORE}% et 100% de compatibilité.`
+                      : `The Smart Matching engine automatically displays listings between ${SMART_MATCHING_MIN_SCORE}% and 100% compatibility.`}
+                  </p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
@@ -1376,8 +1490,8 @@ export default function SmartMatching() {
                 <p className="text-[#111827] font-medium">{labels.noResults}</p>
                 <p className="text-[#6B7280] text-sm mt-1">
                   {language === 'fr'
-                    ? 'Élargissez votre budget, vos zones ou baissez le score minimum.'
-                    : 'Widen your budget, locations or lower the minimum score.'}
+                    ? 'Élargissez votre budget, vos zones ou vos secteurs.'
+                    : 'Widen your budget, locations, or sectors.'}
                 </p>
               </div>
             )}
@@ -1403,6 +1517,7 @@ export default function SmartMatching() {
                     ? createPageUrl('Abonnement')
                     : createPageUrl(`BusinessDetails?id=${listing.id}`);
                   const highlights = listing.smartMatchMeta?.highlights?.slice(0, 3) || [];
+                  const isFavorite = favoriteIds.includes(listing.id);
 
                   return (
                     <article
@@ -1425,8 +1540,26 @@ export default function SmartMatching() {
                           </p>
                         </div>
 
-                        <div className={`inline-flex items-center justify-center min-w-[64px] h-12 px-2 rounded-xl border text-lg font-bold ${tone.badge} ${tone.ring} ring-2`}>
-                          {listing.smartMatchScore}%
+                        <div className="flex flex-col items-end gap-2">
+                          {!listing.isMock && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleFavorite(listing.id)}
+                              className={`inline-flex items-center justify-center w-9 h-9 rounded-full border transition-all ${
+                                isFavorite
+                                  ? 'bg-rose-500 text-white border-rose-500'
+                                  : 'bg-white text-gray-500 border-gray-300 hover:border-rose-400 hover:text-rose-500'
+                              }`}
+                              aria-label={language === 'fr' ? 'Ajouter aux favoris' : 'Add to favorites'}
+                              title={language === 'fr' ? 'Ajouter aux favoris' : 'Add to favorites'}
+                            >
+                              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+                            </button>
+                          )}
+
+                          <div className={`inline-flex items-center justify-center min-w-[64px] h-12 px-2 rounded-xl border text-lg font-bold ${tone.badge} ${tone.ring} ring-2`}>
+                            {listing.smartMatchScore}%
+                          </div>
                         </div>
                       </div>
 

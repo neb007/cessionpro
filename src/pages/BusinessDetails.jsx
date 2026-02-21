@@ -530,6 +530,16 @@ export default function BusinessDetails() {
                         <p className="font-medium text-gray-900">{t(business.reason_for_sale)}</p>
                       </div>
                     )}
+                    {business.seller_business_type && (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Type de cession proposée' : 'Sell-side business type'}</p>
+                        <p className="font-medium text-gray-900">
+                          {business.seller_business_type === 'entreprise' ? (language === 'fr' ? 'Entreprise' : 'Company') :
+                           business.seller_business_type === 'fond_de_commerce' ? (language === 'fr' ? 'Fond de Commerce' : 'Business Fund') :
+                           (language === 'fr' ? 'Franchise' : 'Franchise')}
+                        </p>
+                      </div>
+                    )}
                     {business.assets_included?.length > 0 && (
                       <div>
                         <p className="text-sm text-gray-500 mb-2">{t('assets_included')}</p>

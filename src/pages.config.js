@@ -71,6 +71,7 @@ import Profile from './pages/Profile';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import SmartMatching from './pages/SmartMatching';
+import SmartMatchingNotifications from './pages/SmartMatchingNotifications';
 import __Layout from './Layout.jsx';
 
 
@@ -99,6 +100,7 @@ export const PAGES = {
     "Register": Register,
     "Settings": Settings,
     "SmartMatching": SmartMatching,
+    "SmartMatchingNotifications": SmartMatchingNotifications,
 }
 
 export const pagesConfig = {

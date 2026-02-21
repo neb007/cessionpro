@@ -39,6 +39,7 @@ CREATE TABLE businesses (
   region TEXT,
   year_founded INTEGER,
   reason_for_sale TEXT,
+  seller_business_type TEXT,
   assets_included TEXT[] DEFAULT ARRAY[]::TEXT[],
   images TEXT[] DEFAULT ARRAY[]::TEXT[],
   status TEXT DEFAULT 'draft', -- 'draft', 'active', 'pending', 'sold', 'withdrawn'

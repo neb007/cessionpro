@@ -1,9 +1,15 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { getProfile, updateProfile, updateBuyerProfile, updateSellerProfile } from '@/services/profileService';
+import {
+  DEFAULT_SMART_MATCHING_ALERTS,
+  getSmartMatchingAlertFrequencyLabel,
+  getSmartMatchingAlertPreferences,
+} from '@/services/smartMatchingNotificationService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,6 +53,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [profileData, setProfileData] = useState(null);
+  const [smartMatchingAlerts, setSmartMatchingAlerts] = useState(DEFAULT_SMART_MATCHING_ALERTS);
   
   // Logo processing states
   const [logoPreview, setLogoPreview] = useState(null);
@@ -82,6 +89,11 @@ export default function Profile() {
   useEffect(() => {
     loadUser();
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setSmartMatchingAlerts(getSmartMatchingAlertPreferences(user.id));
+  }, [user?.id]);
 
   const loadUser = async () => {
     if (!user) {
@@ -717,6 +729,25 @@ export default function Profile() {
                     : '🔕 Email notifications are disabled'}
                 </motion.div>
               )}
+
+              <div className="mt-4 p-4 bg-white/60 rounded-xl border border-[#FF6B4A]/20">
+                <p className="font-medium text-gray-900">
+                  {language === 'fr' ? 'Notification Smart Matching' : 'Smart Matching notifications'}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {language === 'fr'
+                    ? `Fréquence actuelle : ${getSmartMatchingAlertFrequencyLabel(smartMatchingAlerts.frequency, language)}`
+                    : `Current frequency: ${getSmartMatchingAlertFrequencyLabel(smartMatchingAlerts.frequency, language)}`}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => navigate('/Settings?tab=smartmatching-notifications')}
+                >
+                  {language === 'fr' ? 'Configurer dans Paramètres' : 'Configure in Settings'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
