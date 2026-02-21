@@ -166,6 +166,28 @@ export const sponsorshipService = {
 
     const row = Array.isArray(data) ? data[0] : data;
     return row || null;
+  },
+
+  async deactivateSponsoredListing(businessId) {
+    const { data, error } = await supabase.rpc('deactivate_sponsored_listing', {
+      p_business_id: businessId
+    });
+
+    if (error) {
+      const message = String(error?.message || '');
+      const lower = message.toLowerCase();
+      if (
+        message.includes('BILLING_RUNTIME_UNAVAILABLE') ||
+        String(error?.code || '') === 'PGRST202' ||
+        lower.includes('function')
+      ) {
+        throw new Error('BILLING_RUNTIME_UNAVAILABLE');
+      }
+      throw new Error(error.message || 'Impossible de désactiver la mise à la une');
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    return row || null;
   }
 };
 

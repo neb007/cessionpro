@@ -117,7 +117,7 @@ export default function BusinessCard({
     >
       <Card
         className={`group overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full flex flex-col rounded-2xl ${
-          isFeatured ? 'border-[3px] border-[#FF6B4A] shadow-[0_0_0_2px_rgba(255,107,74,0.18)]' : 'border border-gray-100'
+          isFeatured ? 'border-[4px] border-[#FF6B4A] shadow-[0_0_0_3px_rgba(255,107,74,0.22)]' : 'border border-gray-100'
         }`}
       >
         {/* Image Section with Category and Views */}

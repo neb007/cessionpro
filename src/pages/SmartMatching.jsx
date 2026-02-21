@@ -68,6 +68,133 @@ const DEFAULT_CRITERIA = {
   minScore: '45',
 };
 
+const SMART_MATCHING_PREVIEW_DATA = {
+  buyer: [
+    {
+      titleFr: 'SaaS RH B2B en forte traction',
+      titleEn: 'High-growth B2B HR SaaS',
+      locationFr: 'Paris, France',
+      locationEn: 'Paris, France',
+      sectorFr: 'Technologie',
+      sectorEn: 'Technology',
+      matchBudget: 1850000,
+      employees: 24,
+      yearFounded: 2018,
+      score: 92,
+      confidence: 88,
+      highlightsFr: ['Secteur compatible', 'Budget dans votre fourchette', 'Croissance du CA cohérente'],
+      highlightsEn: ['Sector fit', 'Budget inside your range', 'Revenue growth aligned'],
+    },
+    {
+      titleFr: 'Réseau de 3 boulangeries premium',
+      titleEn: 'Premium network of 3 bakeries',
+      locationFr: 'Lyon, France',
+      locationEn: 'Lyon, France',
+      sectorFr: 'Commerce',
+      sectorEn: 'Retail',
+      matchBudget: 980000,
+      employees: 17,
+      yearFounded: 2015,
+      score: 86,
+      confidence: 83,
+      highlightsFr: ['Zone géographique cohérente', 'Effectifs alignés', 'Prix demandé attractif'],
+      highlightsEn: ['Geographic fit', 'Team size aligned', 'Attractive asking price'],
+    },
+    {
+      titleFr: 'Cabinet de services IT récurrents',
+      titleEn: 'Recurring revenue IT services firm',
+      locationFr: 'Nantes, France',
+      locationEn: 'Nantes, France',
+      sectorFr: 'Services',
+      sectorEn: 'Services',
+      matchBudget: 1320000,
+      employees: 31,
+      yearFounded: 2012,
+      score: 81,
+      confidence: 79,
+      highlightsFr: ['EBITDA aligné', 'Maturité entreprise cohérente', 'Bon niveau de confiance'],
+      highlightsEn: ['EBITDA aligned', 'Business maturity aligned', 'Strong confidence level'],
+    },
+    {
+      titleFr: 'Clinique dentaire multi-praticiens',
+      titleEn: 'Multi-practitioner dental clinic',
+      locationFr: 'Bordeaux, France',
+      locationEn: 'Bordeaux, France',
+      sectorFr: 'Santé',
+      sectorEn: 'Healthcare',
+      matchBudget: 2150000,
+      employees: 12,
+      yearFounded: 2010,
+      score: 77,
+      confidence: 74,
+      highlightsFr: ['Chiffre d\'affaires compatible', 'Zone recherchée active', 'Profil stable'],
+      highlightsEn: ['Revenue compatible', 'Active target area', 'Stable profile'],
+    },
+  ],
+  seller: [
+    {
+      titleFr: 'Holding familiale orientée croissance externe',
+      titleEn: 'Family holding focused on external growth',
+      locationFr: 'Île-de-France',
+      locationEn: 'Île-de-France',
+      sectorFr: 'Technologie & Services',
+      sectorEn: 'Technology & Services',
+      matchBudget: 3500000,
+      employees: 42,
+      yearFounded: 2009,
+      score: 90,
+      confidence: 86,
+      highlightsFr: ['Capacité financière validée', 'Secteur compatible', 'Décision rapide (< 60 jours)'],
+      highlightsEn: ['Validated financial capacity', 'Sector fit', 'Fast decision timeline (< 60 days)'],
+    },
+    {
+      titleFr: 'Repreneur opérateur dans l\'industrie légère',
+      titleEn: 'Operator-buyer in light industry',
+      locationFr: 'Lille, France',
+      locationEn: 'Lille, France',
+      sectorFr: 'Industrie',
+      sectorEn: 'Manufacturing',
+      matchBudget: 2200000,
+      employees: 18,
+      yearFounded: 2016,
+      score: 84,
+      confidence: 80,
+      highlightsFr: ['Expérience sectorielle forte', 'Budget proche de votre cible', 'Projet de reprise structuré'],
+      highlightsEn: ['Strong sector expertise', 'Budget close to your target', 'Structured acquisition project'],
+    },
+    {
+      titleFr: 'Investisseur PME à impact régional',
+      titleEn: 'Regional SME impact investor',
+      locationFr: 'Toulouse, France',
+      locationEn: 'Toulouse, France',
+      sectorFr: 'Services & Commerce',
+      sectorEn: 'Services & Retail',
+      matchBudget: 1500000,
+      employees: 9,
+      yearFounded: 2019,
+      score: 79,
+      confidence: 76,
+      highlightsFr: ['Zone géographique cohérente', 'Intérêt pour transmissions progressives', 'Bonne qualité de données'],
+      highlightsEn: ['Geographic fit', 'Interest in phased transition deals', 'Good data quality'],
+    },
+    {
+      titleFr: 'Groupe stratégique en build-up',
+      titleEn: 'Strategic group in build-up phase',
+      locationFr: 'Marseille, France',
+      locationEn: 'Marseille, France',
+      sectorFr: 'Transport & Logistique',
+      sectorEn: 'Transport & Logistics',
+      matchBudget: 4800000,
+      employees: 65,
+      yearFounded: 2007,
+      score: 75,
+      confidence: 72,
+      highlightsFr: ['Capacité d\'exécution élevée', 'Synergies opérationnelles probables', 'Mandat d\'acquisition actif'],
+      highlightsEn: ['High execution capacity', 'Likely operating synergies', 'Active acquisition mandate'],
+    },
+  ],
+};
+
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
 const toNumber = (value) => {
@@ -226,14 +353,47 @@ export default function SmartMatching() {
           ? 'Aucun résultat ne correspond à vos critères actuels'
           : 'No match found for the current criteria',
       inactiveAccessTitle:
-        language === 'fr' ? 'Smart Matching en mode découverte' : 'Smart Matching in preview mode',
+        language === 'fr' ? 'Smart Matching en mode découverte' : 'Smart Matching in discovery mode',
       inactiveAccessDescription:
         language === 'fr'
-          ? 'Activez le service pour débloquer tous les résultats, les alertes et les recommandations avancées.'
-          : 'Enable the service to unlock all results, alerts and advanced recommendations.',
+          ? 'Découvrez ci-dessous des exemples de matchs premium. Activez le service pour débloquer vos résultats personnalisés, les alertes et les recommandations avancées.'
+          : 'See premium match examples below. Enable the service to unlock your personalized results, alerts, and advanced recommendations.',
+      activateCta: language === 'fr' ? 'Activer Smart Matching maintenant' : 'Enable Smart Matching now',
+      previewResultsTitle: language === 'fr' ? 'Exemples de résultats premium' : 'Premium result examples',
+      previewResultsDescription:
+        language === 'fr'
+          ? 'Aperçu non contractuel pour illustrer la qualité des matchs Smart Matching.'
+          : 'Non-contractual preview to showcase Smart Matching result quality.',
+      previewCardBadge: language === 'fr' ? 'Aperçu' : 'Preview',
+      previewPrimaryCta: language === 'fr' ? 'Débloquer ce niveau de match' : 'Unlock this match quality',
+      previewSecondaryCta: language === 'fr' ? 'Voir les bénéfices premium' : 'See premium benefits',
     }),
     [language, smartMatchingMode]
   );
+
+  const isDiscoveryAccess = accessStatus === 'inactive' || accessStatus === 'unknown';
+
+  const previewMockListings = useMemo(
+    () =>
+      (SMART_MATCHING_PREVIEW_DATA[smartMatchingMode] || []).map((item, index) => ({
+        id: `preview-${smartMatchingMode}-${index + 1}`,
+        title: language === 'fr' ? item.titleFr : item.titleEn,
+        location: language === 'fr' ? item.locationFr : item.locationEn,
+        sector: language === 'fr' ? item.sectorFr : item.sectorEn,
+        matchBudget: item.matchBudget,
+        employees: item.employees,
+        year_founded: item.yearFounded,
+        smartMatchScore: item.score,
+        smartMatchMeta: {
+          confidence: item.confidence,
+          highlights: language === 'fr' ? item.highlightsFr : item.highlightsEn,
+        },
+        isMock: true,
+      })),
+    [language, smartMatchingMode]
+  );
+
+  const displayedListings = isDiscoveryAccess ? previewMockListings : matchedListings;
 
   const getStorageKey = useCallback(
     (mode) => `smartMatchingCriteria:${user?.id || 'guest'}:${mode}`,
@@ -721,15 +881,15 @@ export default function SmartMatching() {
   );
 
   const averageScore = useMemo(() => {
-    if (matchedListings.length === 0) return 0;
+    if (displayedListings.length === 0) return 0;
     return Math.round(
-      matchedListings.reduce((sum, item) => sum + (item.smartMatchScore || 0), 0) / matchedListings.length
+      displayedListings.reduce((sum, item) => sum + (item.smartMatchScore || 0), 0) / displayedListings.length
     );
-  }, [matchedListings]);
+  }, [displayedListings]);
 
   const highestScore = useMemo(
-    () => (matchedListings.length ? Math.max(...matchedListings.map((x) => x.smartMatchScore || 0)) : 0),
-    [matchedListings]
+    () => (displayedListings.length ? Math.max(...displayedListings.map((x) => x.smartMatchScore || 0)) : 0),
+    [displayedListings]
   );
 
   const handleModeSwitch = (mode) => {
@@ -738,7 +898,7 @@ export default function SmartMatching() {
     setHasSearched(false);
   };
 
-  const isPreviewMode = accessStatus === 'inactive';
+  const isPreviewMode = isDiscoveryAccess;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F8FA] via-white to-[#F3F5F8]">
@@ -805,21 +965,21 @@ export default function SmartMatching() {
                     ? 'Accès Smart Matching non vérifié'
                     : 'Smart Matching access not verified'}
               </p>
-              <p className="text-sm text-[#3B4759] mt-1">
-                {accessStatus === 'inactive'
-                  ? labels.inactiveAccessDescription
-                  : language === 'fr'
+                <p className="text-sm text-[#3B4759] mt-1">
+                  {accessStatus === 'inactive'
+                    ? labels.inactiveAccessDescription
+                    : language === 'fr'
                     ? 'Vous pouvez continuer à utiliser la recherche, mais l\'activation vous garantit toutes les fonctionnalités premium.'
                     : 'You can keep using search, but activation guarantees full premium features.'}
-              </p>
+                </p>
+              </div>
+              <Link
+                to={createPageUrl('Abonnement')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white px-4 py-2.5 font-semibold text-sm whitespace-nowrap"
+              >
+                {labels.activateCta}
+              </Link>
             </div>
-            <Link
-              to={createPageUrl('Abonnement')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white px-4 py-2.5 font-semibold text-sm whitespace-nowrap"
-            >
-              {language === 'fr' ? 'Activer Smart Matching' : 'Enable Smart Matching'}
-            </Link>
-          </div>
         )}
 
         <div ref={layoutGridRef} className="space-y-4">
@@ -1135,7 +1295,7 @@ export default function SmartMatching() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm min-w-0">
                   <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
                     <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Résultats' : 'Results'}</p>
-                    <p className="text-lg font-bold text-[#3B4759]">{matchedListings.length}</p>
+                    <p className="text-lg font-bold text-[#3B4759]">{displayedListings.length}</p>
                   </div>
                   <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
                     <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Score moyen' : 'Average score'}</p>
@@ -1179,11 +1339,18 @@ export default function SmartMatching() {
               </div>
 
               {isPreviewMode && (
-                <p className="text-xs text-[#FF6B4A] font-medium mt-3">
-                  {language === 'fr'
-                    ? 'Mode découverte: seuls les 5 meilleurs matchs sont affichés.'
-                    : 'Preview mode: only top 5 matches are displayed.'}
-                </p>
+                <div className="mt-3 rounded-xl border border-[#FF6B4A]/30 bg-[#FFF6F3] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-[#FF6B4A]">{labels.previewResultsTitle}</p>
+                    <p className="text-xs text-[#7C2D12]">{labels.previewResultsDescription}</p>
+                  </div>
+                  <Link
+                    to={createPageUrl('Abonnement')}
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-[#FF6B4A] text-white text-xs font-semibold hover:bg-[#FF5A3A]"
+                  >
+                    {labels.activateCta}
+                  </Link>
+                </div>
               )}
             </div>
 
@@ -1201,7 +1368,7 @@ export default function SmartMatching() {
               </div>
             )}
 
-            {!loading && !searching && !error && hasSearched && matchedListings.length === 0 && (
+            {!loading && !searching && !error && hasSearched && matchedListings.length === 0 && !isDiscoveryAccess && (
               <div className="text-center py-16 bg-white border border-gray-200 rounded-2xl">
                 <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-gray-400" />
@@ -1215,7 +1382,7 @@ export default function SmartMatching() {
               </div>
             )}
 
-            {!loading && !searching && !error && !hasSearched && (
+            {!loading && !searching && !error && !hasSearched && !isDiscoveryAccess && (
               <div className="text-center py-16 bg-white border border-gray-200 rounded-2xl">
                 <div className="w-16 h-16 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center mx-auto mb-4">
                   <Zap className="w-8 h-8 text-[#FF6B4A]" />
@@ -1228,11 +1395,13 @@ export default function SmartMatching() {
               </div>
             )}
 
-            {!loading && !searching && matchedListings.length > 0 && (
+            {!loading && !searching && displayedListings.length > 0 && (
               <div className="grid sm:grid-cols-2 gap-4 xl:gap-5">
-                {matchedListings.map((listing) => {
+                {displayedListings.map((listing) => {
                   const tone = getScoreTone(listing.smartMatchScore || 0);
-                  const detailsUrl = createPageUrl(`BusinessDetails?id=${listing.id}`);
+                  const detailsUrl = listing.isMock
+                    ? createPageUrl('Abonnement')
+                    : createPageUrl(`BusinessDetails?id=${listing.id}`);
                   const highlights = listing.smartMatchMeta?.highlights?.slice(0, 3) || [];
 
                   return (
@@ -1242,6 +1411,11 @@ export default function SmartMatching() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
+                          {listing.isMock && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 text-[10px] font-bold uppercase tracking-wide text-[#FF6B4A] mb-1">
+                              {labels.previewCardBadge}
+                            </span>
+                          )}
                           <h3 className="text-base md:text-lg font-bold text-[#3B4759] line-clamp-2">
                             {listing.title || listing.company || (language === 'fr' ? 'Annonce sans titre' : 'Untitled listing')}
                           </h3>
@@ -1306,13 +1480,21 @@ export default function SmartMatching() {
                           to={detailsUrl}
                           className="inline-flex items-center justify-center py-2 rounded-lg bg-[#FF6B4A] text-white font-semibold text-sm hover:bg-[#FF5A3A]"
                         >
-                          {language === 'fr' ? 'Voir l\'annonce' : 'View listing'}
+                          {listing.isMock
+                            ? labels.previewPrimaryCta
+                            : language === 'fr'
+                              ? 'Voir l\'annonce'
+                              : 'View listing'}
                         </Link>
                         <Link
                           to={detailsUrl}
                           className="inline-flex items-center justify-center py-2 rounded-lg border border-gray-300 text-[#3B4759] font-semibold text-sm hover:bg-gray-50"
                         >
-                          {language === 'fr' ? 'Détails du match' : 'Match details'}
+                          {listing.isMock
+                            ? labels.previewSecondaryCta
+                            : language === 'fr'
+                              ? 'Détails du match'
+                              : 'Match details'}
                         </Link>
                       </div>
                     </article>

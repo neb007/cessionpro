@@ -278,6 +278,52 @@ export default function MyListings() {
     }
   };
 
+  const handleDeactivateFeatured = async (listing) => {
+    try {
+      setUpdating(prev => ({ ...prev, [listing.id]: 'unfeaturing' }));
+      const result = await sponsorshipService.deactivateSponsoredListing(listing.id);
+
+      const [slots, sponsorships, kpi] = await Promise.all([
+        sponsorshipService.getMyAvailableSponsoredSlots(user?.id).catch(() => 0),
+        sponsorshipService.getMySponsorships(user?.id).catch(() => []),
+        sponsorshipService.getMyFeaturedKpi(user?.id).catch(() => ({ activeFeaturedCount: 0, activations: 0 }))
+      ]);
+
+      const sponsorshipMap = (sponsorships || []).reduce((acc, item) => {
+        if (item?.business_id && item.status === 'active' && new Date(item.ends_at).getTime() > Date.now()) {
+          acc[item.business_id] = item;
+        }
+        return acc;
+      }, {});
+
+      setAvailableFeaturedSlots(Number(slots || 0));
+      setFeaturedKpi(kpi || { activeFeaturedCount: 0, activations: 0 });
+      setSponsorshipByBusinessId(sponsorshipMap);
+
+      const refundedDays = Math.max(0, Number(result?.refunded_days || 0));
+      alert(
+        language === 'fr'
+          ? `Mise à la une désactivée. ${refundedDays} jour(s) restitué(s).`
+          : `Featured status removed. ${refundedDays} day(s) refunded.`
+      );
+    } catch (error) {
+      const msg = String(error?.message || '');
+      if (msg.includes('BILLING_RUNTIME_UNAVAILABLE')) {
+        alert(
+          language === 'fr'
+            ? 'La facturation sponsorisée n’est pas encore activée sur cet environnement.'
+            : 'Sponsored billing is not enabled on this environment yet.'
+        );
+      } else if (msg.includes('SPONSORSHIP_NOT_ACTIVE')) {
+        alert(language === 'fr' ? 'Cette annonce n’est pas actuellement À la une.' : 'This listing is not currently featured.');
+      } else {
+        alert(language === 'fr' ? 'Impossible de désactiver la mise à la une.' : 'Unable to disable featured status.');
+      }
+    } finally {
+      setUpdating(prev => ({ ...prev, [listing.id]: null }));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -459,25 +505,25 @@ export default function MyListings() {
                         <div className="mt-auto grid grid-cols-6 gap-2">
                           <Button
                             size="sm"
-                            className="bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white"
-                            onClick={() => handleActivateFeatured(listing)}
+                            className={isFeatured ? 'bg-gray-900 hover:bg-gray-800 text-white' : 'bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white'}
+                            onClick={() => (isFeatured ? handleDeactivateFeatured(listing) : handleActivateFeatured(listing))}
                             disabled={
                               updating[listing.id] ||
                               listing.status !== 'active' ||
-                              isFeatured ||
-                              availableFeaturedSlots <= 0 ||
-                              !hasEnoughDays
+                              (!isFeatured && (availableFeaturedSlots <= 0 || !hasEnoughDays))
                             }
                             title={
                               isFeatured
-                                ? (language === 'fr' ? 'Déjà À la une' : 'Already featured')
+                                ? (language === 'fr' ? 'Désactiver À la une' : 'Disable featured')
                                 : !hasEnoughDays
                                 ? (language === 'fr' ? 'Pas assez de jours disponibles' : 'Not enough days available')
                                 : (language === 'fr' ? 'Activer À la une' : 'Activate featured')
                             }
                           >
-                            {updating[listing.id] === 'featuring'
+                            {updating[listing.id] === 'featuring' || updating[listing.id] === 'unfeaturing'
                               ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : isFeatured
+                              ? (language === 'fr' ? 'Retirer' : 'Remove')
                               : (language === 'fr' ? 'À la une' : 'Featured')}
                           </Button>
 
