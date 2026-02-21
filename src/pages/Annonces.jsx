@@ -460,30 +460,28 @@ export default function Businesses() {
     };
   }, [sortedBusinesses]);
 
-  const listingBuckets = useMemo(() => {
-    const featured = [];
-    const organic = [];
-    const featuredSellerSet = new Set();
-
-    sortedBusinesses.forEach((business) => {
+  const prioritizedBusinesses = useMemo(() => {
+    const enriched = sortedBusinesses.map((business, index) => {
       const sponsorship = sponsorshipByBusinessId[business.id];
       const isFeatured = Boolean(sponsorship);
       const featuredLabel = sponsorship?.display_label || (language === 'fr' ? 'À la une' : 'Featured');
-      const enrichedBusiness = { ...business, isFeatured, featuredLabel };
 
-      if (isFeatured && featured.length < 3) {
-        const sellerKey = business.seller_id || business.id;
-        if (!featuredSellerSet.has(sellerKey)) {
-          featuredSellerSet.add(sellerKey);
-          featured.push(enrichedBusiness);
-          return;
-        }
-      }
-
-      organic.push(enrichedBusiness);
+      return {
+        ...business,
+        isFeatured,
+        featuredLabel,
+        _originalIndex: index
+      };
     });
 
-    return { featured, organic };
+    enriched.sort((a, b) => {
+      if (a.isFeatured === b.isFeatured) {
+        return a._originalIndex - b._originalIndex;
+      }
+      return a.isFeatured ? -1 : 1;
+    });
+
+    return enriched.map(({ _originalIndex, ...business }) => business);
   }, [sortedBusinesses, sponsorshipByBusinessId, language]);
 
   return (
@@ -611,71 +609,32 @@ export default function Businesses() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-6 mt-6">
-            {listingBuckets.featured.length > 0 && (
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-display text-lg sm:text-xl font-semibold text-gray-900">
-                    {language === 'fr' ? 'Annonces à la une' : 'Featured listings'}
-                  </h2>
-                  <span className="text-xs text-gray-500">
-                    {language === 'fr' ? 'Visibilité renforcée' : 'Boosted visibility'}
-                  </span>
-                </div>
-
-                <motion.div layout className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  <AnimatePresence mode="popLayout">
-                    {listingBuckets.featured.map((business) => (
-                      <motion.div
-                        key={`featured-${business.id}`}
-                        layout
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="relative"
-                      >
-                        <BusinessCard
-                          business={business}
-                          isFavorite={favorites.includes(business.id)}
-                          onToggleFavorite={toggleFavorite}
-                          fetchSellerLogo={false}
-                          isFeatured={business.isFeatured}
-                          featuredLabel={business.featuredLabel}
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+          <motion.div
+            layout
+            className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6"
+          >
+            <AnimatePresence mode="popLayout">
+              {prioritizedBusinesses.map((business) => (
+                <motion.div
+                  key={`listing-${business.id}`}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="relative"
+                >
+                  <BusinessCard
+                    business={business}
+                    isFavorite={favorites.includes(business.id)}
+                    onToggleFavorite={toggleFavorite}
+                    fetchSellerLogo={false}
+                    isFeatured={business.isFeatured}
+                    featuredLabel={business.featuredLabel}
+                  />
                 </motion.div>
-              </section>
-            )}
-
-            <motion.div
-              layout
-              className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
-            >
-              <AnimatePresence mode="popLayout">
-                {listingBuckets.organic.map((business) => (
-                  <motion.div
-                    key={`organic-${business.id}`}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="relative"
-                  >
-                    <BusinessCard
-                      business={business}
-                      isFavorite={favorites.includes(business.id)}
-                      onToggleFavorite={toggleFavorite}
-                      fetchSellerLogo={false}
-                      isFeatured={business.isFeatured}
-                      featuredLabel={business.featuredLabel}
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          </div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         )}
         <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
           {loadingMore && (

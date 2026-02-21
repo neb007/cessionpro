@@ -115,10 +115,11 @@ export default function BusinessCard({
       transition={{ duration: 0.3 }}
       className="h-full"
     >
-      <Card className="group overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full flex flex-col rounded-2xl">
-        {isFeatured && (
-          <div className="absolute inset-0 rounded-2xl ring-1 ring-[#FF6B4A]/40 pointer-events-none" />
-        )}
+      <Card
+        className={`group overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full flex flex-col rounded-2xl ${
+          isFeatured ? 'border-[3px] border-[#FF6B4A] shadow-[0_0_0_2px_rgba(255,107,74,0.18)]' : 'border border-gray-100'
+        }`}
+      >
         {/* Image Section with Category and Views */}
         <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
           <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)}>
@@ -140,7 +141,7 @@ export default function BusinessCard({
           )}
           
           {/* Views badge on image */}
-          <div className={`absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium ${isFeatured ? 'mt-9' : ''}`}>
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium">
             <Eye className="w-4 h-4" />
             <span className="font-mono">{business.views_count || 0}</span>
           </div>
