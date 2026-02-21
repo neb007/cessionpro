@@ -165,7 +165,7 @@ export default function Billing() {
         ) : null}
 
         <div className="rounded-2xl border border-[#FF6B4A]/20 bg-orange-50/40 p-4 mb-6">
-          <p className="text-xs text-[#3B4759]">🔒 {labels.secure}</p>
+          <p className="text-xs text-[#3B4759]">{labels.secure}</p>
         </div>
 
         {loading ? (

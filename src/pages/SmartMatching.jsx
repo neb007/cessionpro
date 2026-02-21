@@ -1,10 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Zap, MapPin, Send, TrendingUp, Users, Calendar, BarChart3, X, Search } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  ArrowUpDown,
+  BarChart3,
+  Calendar,
+  Lock,
+  MapPin,
+  Search,
+  Send,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  TrendingUp,
+  Users,
+  X,
+  Zap,
+} from 'lucide-react';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
+import { billingService } from '@/services/billingService';
+import { toast } from '@/components/ui/use-toast';
+import { createPageUrl } from '@/utils';
 
-// Secteurs disponibles
 const SECTORS = [
   { value: 'technology', label: 'Technologie' },
   { value: 'retail', label: 'Vente au détail' },
@@ -34,41 +52,226 @@ const LOCATIONS = [
   { value: 'belgium', label: 'Belgique' },
 ];
 
+const DEFAULT_CRITERIA = {
+  sectors: [],
+  locations: [],
+  minPrice: '',
+  maxPrice: '',
+  minEmployees: '',
+  maxEmployees: '',
+  minYear: '',
+  maxYear: '',
+  minCA: '',
+  maxCA: '',
+  minEBITDA: '',
+  maxEBITDA: '',
+  minScore: '45',
+};
+
+const normalize = (value) => String(value || '').trim().toLowerCase();
+
+const toNumber = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const isRangeActive = (minValue, maxValue) => minValue !== '' || maxValue !== '';
+
+const getListingBudget = (listing, mode) => {
+  const askingPrice = toNumber(listing.asking_price);
+  const buyerBudgetMin = toNumber(listing.buyer_budget_min);
+  const buyerBudgetMax = toNumber(listing.buyer_budget_max);
+  const buyerInvestment = toNumber(listing.buyer_investment_available);
+
+  if (mode === 'seller') {
+    return buyerBudgetMax || buyerInvestment || buyerBudgetMin || askingPrice;
+  }
+
+  return askingPrice || buyerInvestment || buyerBudgetMax || buyerBudgetMin;
+};
+
+const getScoreTone = (score) => {
+  if (score >= 80) {
+    return {
+      badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      ring: 'ring-emerald-100',
+      card: 'border-emerald-200 bg-emerald-50/40',
+      accent: 'text-emerald-700',
+    };
+  }
+
+  if (score >= 60) {
+    return {
+      badge: 'bg-blue-50 text-blue-700 border-blue-200',
+      ring: 'ring-blue-100',
+      card: 'border-blue-200 bg-blue-50/40',
+      accent: 'text-blue-700',
+    };
+  }
+
+  if (score >= 40) {
+    return {
+      badge: 'bg-amber-50 text-amber-700 border-amber-200',
+      ring: 'ring-amber-100',
+      card: 'border-amber-200 bg-amber-50/40',
+      accent: 'text-amber-700',
+    };
+  }
+
+  return {
+    badge: 'bg-rose-50 text-rose-700 border-rose-200',
+    ring: 'ring-rose-100',
+    card: 'border-rose-200 bg-rose-50/40',
+    accent: 'text-rose-700',
+  };
+};
+
+const formatMoneyCompact = (value, language) => {
+  const amount = toNumber(value);
+  if (!amount) return language === 'fr' ? 'Non renseigné' : 'Not provided';
+
+  return new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-GB', {
+    style: 'currency',
+    currency: 'EUR',
+    notation: amount >= 1000000 ? 'compact' : 'standard',
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const evaluateRangeScore = ({ value, min, max, weight, tolerance = 0.15 }) => {
+  const hasMin = min !== null;
+  const hasMax = max !== null;
+
+  if (!hasMin && !hasMax) {
+    return { points: 0, matched: false, partial: false, missing: false };
+  }
+
+  if (value === null) {
+    return { points: 0, matched: false, partial: false, missing: true };
+  }
+
+  let exact = true;
+  let partial = true;
+
+  if (hasMin) {
+    exact = exact && value >= min;
+    partial = partial && value >= min * (1 - tolerance);
+  }
+
+  if (hasMax) {
+    exact = exact && value <= max;
+    partial = partial && value <= max * (1 + tolerance);
+  }
+
+  if (exact) {
+    return { points: weight, matched: true, partial: false, missing: false };
+  }
+
+  if (partial) {
+    return { points: Math.round(weight * 0.55), matched: true, partial: true, missing: false };
+  }
+
+  return { points: 0, matched: false, partial: false, missing: false };
+};
+
 export default function SmartMatching() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const sectorDropdownRef = useRef(null);
   const locationDropdownRef = useRef(null);
-  
+  const layoutGridRef = useRef(null);
+
   const [allListings, setAllListings] = useState([]);
   const [matchedListings, setMatchedListings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [accessStatus, setAccessStatus] = useState('loading');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showFiltersPanel, setShowFiltersPanel] = useState(true);
+  const [sortBy, setSortBy] = useState('score_desc');
   const [sectorSearch, setSectorSearch] = useState('');
   const [showSectorDropdown, setShowSectorDropdown] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  
-  // Mode (Achat ou Cession)
-  const [smartMatchingMode, setSmartMatchingMode] = useState('buyer');
+
+  const [smartMatchingMode, setSmartMatchingMode] = useState(
+    user?.user_metadata?.role === 'seller' ? 'seller' : 'buyer'
+  );
   const userRole = user?.user_metadata?.role || 'buyer';
   const canSwitchMode = userRole === 'both';
-  
-  const [criteria, setCriteria] = useState({
-    sectors: [],
-    locations: [],
-    minPrice: '',
-    maxPrice: '',
-    minEmployees: '',
-    maxEmployees: '',
-    minYear: '',
-    maxYear: '',
-    minCA: '',
-    maxCA: '',
-    minEBITDA: '',
-    maxEBITDA: '',
-  });
+
+  const [criteria, setCriteria] = useState(DEFAULT_CRITERIA);
+
+  const labels = useMemo(
+    () => ({
+      title: language === 'fr' ? 'Smart Matching' : 'Smart Matching',
+      subtitle:
+        smartMatchingMode === 'buyer'
+          ? language === 'fr'
+            ? "Trouvez les meilleures entreprises à acquérir selon vos critères"
+            : 'Find the best businesses to acquire based on your criteria'
+          : language === 'fr'
+            ? 'Trouvez les profils acquéreurs les plus alignés avec votre entreprise'
+            : 'Find buyer profiles aligned with your business',
+      criteriaPanel: language === 'fr' ? 'Critères de matching' : 'Matching criteria',
+      essentialFilters: language === 'fr' ? 'Filtres essentiels' : 'Essential filters',
+      advancedFilters: language === 'fr' ? 'Filtres avancés' : 'Advanced filters',
+      searchButton:
+        language === 'fr' ? 'Lancer la recherche et sauvegarder' : 'Search and save criteria',
+      resetButton: language === 'fr' ? 'Réinitialiser' : 'Reset',
+      noResults:
+        language === 'fr'
+          ? 'Aucun résultat ne correspond à vos critères actuels'
+          : 'No match found for the current criteria',
+      inactiveAccessTitle:
+        language === 'fr' ? 'Smart Matching en mode découverte' : 'Smart Matching in preview mode',
+      inactiveAccessDescription:
+        language === 'fr'
+          ? 'Activez le service pour débloquer tous les résultats, les alertes et les recommandations avancées.'
+          : 'Enable the service to unlock all results, alerts and advanced recommendations.',
+    }),
+    [language, smartMatchingMode]
+  );
+
+  const getStorageKey = useCallback(
+    (mode) => `smartMatchingCriteria:${user?.id || 'guest'}:${mode}`,
+    [user?.id]
+  );
+
+  const activeCriteriaCount = useMemo(() => {
+    let count = 0;
+    if (criteria.sectors.length > 0) count += 1;
+    if (criteria.locations.length > 0) count += 1;
+    if (isRangeActive(criteria.minPrice, criteria.maxPrice)) count += 1;
+    if (isRangeActive(criteria.minEmployees, criteria.maxEmployees)) count += 1;
+    if (isRangeActive(criteria.minYear, criteria.maxYear)) count += 1;
+    if (isRangeActive(criteria.minCA, criteria.maxCA)) count += 1;
+    if (isRangeActive(criteria.minEBITDA, criteria.maxEBITDA)) count += 1;
+    return count;
+  }, [criteria]);
+
+  const filteredSectors = useMemo(
+    () =>
+      SECTORS.filter((sector) =>
+        normalize(sector.label).includes(normalize(sectorSearch))
+      ),
+    [sectorSearch]
+  );
+
+  const filteredLocations = useMemo(
+    () =>
+      LOCATIONS.filter((location) =>
+        normalize(location.label).includes(normalize(locationSearch))
+      ),
+    [locationSearch]
+  );
+
+  useEffect(() => {
+    if (canSwitchMode) return;
+    setSmartMatchingMode(userRole === 'seller' ? 'seller' : 'buyer');
+  }, [userRole, canSwitchMode]);
 
   useEffect(() => {
     const loadListings = async () => {
@@ -76,24 +279,60 @@ export default function SmartMatching() {
         setLoading(true);
         setError(null);
 
-        const { data: listings, error: dbError } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('status', 'active');
+        const [
+          { data: listings, error: dbError },
+          accessPayload,
+        ] = await Promise.all([
+          supabase
+            .from('businesses')
+            .select('*')
+            .eq('status', 'active'),
+          billingService
+            .getMyActiveServices(10)
+            .then((data) => ({ data, error: null }))
+            .catch((serviceError) => ({ data: null, error: serviceError })),
+        ]);
 
         if (dbError) throw dbError;
         setAllListings(listings || []);
 
-        if (user?.user_metadata) {
-          setCriteria(prev => ({
-            ...prev,
-            sectors: user.user_metadata.sector ? [user.user_metadata.sector] : [],
-            locations: user.user_metadata.location ? [user.user_metadata.location] : [],
-          }));
+        if (accessPayload.error) {
+          setAccessStatus('unknown');
+        } else {
+          const billingRuntimeUnavailable =
+            typeof window !== 'undefined' &&
+            window.localStorage?.getItem('riviqo_billing_runtime_unavailable') === '1';
+
+          if (billingRuntimeUnavailable) {
+            setAccessStatus('unknown');
+          } else {
+            const activeFeatureCodes = new Set(
+              (accessPayload.data?.entitlements || [])
+                .filter((item) => item?.entitlement_type === 'feature' && item?.status === 'active')
+                .map((item) => item.product_code)
+            );
+            setAccessStatus(activeFeatureCodes.has('smart_matching') ? 'active' : 'inactive');
+          }
         }
+
+        if (user?.user_metadata?.role && user?.user_metadata?.role !== 'both') {
+          setSmartMatchingMode(user.user_metadata.role === 'seller' ? 'seller' : 'buyer');
+        }
+
+        setCriteria((prev) => {
+          const next = { ...prev };
+          if (!next.sectors.length && user?.user_metadata?.sector) {
+            next.sectors = [normalize(user.user_metadata.sector)];
+          }
+          if (!next.locations.length && user?.user_metadata?.location) {
+            next.locations = [normalize(user.user_metadata.location)];
+          }
+          return next;
+        });
       } catch (err) {
         console.error('Error loading listings:', err);
         setError(err?.message);
+        setAccessStatus('unknown');
       } finally {
         setLoading(false);
       }
@@ -104,136 +343,363 @@ export default function SmartMatching() {
     }
   }, [user]);
 
-  const searchMatches = () => {
-    let results = allListings;
+  useEffect(() => {
+    const saved = localStorage.getItem(getStorageKey(smartMatchingMode));
+    if (!saved) return;
 
-    if (criteria.sectors.length > 0) {
-      results = results.filter(l => 
-        criteria.sectors.includes(l.sector?.toLowerCase())
-      );
+    try {
+      const parsed = JSON.parse(saved);
+      setCriteria({ ...DEFAULT_CRITERIA, ...parsed });
+    } catch {
+      setCriteria(DEFAULT_CRITERIA);
     }
-    if (criteria.locations.length > 0) {
-      results = results.filter(l => 
-        criteria.locations.some(loc =>
-          l.location?.toLowerCase().includes(loc.toLowerCase()) ||
-          l.region?.toLowerCase().includes(loc.toLowerCase())
-        )
-      );
-    }
-    if (criteria.minPrice) {
-      results = results.filter(l => l.asking_price >= parseInt(criteria.minPrice));
-    }
-    if (criteria.maxPrice) {
-      results = results.filter(l => l.asking_price <= parseInt(criteria.maxPrice));
-    }
-    if (criteria.minEmployees) {
-      results = results.filter(l => l.employees >= parseInt(criteria.minEmployees));
-    }
-    if (criteria.maxEmployees) {
-      results = results.filter(l => l.employees <= parseInt(criteria.maxEmployees));
-    }
-    if (criteria.minYear) {
-      results = results.filter(l => l.year_founded >= parseInt(criteria.minYear));
-    }
-    if (criteria.maxYear) {
-      results = results.filter(l => l.year_founded <= parseInt(criteria.maxYear));
-    }
-    if (criteria.minCA) {
-      results = results.filter(l => l.annual_revenue >= parseInt(criteria.minCA));
-    }
-    if (criteria.maxCA) {
-      results = results.filter(l => l.annual_revenue <= parseInt(criteria.maxCA));
-    }
-    if (criteria.minEBITDA) {
-      results = results.filter(l => l.ebitda >= parseInt(criteria.minEBITDA));
-    }
-    if (criteria.maxEBITDA) {
-      results = results.filter(l => l.ebitda <= parseInt(criteria.maxEBITDA));
-    }
+    setMatchedListings([]);
+    setHasSearched(false);
+    setSectorSearch('');
+    setLocationSearch('');
+  }, [smartMatchingMode, getStorageKey]);
 
-    setMatchedListings(results);
-  };
+  const getMatchAnalysis = useCallback(
+    (listing) => {
+      let points = 0;
+      let totalWeight = 0;
+      let matchedCriteria = 0;
+      const highlights = [];
+      const missingFields = [];
 
-  // Click-outside handler for sector dropdown
+      if (criteria.sectors.length > 0) {
+        const weight = 24;
+        totalWeight += weight;
+
+        const listingSector = normalize(listing.sector);
+        if (!listingSector) {
+          missingFields.push(language === 'fr' ? 'secteur' : 'sector');
+        } else {
+          const matched = criteria.sectors.some((sector) => listingSector.includes(normalize(sector)));
+          if (matched) {
+            points += weight;
+            matchedCriteria += 1;
+            highlights.push(language === 'fr' ? 'Secteur compatible' : 'Sector fit');
+          }
+        }
+      }
+
+      if (criteria.locations.length > 0) {
+        const weight = 16;
+        totalWeight += weight;
+
+        const listingLocationBlob = normalize(
+          [listing.location, listing.region, listing.country].filter(Boolean).join(' ')
+        );
+
+        if (!listingLocationBlob) {
+          missingFields.push(language === 'fr' ? 'localisation' : 'location');
+        } else {
+          const matched = criteria.locations.some((locValue) => {
+            const option = LOCATIONS.find((loc) => normalize(loc.value) === normalize(locValue));
+            const probes = [locValue, option?.label].filter(Boolean).map(normalize);
+            return probes.some((probe) => listingLocationBlob.includes(probe));
+          });
+
+          if (matched) {
+            points += weight;
+            matchedCriteria += 1;
+            highlights.push(language === 'fr' ? 'Zone géographique cohérente' : 'Geographic fit');
+          }
+        }
+      }
+
+      if (isRangeActive(criteria.minPrice, criteria.maxPrice)) {
+        const weight = 24;
+        totalWeight += weight;
+
+        const budgetScore = evaluateRangeScore({
+          value: getListingBudget(listing, smartMatchingMode),
+          min: toNumber(criteria.minPrice),
+          max: toNumber(criteria.maxPrice),
+          weight,
+          tolerance: 0.2,
+        });
+
+        points += budgetScore.points;
+        if (budgetScore.matched) {
+          matchedCriteria += 1;
+          highlights.push(
+            budgetScore.partial
+              ? language === 'fr'
+                ? 'Budget proche de votre cible'
+                : 'Budget close to your target'
+              : language === 'fr'
+                ? 'Budget dans votre fourchette'
+                : 'Budget inside your range'
+          );
+        }
+        if (budgetScore.missing) {
+          missingFields.push(language === 'fr' ? 'budget' : 'budget');
+        }
+      }
+
+      if (isRangeActive(criteria.minEmployees, criteria.maxEmployees)) {
+        const weight = 10;
+        totalWeight += weight;
+        const employeesScore = evaluateRangeScore({
+          value: toNumber(listing.employees),
+          min: toNumber(criteria.minEmployees),
+          max: toNumber(criteria.maxEmployees),
+          weight,
+        });
+
+        points += employeesScore.points;
+        if (employeesScore.matched) {
+          matchedCriteria += 1;
+          highlights.push(language === 'fr' ? 'Effectifs alignés' : 'Team size aligned');
+        }
+        if (employeesScore.missing) {
+          missingFields.push(language === 'fr' ? 'effectifs' : 'employees');
+        }
+      }
+
+      if (isRangeActive(criteria.minYear, criteria.maxYear)) {
+        const weight = 8;
+        totalWeight += weight;
+        const yearScore = evaluateRangeScore({
+          value: toNumber(listing.year_founded),
+          min: toNumber(criteria.minYear),
+          max: toNumber(criteria.maxYear),
+          weight,
+          tolerance: 0.05,
+        });
+
+        points += yearScore.points;
+        if (yearScore.matched) {
+          matchedCriteria += 1;
+          highlights.push(language === 'fr' ? 'Maturité entreprise cohérente' : 'Business maturity aligned');
+        }
+        if (yearScore.missing) {
+          missingFields.push(language === 'fr' ? 'année' : 'year');
+        }
+      }
+
+      if (isRangeActive(criteria.minCA, criteria.maxCA)) {
+        const weight = 10;
+        totalWeight += weight;
+        const revenueScore = evaluateRangeScore({
+          value: toNumber(listing.annual_revenue),
+          min: toNumber(criteria.minCA),
+          max: toNumber(criteria.maxCA),
+          weight,
+        });
+
+        points += revenueScore.points;
+        if (revenueScore.matched) {
+          matchedCriteria += 1;
+          highlights.push(language === 'fr' ? 'Chiffre d\'affaires compatible' : 'Revenue compatible');
+        }
+        if (revenueScore.missing) {
+          missingFields.push(language === 'fr' ? 'CA' : 'revenue');
+        }
+      }
+
+      if (isRangeActive(criteria.minEBITDA, criteria.maxEBITDA)) {
+        const weight = 8;
+        totalWeight += weight;
+        const ebitdaScore = evaluateRangeScore({
+          value: toNumber(listing.ebitda),
+          min: toNumber(criteria.minEBITDA),
+          max: toNumber(criteria.maxEBITDA),
+          weight,
+        });
+
+        points += ebitdaScore.points;
+        if (ebitdaScore.matched) {
+          matchedCriteria += 1;
+          highlights.push(language === 'fr' ? 'EBITDA aligné' : 'EBITDA aligned');
+        }
+        if (ebitdaScore.missing) {
+          missingFields.push(language === 'fr' ? 'EBITDA' : 'EBITDA');
+        }
+      }
+
+      const score = totalWeight > 0 ? Math.round((points / totalWeight) * 100) : 0;
+      const confidence = totalWeight > 0
+        ? Math.max(20, Math.round(((totalWeight - missingFields.length * 4) / totalWeight) * 100))
+        : 0;
+
+      return {
+        score,
+        confidence,
+        matchedCriteria,
+        totalCriteria: totalWeight > 0 ? activeCriteriaCount : 0,
+        highlights,
+        missingFields,
+      };
+    },
+    [activeCriteriaCount, criteria, language, smartMatchingMode]
+  );
+
+  const searchMatches = useCallback(
+    ({ notifyIfLimited = false } = {}) => {
+      setSearching(true);
+
+      const targetType = smartMatchingMode === 'buyer' ? 'cession' : 'acquisition';
+      const minScore = Number(criteria.minScore) || 0;
+
+      let results = (allListings || [])
+        .filter((listing) => listing.type === targetType)
+        .filter((listing) => listing.seller_id !== user?.id)
+        .map((listing) => {
+          const analysis = getMatchAnalysis(listing);
+          return {
+            ...listing,
+            smartMatchScore: analysis.score,
+            smartMatchMeta: analysis,
+            matchBudget: getListingBudget(listing, smartMatchingMode),
+          };
+        })
+        .filter((listing) => listing.smartMatchScore >= minScore);
+
+      results.sort((a, b) => {
+        if (sortBy === 'score_asc') {
+          return a.smartMatchScore - b.smartMatchScore;
+        }
+
+        if (sortBy === 'budget_desc') {
+          return (b.matchBudget || 0) - (a.matchBudget || 0);
+        }
+
+        if (sortBy === 'budget_asc') {
+          return (a.matchBudget || 0) - (b.matchBudget || 0);
+        }
+
+        if (sortBy === 'newest') {
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        }
+
+        return b.smartMatchScore - a.smartMatchScore;
+      });
+
+      if (accessStatus === 'inactive') {
+        results = results.slice(0, 5);
+        if (notifyIfLimited) {
+          toast({
+            title: language === 'fr' ? 'Mode découverte actif' : 'Preview mode enabled',
+            description:
+              language === 'fr'
+                ? 'Seuls les 5 meilleurs résultats sont visibles. Activez Smart Matching pour tout débloquer.'
+                : 'Only top 5 results are visible. Enable Smart Matching to unlock all matches.',
+          });
+        }
+      }
+
+      setMatchedListings(results);
+      setHasSearched(true);
+      setSearching(false);
+    },
+    [accessStatus, allListings, criteria.minScore, getMatchAnalysis, language, smartMatchingMode, sortBy, user?.id]
+  );
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (sectorDropdownRef.current && !sectorDropdownRef.current.contains(event.target)) {
         setShowSectorDropdown(false);
       }
+
+      if (locationDropdownRef.current && !locationDropdownRef.current.contains(event.target)) {
+        setShowLocationDropdown(false);
+      }
     };
 
-    if (showSectorDropdown) {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setShowSectorDropdown(false);
+        setShowLocationDropdown(false);
+      }
+    };
+
+    if (showSectorDropdown || showLocationDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
     }
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
     };
-  }, [showSectorDropdown]);
+  }, [showSectorDropdown, showLocationDropdown]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('smartMatchingCriteria');
-    if (saved) {
-      setCriteria(JSON.parse(saved));
-    }
-  }, []);
+    if (!hasSearched) return;
+    searchMatches();
+  }, [sortBy, hasSearched, searchMatches]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const runLayoutDiagnostics = () => {
+      const viewportWidth = window.innerWidth;
+      const containerWidth = layoutGridRef.current?.clientWidth || null;
+
+      console.debug('[SmartMatching][UX_DIAG_LAYOUT]', {
+        viewportWidth,
+        containerWidth,
+        layoutMode: 'single_column',
+        filterPanelOpen: showFiltersPanel,
+        hasSearched,
+        resultCount: matchedListings.length,
+        showAdvanced,
+      });
+    };
+
+    runLayoutDiagnostics();
+    window.addEventListener('resize', runLayoutDiagnostics);
+    return () => window.removeEventListener('resize', runLayoutDiagnostics);
+  }, [hasSearched, matchedListings.length, showAdvanced, showFiltersPanel]);
 
   const saveCriteria = () => {
-    localStorage.setItem('smartMatchingCriteria', JSON.stringify(criteria));
-    searchMatches();
+    localStorage.setItem(getStorageKey(smartMatchingMode), JSON.stringify(criteria));
+    toast({
+      title: language === 'fr' ? 'Critères sauvegardés' : 'Criteria saved',
+      description:
+        language === 'fr'
+          ? 'Vos préférences Smart Matching ont été enregistrées.'
+          : 'Your Smart Matching preferences have been saved.',
+    });
+
+    searchMatches({ notifyIfLimited: true });
   };
 
   const handleChange = (field, value) => {
-    setCriteria(prev => ({ ...prev, [field]: value }));
+    setCriteria((prev) => ({ ...prev, [field]: value }));
   };
 
   const resetCriteria = () => {
-    setCriteria({
-      sectors: [], locations: [], minPrice: '', maxPrice: '', 
-      minEmployees: '', maxEmployees: '', minYear: '', maxYear: '',
-      minCA: '', maxCA: '', minEBITDA: '', maxEBITDA: '',
-    });
+    setCriteria(DEFAULT_CRITERIA);
     setMatchedListings([]);
     setSectorSearch('');
     setLocationSearch('');
+    setHasSearched(false);
   };
 
   const toggleSector = (sectorValue) => {
-    setCriteria(prev => {
+    setCriteria((prev) => {
       const newSectors = prev.sectors.includes(sectorValue)
-        ? prev.sectors.filter(s => s !== sectorValue)
+        ? prev.sectors.filter((s) => s !== sectorValue)
         : [...prev.sectors, sectorValue];
       return { ...prev, sectors: newSectors };
     });
   };
 
   const toggleLocation = (locationValue) => {
-    setCriteria(prev => {
+    setCriteria((prev) => {
       const newLocations = prev.locations.includes(locationValue)
-        ? prev.locations.filter(l => l !== locationValue)
+        ? prev.locations.filter((l) => l !== locationValue)
         : [...prev.locations, locationValue];
       return { ...prev, locations: newLocations };
     });
   };
 
-  // Filtrer les secteurs selon la recherche
-  const filteredSectors = SECTORS.filter(sector =>
-    sector.label.toLowerCase().includes(sectorSearch.toLowerCase())
-  );
-
-  // Filtrer les localisations selon la recherche
-  const filteredLocations = LOCATIONS.filter(location =>
-    location.label.toLowerCase().includes(locationSearch.toLowerCase())
-  );
-
-  const getScoreColor = (score) => {
-    if (score >= 85) return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' };
-    if (score >= 70) return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' };
-    if (score >= 50) return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700' };
-    return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' };
-  };
-
-  const FormInput = ({ icon: Icon, label, type = 'text', value, onChange, placeholder }) => (
-    <div className="relative">
+  const FormInput = ({ icon: Icon = null, label, type = 'text', value, onChange, placeholder }) => (
+    <div className="relative min-w-0">
       {Icon && (
         <div className="absolute left-3 top-2 text-[#FF6B4A]">
           <Icon className="w-4 h-4" />
@@ -254,397 +720,608 @@ export default function SmartMatching() {
     </div>
   );
 
+  const averageScore = useMemo(() => {
+    if (matchedListings.length === 0) return 0;
+    return Math.round(
+      matchedListings.reduce((sum, item) => sum + (item.smartMatchScore || 0), 0) / matchedListings.length
+    );
+  }, [matchedListings]);
+
+  const highestScore = useMemo(
+    () => (matchedListings.length ? Math.max(...matchedListings.map((x) => x.smartMatchScore || 0)) : 0),
+    [matchedListings]
+  );
+
+  const handleModeSwitch = (mode) => {
+    setSmartMatchingMode(mode);
+    setMatchedListings([]);
+    setHasSearched(false);
+  };
+
+  const isPreviewMode = accessStatus === 'inactive';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center shadow-md">
-                <Zap className="w-5 h-5 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-[#F7F8FA] via-white to-[#F3F5F8]">
+      <div className="bg-white/95 border-b border-gray-200 sticky top-0 z-30 backdrop-blur">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center shadow-md ring-4 ring-[#FF6B4A]/10">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#3B4759]">Smart Matching</h1>
-                <p className="text-xs text-[#111827]">
-                  {smartMatchingMode === 'buyer' 
-                    ? 'Trouvez l\'entreprise parfaite à acquérir'
-                    : 'Trouvez le bon acquéreur pour votre entreprise'}
-                </p>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold text-[#3B4759] truncate">{labels.title}</h1>
+                <p className="text-sm text-[#4B5563] truncate">{labels.subtitle}</p>
               </div>
             </div>
 
-            {canSwitchMode && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSmartMatchingMode('buyer')}
-                  className={`px-3 py-1 rounded-lg font-semibold text-xs transition-all ${
-                    smartMatchingMode === 'buyer'
-                      ? 'bg-[#FF6B4A] text-white shadow-md'
-                      : 'bg-gray-200 text-[#3B4759] hover:bg-gray-300'
-                  }`}
-                >
-                  Acquérir
-                </button>
-                <button
-                  onClick={() => setSmartMatchingMode('seller')}
-                  className={`px-3 py-1 rounded-lg font-semibold text-xs transition-all ${
-                    smartMatchingMode === 'seller'
-                      ? 'bg-[#FF6B4A] text-white shadow-md'
-                      : 'bg-gray-200 text-[#3B4759] hover:bg-gray-300'
-                  }`}
-                >
-                  Céder
-                </button>
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-[#3B4759]">
+                <ShieldCheck className="w-4 h-4 text-[#FF6B4A]" />
+                {activeCriteriaCount}{' '}
+                {language === 'fr' ? 'critères actifs' : 'active filters'}
               </div>
-            )}
+
+              {canSwitchMode && (
+                <div className="flex gap-1.5 p-1 bg-gray-100 rounded-xl border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => handleModeSwitch('buyer')}
+                    className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
+                      smartMatchingMode === 'buyer'
+                        ? 'bg-[#FF6B4A] text-white shadow-sm'
+                        : 'bg-transparent text-[#3B4759] hover:bg-white'
+                    }`}
+                  >
+                    {language === 'fr' ? 'Acquérir' : 'Acquire'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModeSwitch('seller')}
+                    className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
+                      smartMatchingMode === 'seller'
+                        ? 'bg-[#FF6B4A] text-white shadow-sm'
+                        : 'bg-transparent text-[#3B4759] hover:bg-white'
+                    }`}
+                  >
+                    {language === 'fr' ? 'Céder' : 'Sell'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto p-4">
-        
-        {/* Search Form Card */}
-        {!loading && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-            
-            {/* Secteur - Multi-Select Autocomplete */}
-            <div className="mb-3 relative" ref={sectorDropdownRef}>
-              <label className="block text-xs font-bold text-[#3B4759] mb-1 uppercase tracking-wide">Secteur</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={sectorSearch}
-                  onChange={(e) => setSectorSearch(e.target.value)}
-                  onFocus={() => setShowSectorDropdown(true)}
-                  placeholder="Chercher un secteur..."
-                  className="w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] text-sm"
-                />
-                <Search className="absolute right-3 top-2 w-4 h-4 text-gray-400" />
-                
-                {/* Autocomplete Dropdown */}
-                {showSectorDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                    {filteredSectors.length > 0 ? (
-                      filteredSectors.map(sector => (
-                        <button
-                          key={sector.value}
-                          onClick={() => {
-                            toggleSector(sector.value);
-                            setShowSectorDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 transition-all ${
-                            criteria.sectors.includes(sector.value)
-                              ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-semibold'
-                              : 'text-[#3B4759]'
-                          }`}
-                        >
-                          <div className={`w-4 h-4 border-2 rounded ${
-                            criteria.sectors.includes(sector.value)
-                              ? 'bg-[#FF6B4A] border-[#FF6B4A]'
-                              : 'border-gray-300'
-                          }`} />
-                          {sector.label}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-gray-500">Aucun secteur trouvé</div>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              {/* Tags des secteurs sélectionnés */}
-              {criteria.sectors.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {criteria.sectors.map(sectorValue => {
-                    const sectorLabel = SECTORS.find(s => s.value === sectorValue)?.label;
-                    return (
-                      <div
-                        key={sectorValue}
-                        className="flex items-center gap-1 px-2 py-1 bg-[#FF6B4A]/10 border border-[#FF6B4A] rounded-full text-xs font-semibold text-[#FF6B4A]"
-                      >
-                        {sectorLabel}
-                        <button
-                          onClick={() => toggleSector(sectorValue)}
-                          className="ml-1 hover:text-red-600 transition-colors"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Localisation - Multi-Select Autocomplete */}
-            <div className="mb-3 relative" ref={locationDropdownRef}>
-              <label className="block text-xs font-bold text-[#3B4759] mb-1 uppercase tracking-wide">Localisation</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={locationSearch}
-                  onChange={(e) => setLocationSearch(e.target.value)}
-                  onFocus={() => setShowLocationDropdown(true)}
-                  placeholder="Chercher une localisation..."
-                  className="w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] text-sm"
-                />
-                <Search className="absolute right-3 top-2 w-4 h-4 text-gray-400" />
-                
-                {/* Autocomplete Dropdown */}
-                {showLocationDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                    {filteredLocations.length > 0 ? (
-                      filteredLocations.map(location => (
-                        <button
-                          key={location.value}
-                          onClick={() => {
-                            toggleLocation(location.value);
-                            setShowLocationDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 transition-all ${
-                            criteria.locations.includes(location.value)
-                              ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-semibold'
-                              : 'text-[#3B4759]'
-                          }`}
-                        >
-                          <div className={`w-4 h-4 border-2 rounded ${
-                            criteria.locations.includes(location.value)
-                              ? 'bg-[#FF6B4A] border-[#FF6B4A]'
-                              : 'border-gray-300'
-                          }`} />
-                          {location.label}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-gray-500">Aucune localisation trouvée</div>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              {/* Tags des localisations sélectionnées */}
-              {criteria.locations.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {criteria.locations.map(locationValue => {
-                    const locationLabel = LOCATIONS.find(l => l.value === locationValue)?.label;
-                    return (
-                      <div
-                        key={locationValue}
-                        className="flex items-center gap-1 px-2 py-1 bg-[#FF6B4A]/10 border border-[#FF6B4A] rounded-full text-xs font-semibold text-[#FF6B4A]"
-                      >
-                        {locationLabel}
-                        <button
-                          onClick={() => toggleLocation(locationValue)}
-                          className="ml-1 hover:text-red-600 transition-colors"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Budget - Aligné */}
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
+        {(accessStatus === 'inactive' || accessStatus === 'unknown') && (
+          <div className="rounded-2xl border border-[#FF6B4A]/30 bg-gradient-to-r from-[#FFF4F1] to-[#FFF8F6] p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <label className="block text-xs font-bold text-[#3B4759] mb-1 uppercase tracking-wide">Budget</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  value={criteria.minPrice}
-                  onChange={(e) => handleChange('minPrice', e.target.value)}
-                  placeholder="Min"
-                  className="w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] transition-all text-sm"
-                />
-                <input
-                  type="number"
-                  value={criteria.maxPrice}
-                  onChange={(e) => handleChange('maxPrice', e.target.value)}
-                  placeholder="Max"
-                  className="w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] transition-all text-sm"
-                />
-              </div>
+              <p className="text-sm font-semibold text-[#FF6B4A] inline-flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                {accessStatus === 'inactive'
+                  ? labels.inactiveAccessTitle
+                  : language === 'fr'
+                    ? 'Accès Smart Matching non vérifié'
+                    : 'Smart Matching access not verified'}
+              </p>
+              <p className="text-sm text-[#3B4759] mt-1">
+                {accessStatus === 'inactive'
+                  ? labels.inactiveAccessDescription
+                  : language === 'fr'
+                    ? 'Vous pouvez continuer à utiliser la recherche, mais l\'activation vous garantit toutes les fonctionnalités premium.'
+                    : 'You can keep using search, but activation guarantees full premium features.'}
+              </p>
             </div>
-
-            {/* Toggle Advanced */}
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-[#FF6B4A] font-semibold text-xs mb-2 flex items-center gap-1 hover:gap-2 transition-all"
+            <Link
+              to={createPageUrl('Abonnement')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white px-4 py-2.5 font-semibold text-sm whitespace-nowrap"
             >
-              {showAdvanced ? '▼' : '▶'} Critères avancés
-            </button>
+              {language === 'fr' ? 'Activer Smart Matching' : 'Enable Smart Matching'}
+            </Link>
+          </div>
+        )}
 
-            {/* Advanced Filters */}
-            {showAdvanced && (
-              <div className="border-t border-gray-200 pt-3 space-y-3">
-                
-                {/* Employees */}
-                <div>
-                  <label className="block text-xs font-bold text-[#3B4759] mb-1 uppercase tracking-wide">Effectifs</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <FormInput icon={Users} label="Min" type="number" value={criteria.minEmployees} onChange={(v) => handleChange('minEmployees', v)} placeholder="0" />
-                    <FormInput icon={Users} label="Max" type="number" value={criteria.maxEmployees} onChange={(v) => handleChange('maxEmployees', v)} placeholder="∞" />
-                    <div />
-                  </div>
-                </div>
-
-                {/* Year Founded */}
-                <div>
-                  <label className="block text-xs font-bold text-[#3B4759] mb-1 uppercase tracking-wide">Année de création</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <FormInput icon={Calendar} label="Min" type="number" value={criteria.minYear} onChange={(v) => handleChange('minYear', v)} placeholder="1990" />
-                    <FormInput icon={Calendar} label="Max" type="number" value={criteria.maxYear} onChange={(v) => handleChange('maxYear', v)} placeholder={new Date().getFullYear().toString()} />
-                    <div />
-                  </div>
-                </div>
-
-                {/* CA */}
-                <div>
-                  <label className="block text-xs font-bold text-[#3B4759] mb-1 uppercase tracking-wide">Chiffre d'affaires</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <FormInput icon={BarChart3} label="Min" type="number" value={criteria.minCA} onChange={(v) => handleChange('minCA', v)} placeholder="0" />
-                    <FormInput icon={BarChart3} label="Max" type="number" value={criteria.maxCA} onChange={(v) => handleChange('maxCA', v)} placeholder="∞" />
-                    <div />
-                  </div>
-                </div>
-
-                {/* EBITDA */}
-                <div>
-                  <label className="block text-xs font-bold text-[#3B4759] mb-1 uppercase tracking-wide">EBITDA</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <FormInput icon={TrendingUp} label="Min" type="number" value={criteria.minEBITDA} onChange={(v) => handleChange('minEBITDA', v)} placeholder="0" />
-                    <FormInput icon={TrendingUp} label="Max" type="number" value={criteria.maxEBITDA} onChange={(v) => handleChange('maxEBITDA', v)} placeholder="∞" />
-                    <div />
-                  </div>
-                </div>
+        <div ref={layoutGridRef} className="space-y-4">
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-[#3B4759]">{labels.criteriaPanel}</h2>
+                <p className="text-xs text-[#6B7280] mt-1">
+                  {language === 'fr'
+                    ? 'Vue mono-colonne ergonomique avec filtres repliables et résultats pleine largeur.'
+                    : 'Ergonomic single-column view with collapsible filters and full-width results.'}
+                </p>
               </div>
-            )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200">
-              <button
-                onClick={saveCriteria}
-                className="flex-1 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6D] text-white py-2 rounded-lg font-semibold hover:shadow-md transition-all flex items-center justify-center gap-2 text-sm"
-              >
-                <Send className="w-4 h-4" />
-                Chercher
-              </button>
-              <button
-                onClick={resetCriteria}
-                className="px-3 bg-gray-100 text-[#3B4759] py-2 rounded-lg font-semibold hover:bg-gray-200 transition-all"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-[#FF6B4A]/10 text-[#FF6B4A] font-semibold">
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {activeCriteriaCount}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFiltersPanel((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-[#3B4759] hover:bg-gray-50"
+                >
+                  {showFiltersPanel
+                    ? language === 'fr'
+                      ? 'Masquer filtres'
+                      : 'Hide filters'
+                    : language === 'fr'
+                      ? 'Afficher filtres'
+                      : 'Show filters'}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin">
-              <Zap className="w-10 h-10 text-[#FF6B4A]" />
-            </div>
-            <p className="text-[#111827] mt-3 text-sm">Chargement...</p>
-          </div>
-        )}
+            {showFiltersPanel && (
+              <div className="space-y-4 mt-4 pt-4 border-t border-gray-200">
+                <div>
+                  <p className="text-xs font-bold text-[#3B4759] uppercase tracking-wide mb-2">{labels.essentialFilters}</p>
 
-        {/* Results */}
-        {!loading && matchedListings.length > 0 && (
-          <>
-            <h2 className="text-xl font-bold text-[#3B4759] mb-4">
-              {matchedListings.length} Annonce{matchedListings.length > 1 ? 's' : ''} trouvée{matchedListings.length > 1 ? 's' : ''}
-            </h2>
+                  <div className="mb-3 relative" ref={sectorDropdownRef}>
+                    <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Secteurs' : 'Sectors'}</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={sectorSearch}
+                        onChange={(e) => setSectorSearch(e.target.value)}
+                        onFocus={() => setShowSectorDropdown(true)}
+                        placeholder={language === 'fr' ? 'Chercher un secteur...' : 'Search a sector...'}
+                        className="w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] text-sm"
+                        aria-expanded={showSectorDropdown}
+                        aria-controls="sector-dropdown"
+                      />
+                      <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
 
-            <div className="space-y-2">
-              {matchedListings.map((listing) => {
-                const colors = getScoreColor(75);
-                return (
-                  <div
-                    key={listing.id}
-                    className={`${colors.bg} border-2 ${colors.border} rounded-lg p-4 hover:shadow-md transition-all`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <h3 className="text-base font-bold text-[#3B4759] mb-2">
-                          {listing.title || listing.company}
-                        </h3>
-                        
-                        <div className="flex flex-wrap gap-1 mb-1">
-                          {listing.location && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#111827]">
-                              <MapPin className="w-3 h-3" /> {listing.location}
-                            </div>
-                          )}
-                          {listing.asking_price && (
-                            <div className="px-2 py-1 bg-white rounded-full text-xs font-semibold text-[#FF6B4A]">
-                              {(listing.asking_price / 1000).toFixed(0)}k
-                            </div>
-                          )}
-                          {listing.employees && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#111827]">
-                              <Users className="w-3 h-3" /> {listing.employees}
-                            </div>
-                          )}
-                          {listing.year_founded && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-full text-xs text-[#111827]">
-                              <Calendar className="w-3 h-3" /> {listing.year_founded}
+                      {showSectorDropdown && (
+                        <div
+                          id="sector-dropdown"
+                          role="listbox"
+                          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-40 max-h-52 overflow-y-auto"
+                        >
+                          {filteredSectors.length > 0 ? (
+                            filteredSectors.map((sector) => (
+                              <button
+                                key={sector.value}
+                                type="button"
+                                aria-pressed={criteria.sectors.includes(sector.value)}
+                                onClick={() => toggleSector(sector.value)}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 transition-all ${
+                                  criteria.sectors.includes(sector.value)
+                                    ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-semibold'
+                                    : 'text-[#3B4759]'
+                                }`}
+                              >
+                                <div
+                                  className={`w-4 h-4 border-2 rounded ${
+                                    criteria.sectors.includes(sector.value)
+                                      ? 'bg-[#FF6B4A] border-[#FF6B4A]'
+                                      : 'border-gray-300'
+                                  }`}
+                                />
+                                {sector.label}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">
+                              {language === 'fr' ? 'Aucun secteur trouvé' : 'No sector found'}
                             </div>
                           )}
                         </div>
+                      )}
+                    </div>
 
-                        {(listing.annual_revenue || listing.ebitda) && (
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            {listing.annual_revenue && (
-                              <span className="flex items-center gap-1 text-green-700 font-semibold">
-                                <BarChart3 className="w-3 h-3" /> CA: {(listing.annual_revenue / 1000).toFixed(0)}k
-                              </span>
-                            )}
-                            {listing.ebitda && (
-                              <span className="flex items-center gap-1 text-blue-700 font-semibold">
-                                <TrendingUp className="w-3 h-3" /> EBITDA: {(listing.ebitda / 1000).toFixed(0)}k
-                              </span>
-                            )}
-                          </div>
+                    {criteria.sectors.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {criteria.sectors.map((sectorValue) => {
+                          const sectorLabel = SECTORS.find((s) => s.value === sectorValue)?.label;
+                          return (
+                            <div
+                              key={sectorValue}
+                              className="flex items-center gap-1 px-2 py-1 bg-[#FF6B4A]/10 border border-[#FF6B4A] rounded-full text-xs font-semibold text-[#FF6B4A]"
+                            >
+                              {sectorLabel || sectorValue}
+                              <button
+                                type="button"
+                                onClick={() => toggleSector(sectorValue)}
+                                className="ml-1 hover:text-red-600 transition-colors"
+                                aria-label={language === 'fr' ? 'Retirer le secteur' : 'Remove sector'}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mb-3 relative" ref={locationDropdownRef}>
+                    <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Localisations' : 'Locations'}</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={locationSearch}
+                        onChange={(e) => setLocationSearch(e.target.value)}
+                        onFocus={() => setShowLocationDropdown(true)}
+                        placeholder={language === 'fr' ? 'Chercher une zone...' : 'Search a location...'}
+                        className="w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] text-sm"
+                        aria-expanded={showLocationDropdown}
+                        aria-controls="location-dropdown"
+                      />
+                      <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+
+                      {showLocationDropdown && (
+                        <div
+                          id="location-dropdown"
+                          role="listbox"
+                          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-40 max-h-52 overflow-y-auto"
+                        >
+                          {filteredLocations.length > 0 ? (
+                            filteredLocations.map((location) => (
+                              <button
+                                key={location.value}
+                                type="button"
+                                aria-pressed={criteria.locations.includes(location.value)}
+                                onClick={() => toggleLocation(location.value)}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 transition-all ${
+                                  criteria.locations.includes(location.value)
+                                    ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-semibold'
+                                    : 'text-[#3B4759]'
+                                }`}
+                              >
+                                <div
+                                  className={`w-4 h-4 border-2 rounded ${
+                                    criteria.locations.includes(location.value)
+                                      ? 'bg-[#FF6B4A] border-[#FF6B4A]'
+                                      : 'border-gray-300'
+                                  }`}
+                                />
+                                {location.label}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">
+                              {language === 'fr' ? 'Aucune localisation trouvée' : 'No location found'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {criteria.locations.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {criteria.locations.map((locationValue) => {
+                          const locationLabel = LOCATIONS.find((l) => l.value === locationValue)?.label;
+                          return (
+                            <div
+                              key={locationValue}
+                              className="flex items-center gap-1 px-2 py-1 bg-[#FF6B4A]/10 border border-[#FF6B4A] rounded-full text-xs font-semibold text-[#FF6B4A]"
+                            >
+                              {locationLabel || locationValue}
+                              <button
+                                type="button"
+                                onClick={() => toggleLocation(locationValue)}
+                                className="ml-1 hover:text-red-600 transition-colors"
+                                aria-label={language === 'fr' ? 'Retirer la localisation' : 'Remove location'}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#3B4759] mb-1">
+                      {smartMatchingMode === 'buyer'
+                        ? language === 'fr'
+                          ? 'Budget cible (€)'
+                          : 'Target budget (€)'
+                        : language === 'fr'
+                          ? 'Budget acheteur attendu (€)'
+                          : 'Expected buyer budget (€)'}
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormInput
+                        label="Min"
+                        type="number"
+                        value={criteria.minPrice}
+                        onChange={(v) => handleChange('minPrice', v)}
+                        placeholder="100000"
+                      />
+                      <FormInput
+                        label="Max"
+                        type="number"
+                        value={criteria.maxPrice}
+                        onChange={(v) => handleChange('maxPrice', v)}
+                        placeholder="2000000"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced((prev) => !prev)}
+                    className="text-[#FF6B4A] font-semibold text-xs flex items-center gap-1 hover:gap-2 transition-all"
+                  >
+                    {showAdvanced ? '▼' : '▶'} {labels.advancedFilters}
+                  </button>
+
+                  {showAdvanced && (
+                    <div className="mt-3 border-t border-gray-200 pt-3 space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Effectifs' : 'Employees'}</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <FormInput icon={Users} label="Min" type="number" value={criteria.minEmployees} onChange={(v) => handleChange('minEmployees', v)} placeholder="5" />
+                          <FormInput icon={Users} label="Max" type="number" value={criteria.maxEmployees} onChange={(v) => handleChange('maxEmployees', v)} placeholder="500" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Année de création' : 'Founded year'}</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <FormInput icon={Calendar} label="Min" type="number" value={criteria.minYear} onChange={(v) => handleChange('minYear', v)} placeholder="1990" />
+                          <FormInput icon={Calendar} label="Max" type="number" value={criteria.maxYear} onChange={(v) => handleChange('maxYear', v)} placeholder={new Date().getFullYear().toString()} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Chiffre d\'affaires (€)' : 'Revenue (€)'}</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <FormInput icon={BarChart3} label="Min" type="number" value={criteria.minCA} onChange={(v) => handleChange('minCA', v)} placeholder="100000" />
+                          <FormInput icon={BarChart3} label="Max" type="number" value={criteria.maxCA} onChange={(v) => handleChange('maxCA', v)} placeholder="5000000" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[#3B4759] mb-1">EBITDA (€)</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <FormInput icon={TrendingUp} label="Min" type="number" value={criteria.minEBITDA} onChange={(v) => handleChange('minEBITDA', v)} placeholder="0" />
+                          <FormInput icon={TrendingUp} label="Max" type="number" value={criteria.maxEBITDA} onChange={(v) => handleChange('maxEBITDA', v)} placeholder="1000000" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-gray-200 pt-3">
+                  <label className="block text-xs font-semibold text-[#3B4759] mb-2">
+                    {language === 'fr' ? 'Score minimum requis' : 'Minimum match score'}: {criteria.minScore}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="95"
+                    step="5"
+                    value={criteria.minScore}
+                    onChange={(e) => handleChange('minScore', e.target.value)}
+                    className="w-full accent-[#FF6B4A]"
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={saveCriteria}
+                    disabled={loading || searching}
+                    className="flex-1 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6D] text-white py-2.5 rounded-lg font-semibold hover:shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                  >
+                    <Send className="w-4 h-4" />
+                    {labels.searchButton}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetCriteria}
+                    className="px-3 bg-gray-100 text-[#3B4759] py-2.5 rounded-lg font-semibold hover:bg-gray-200 transition-all inline-flex items-center justify-center"
+                    aria-label={labels.resetButton}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-5">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm min-w-0">
+                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
+                    <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Résultats' : 'Results'}</p>
+                    <p className="text-lg font-bold text-[#3B4759]">{matchedListings.length}</p>
+                  </div>
+                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
+                    <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Score moyen' : 'Average score'}</p>
+                    <p className="text-lg font-bold text-[#3B4759]">{averageScore}%</p>
+                  </div>
+                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
+                    <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Meilleur score' : 'Top score'}</p>
+                    <p className="text-lg font-bold text-[#3B4759]">{highestScore}%</p>
+                  </div>
+                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
+                    <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Type ciblé' : 'Target type'}</p>
+                    <p className="text-sm font-semibold text-[#3B4759]">
+                      {smartMatchingMode === 'buyer'
+                        ? language === 'fr'
+                          ? 'Annonces de cession'
+                          : 'Sell-side listings'
+                        : language === 'fr'
+                          ? 'Profils acquéreurs'
+                          : 'Buyer profiles'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-full lg:w-[260px]">
+                  <label className="text-xs font-semibold text-[#3B4759] mb-1 block">{language === 'fr' ? 'Tri des résultats' : 'Sort results'}</label>
+                  <div className="relative">
+                    <ArrowUpDown className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#FF6B4A] focus:border-[#FF6B4A]"
+                    >
+                      <option value="score_desc">{language === 'fr' ? 'Pertinence décroissante' : 'Relevance descending'}</option>
+                      <option value="score_asc">{language === 'fr' ? 'Pertinence croissante' : 'Relevance ascending'}</option>
+                      <option value="newest">{language === 'fr' ? 'Plus récents' : 'Newest first'}</option>
+                      <option value="budget_desc">{language === 'fr' ? 'Budget décroissant' : 'Budget descending'}</option>
+                      <option value="budget_asc">{language === 'fr' ? 'Budget croissant' : 'Budget ascending'}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {isPreviewMode && (
+                <p className="text-xs text-[#FF6B4A] font-medium mt-3">
+                  {language === 'fr'
+                    ? 'Mode découverte: seuls les 5 meilleurs matchs sont affichés.'
+                    : 'Preview mode: only top 5 matches are displayed.'}
+                </p>
+              )}
+            </div>
+
+            {(loading || searching) && (
+              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div key={item} className="h-48 rounded-2xl border border-gray-200 bg-white animate-pulse" />
+                ))}
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            {!loading && !searching && !error && hasSearched && matchedListings.length === 0 && (
+              <div className="text-center py-16 bg-white border border-gray-200 rounded-2xl">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-[#111827] font-medium">{labels.noResults}</p>
+                <p className="text-[#6B7280] text-sm mt-1">
+                  {language === 'fr'
+                    ? 'Élargissez votre budget, vos zones ou baissez le score minimum.'
+                    : 'Widen your budget, locations or lower the minimum score.'}
+                </p>
+              </div>
+            )}
+
+            {!loading && !searching && !error && !hasSearched && (
+              <div className="text-center py-16 bg-white border border-gray-200 rounded-2xl">
+                <div className="w-16 h-16 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-8 h-8 text-[#FF6B4A]" />
+                </div>
+                <p className="text-[#111827] font-medium">
+                  {language === 'fr'
+                    ? 'Configurez vos critères puis lancez le matching'
+                    : 'Set your criteria and start matching'}
+                </p>
+              </div>
+            )}
+
+            {!loading && !searching && matchedListings.length > 0 && (
+              <div className="grid sm:grid-cols-2 gap-4 xl:gap-5">
+                {matchedListings.map((listing) => {
+                  const tone = getScoreTone(listing.smartMatchScore || 0);
+                  const detailsUrl = createPageUrl(`BusinessDetails?id=${listing.id}`);
+                  const highlights = listing.smartMatchMeta?.highlights?.slice(0, 3) || [];
+
+                  return (
+                    <article
+                      key={listing.id}
+                      className={`rounded-2xl border p-4 md:p-5 shadow-sm transition-all hover:shadow-md ${tone.card}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-base md:text-lg font-bold text-[#3B4759] line-clamp-2">
+                            {listing.title || listing.company || (language === 'fr' ? 'Annonce sans titre' : 'Untitled listing')}
+                          </h3>
+                          <p className="text-xs text-[#6B7280] mt-1 inline-flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5" />
+                            {listing.location || listing.region || listing.country || (language === 'fr' ? 'Localisation non précisée' : 'Location not provided')}
+                          </p>
+                        </div>
+
+                        <div className={`inline-flex items-center justify-center min-w-[64px] h-12 px-2 rounded-xl border text-lg font-bold ${tone.badge} ${tone.ring} ring-2`}>
+                          {listing.smartMatchScore}%
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {listing.sector && (
+                          <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs text-[#3B4759]">
+                            {listing.sector}
+                          </span>
+                        )}
+                        {listing.matchBudget && (
+                          <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs font-semibold text-[#FF6B4A]">
+                            {formatMoneyCompact(listing.matchBudget, language)}
+                          </span>
+                        )}
+                        {listing.employees ? (
+                          <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs text-[#3B4759] inline-flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            {listing.employees}
+                          </span>
+                        ) : null}
+                        {listing.year_founded ? (
+                          <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs text-[#3B4759] inline-flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {listing.year_founded}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="mt-3 space-y-1.5">
+                        {highlights.length > 0 ? (
+                          highlights.map((highlight, index) => (
+                            <p key={`${listing.id}-${index}`} className={`text-xs font-medium ${tone.accent}`}>
+                              • {highlight}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-[#6B7280]">
+                            {language === 'fr'
+                              ? 'Renseignez davantage de critères pour enrichir les explications de matching.'
+                              : 'Add more criteria to get richer matching explanations.'}
+                          </p>
                         )}
                       </div>
 
-                      {/* Score */}
-                      <div className={`flex items-center justify-center w-14 h-14 rounded-full ${colors.bg} border-3 ${colors.border} flex-shrink-0`}>
-                        <span className={`text-xl font-bold ${colors.text}`}>75%</span>
+                      <div className="mt-3 text-xs text-[#6B7280]">
+                        {language === 'fr' ? 'Confiance des données' : 'Data confidence'}: {listing.smartMatchMeta?.confidence || 0}%
                       </div>
-                    </div>
 
-                    <button className={`w-full mt-2 py-1.5 border-2 ${colors.border} rounded-lg font-semibold text-[#FF6B4A] hover:bg-[#FF6B4A] hover:text-white transition-all text-xs`}>
-                      Détails
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Empty State */}
-        {!loading && matchedListings.length === 0 && !error && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-[#111827] text-sm">Configurez vos critères et lancez la recherche</p>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <Link
+                          to={detailsUrl}
+                          className="inline-flex items-center justify-center py-2 rounded-lg bg-[#FF6B4A] text-white font-semibold text-sm hover:bg-[#FF5A3A]"
+                        >
+                          {language === 'fr' ? 'Voir l\'annonce' : 'View listing'}
+                        </Link>
+                        <Link
+                          to={detailsUrl}
+                          className="inline-flex items-center justify-center py-2 rounded-lg border border-gray-300 text-[#3B4759] font-semibold text-sm hover:bg-gray-50"
+                        >
+                          {language === 'fr' ? 'Détails du match' : 'Match details'}
+                        </Link>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );

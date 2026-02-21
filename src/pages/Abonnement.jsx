@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, CheckCircle2, Loader2, Lock, ArrowRight, Receipt, Sparkles } from 'lucide-react';
+import { ChevronDown, CheckCircle2, Loader2, Receipt, Sparkles } from 'lucide-react';
 
 const STORAGE_KEY = 'riviqo_checkout_payload';
 
@@ -34,9 +34,7 @@ export default function Abonnement() {
   const [cart, setCart] = useState([]);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [servicesLoading, setServicesLoading] = useState(true);
-  const [ordersLoading, setOrdersLoading] = useState(true);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
-  const [recentOrders, setRecentOrders] = useState([]);
   const [activeServices, setActiveServices] = useState({
     balances: { photos: 0, contacts: 0 },
     entitlements: [],
@@ -64,19 +62,17 @@ export default function Abonnement() {
       monthly: '/mois',
       yearly: '/an',
       unavailable: 'Indisponible',
-      servicesTitle: 'Mes services actifs',
-      servicesSubtitle: 'Barre de pilotage de tous vos services.',
-      creditsPhotos: 'Crédits photos',
-      creditsContacts: 'Crédits contacts',
-      usageTitle: 'Journal d’utilisation',
-      premiumTitle: 'Options premium',
-      noPremium: 'Aucune option premium active pour le moment.',
-      noUsage: 'Aucune utilisation enregistrée pour le moment.',
+      servicesTitle: 'Mes packs achetés',
+      servicesSubtitle: 'Résumé des packs achetés sur votre compte.',
+      photosPacksPurchased: 'Packs photos',
+      sponsoredPacksPurchased: 'Packs annonces sponsorisées',
+      smartMatchingPurchased: 'Packs Smart Matching',
+      packsPurchasedSuffix: 'achetés',
       servicesLoadError: 'Impossible de charger vos services actifs.',
       paymentSuccessTitle: 'Paiement confirmé',
       paymentSuccessDescription: 'Merci pour votre commande. Votre paiement a été validé avec succès.',
       paymentSuccessEmail: 'Un email de confirmation de commande vient d’être envoyé.',
-      paymentSuccessManage: 'Gérer mes services',
+      paymentSuccessManage: 'Voir mes packs achetés',
       paymentSuccessBilling: 'Voir ma facture',
       photosService: 'Photos',
       contactsService: 'Contacts',
@@ -88,30 +84,11 @@ export default function Abonnement() {
       statusInactive: 'Inactif',
       statusLocked: 'Verrouillé',
       soon: 'Bientôt disponible',
-      manageTitle: 'Gérer mes services',
-      manageSubtitle: 'Où les utiliser et comment les piloter après achat.',
-      manageHistory: 'Historique & factures',
-      manageUseNow: 'Utiliser maintenant',
-      manageBuyNow: 'Choisir cette option',
       usePhotosHint: 'Utilisable dans Mes annonces lors de l’ajout de photos.',
       useContactsHint: 'Utilisable dans Leads pour contacter des profils.',
       useSmartHint: 'Utilisable dans Smart Matching pour activer vos alertes.',
       useSponsoredHint: 'Utilisable dans Mes annonces pour booster votre visibilité.',
-      useSoonHint: 'Service en préparation. Activation prochaine.',
-      recentOrdersTitle: 'Commandes récentes',
-      recentOrdersSubtitle: 'Retrouvez vos derniers achats et vos factures en un coup d’œil.',
-      recentOrdersEmpty: 'Aucune commande pour le moment.',
-      orderDate: 'Date',
-      orderAmount: 'Montant',
-      orderStatus: 'Statut',
-      orderInvoice: 'Facture',
-      orderOpenInvoice: 'Ouvrir',
-      orderItemsFallback: 'Service Riviqo',
-      orderStatusPaid: 'Payé',
-      orderStatusSucceeded: 'Payé',
-      orderStatusComplete: 'Terminé',
-      orderStatusPending: 'En attente',
-      orderStatusFailed: 'Échec'
+      useSoonHint: 'Service en préparation. Activation prochaine.'
     },
     en: {
       title: 'Order services',
@@ -133,19 +110,17 @@ export default function Abonnement() {
       monthly: '/month',
       yearly: '/year',
       unavailable: 'Unavailable',
-      servicesTitle: 'My active services',
-      servicesSubtitle: 'Control bar for all your services.',
-      creditsPhotos: 'Photo credits',
-      creditsContacts: 'Contact credits',
-      usageTitle: 'Usage log',
-      premiumTitle: 'Premium options',
-      noPremium: 'No active premium options yet.',
-      noUsage: 'No usage recorded yet.',
+      servicesTitle: 'My purchased packs',
+      servicesSubtitle: 'Summary of packs purchased on your account.',
+      photosPacksPurchased: 'Photo packs',
+      sponsoredPacksPurchased: 'Sponsored listing packs',
+      smartMatchingPurchased: 'Smart Matching packs',
+      packsPurchasedSuffix: 'purchased',
       servicesLoadError: 'Unable to load your active services.',
       paymentSuccessTitle: 'Payment confirmed',
       paymentSuccessDescription: 'Thank you for your order. Your payment has been successfully confirmed.',
       paymentSuccessEmail: 'A purchase confirmation email has just been sent.',
-      paymentSuccessManage: 'Manage my services',
+      paymentSuccessManage: 'View my purchased packs',
       paymentSuccessBilling: 'View my invoice',
       photosService: 'Photos',
       contactsService: 'Contacts',
@@ -157,30 +132,11 @@ export default function Abonnement() {
       statusInactive: 'Inactive',
       statusLocked: 'Locked',
       soon: 'Coming soon',
-      manageTitle: 'Manage my services',
-      manageSubtitle: 'Where to use them and how to control them after purchase.',
-      manageHistory: 'History & invoices',
-      manageUseNow: 'Use now',
-      manageBuyNow: 'Choose this option',
       usePhotosHint: 'Use it in My listings when adding photos.',
       useContactsHint: 'Use it in Leads to contact profiles.',
       useSmartHint: 'Use it in Smart Matching to enable alerts.',
       useSponsoredHint: 'Use it in My listings to boost visibility.',
-      useSoonHint: 'Service in preparation. Activation coming soon.',
-      recentOrdersTitle: 'Recent orders',
-      recentOrdersSubtitle: 'Find your latest purchases and invoices at a glance.',
-      recentOrdersEmpty: 'No orders yet.',
-      orderDate: 'Date',
-      orderAmount: 'Amount',
-      orderStatus: 'Status',
-      orderInvoice: 'Invoice',
-      orderOpenInvoice: 'Open',
-      orderItemsFallback: 'Riviqo service',
-      orderStatusPaid: 'Paid',
-      orderStatusSucceeded: 'Paid',
-      orderStatusComplete: 'Complete',
-      orderStatusPending: 'Pending',
-      orderStatusFailed: 'Failed'
+      useSoonHint: 'Service in preparation. Activation coming soon.'
     }
   };
 
@@ -210,245 +166,42 @@ export default function Abonnement() {
     [selectedItems]
   );
 
-  const premiumEntitlements = useMemo(
-    () =>
-      (activeServices.entitlements || []).filter(
-        (item) => item?.entitlement_type === 'feature' && item?.status === 'active'
-      ),
-    [activeServices.entitlements]
-  );
+  const purchasedCounters = useMemo(() => {
+    const base = {
+      photoPacks: 0,
+      sponsoredPacks: 0,
+      smartMatchingPacks: 0
+    };
 
-  const activeFeatureCodes = useMemo(
-    () => new Set(premiumEntitlements.map((item) => item.product_code)),
-    [premiumEntitlements]
-  );
+    const entitlements = Array.isArray(activeServices?.entitlements) ? activeServices.entitlements : [];
 
-  const serviceBarItems = useMemo(
-    () => [
-      {
-        key: 'photos',
-        label: l.photosService,
-        status: Number(activeServices?.balances?.photos || 0) > 0 ? 'active' : 'inactive',
-        statusLabel:
-          Number(activeServices?.balances?.photos || 0) > 0 ? l.statusActive : l.statusInactive,
-        meta: `${Number(activeServices?.balances?.photos || 0)} ${l.creditsPhotos.toLowerCase()}`,
-        selectable: true,
-        selectId: 'photos_pack5'
-      },
-      {
-        key: 'contacts',
-        label: l.contactsService,
-        status: Number(activeServices?.balances?.contacts || 0) > 0 ? 'active' : 'inactive',
-        statusLabel:
-          Number(activeServices?.balances?.contacts || 0) > 0 ? l.statusActive : l.statusInactive,
-        meta: `${Number(activeServices?.balances?.contacts || 0)} ${l.creditsContacts.toLowerCase()}`,
-        selectable: true,
-        selectId: 'contact_unit'
-      },
-      {
-        key: 'smart_matching',
-        label: l.smartMatchingService,
-        status: activeFeatureCodes.has('smart_matching') ? 'active' : 'inactive',
-        statusLabel: activeFeatureCodes.has('smart_matching') ? l.statusActive : l.statusInactive,
-        meta: null,
-        selectable: true,
-        selectId: 'smart_matching'
-      },
-      {
-        key: 'sponsored_listing',
-        label: l.sponsoredService,
-        status: activeFeatureCodes.has('sponsored_listing') ? 'active' : 'inactive',
-        statusLabel: activeFeatureCodes.has('sponsored_listing') ? l.statusActive : l.statusInactive,
-        meta: null,
-        selectable: true,
-        selectId: 'sponsored_listing'
-      },
-      {
-        key: 'data_room',
-        label: l.dataRoomService,
-        status: 'locked',
-        statusLabel: l.statusLocked,
-        meta: l.soon,
-        selectable: false,
-        selectId: null
-      },
-      {
-        key: 'nda_protection',
-        label: l.ndaService,
-        status: 'locked',
-        statusLabel: l.statusLocked,
-        meta: l.soon,
-        selectable: false,
-        selectId: null
+    return entitlements.reduce((acc, item) => {
+      const code = String(item?.product_code || '').toLowerCase();
+
+      if (code === 'photos_pack5' || code === 'photos_pack15') {
+        acc.photoPacks += 1;
       }
-    ],
-    [activeFeatureCodes, activeServices?.balances?.contacts, activeServices?.balances?.photos, l]
-  );
 
-  const serviceManagementItems = useMemo(
-    () => [
-      {
-        key: 'photos',
-        label: l.photosService,
-        status: Number(activeServices?.balances?.photos || 0) > 0 ? 'active' : 'inactive',
-        meta: `${Number(activeServices?.balances?.photos || 0)} ${l.creditsPhotos.toLowerCase()}`,
-        usageHint: l.usePhotosHint,
-        actionType: Number(activeServices?.balances?.photos || 0) > 0 ? 'use' : 'buy',
-        selectId: 'photos_pack5',
-        destination: '/MyListings'
-      },
-      {
-        key: 'contacts',
-        label: l.contactsService,
-        status: Number(activeServices?.balances?.contacts || 0) > 0 ? 'active' : 'inactive',
-        meta: `${Number(activeServices?.balances?.contacts || 0)} ${l.creditsContacts.toLowerCase()}`,
-        usageHint: l.useContactsHint,
-        actionType: Number(activeServices?.balances?.contacts || 0) > 0 ? 'use' : 'buy',
-        selectId: 'contact_unit',
-        destination: '/Leads'
-      },
-      {
-        key: 'smart_matching',
-        label: l.smartMatchingService,
-        status: activeFeatureCodes.has('smart_matching') ? 'active' : 'inactive',
-        meta: activeFeatureCodes.has('smart_matching') ? l.statusActive : l.statusInactive,
-        usageHint: l.useSmartHint,
-        actionType: activeFeatureCodes.has('smart_matching') ? 'use' : 'buy',
-        selectId: 'smart_matching',
-        destination: '/SmartMatching'
-      },
-      {
-        key: 'sponsored_listing',
-        label: l.sponsoredService,
-        status: activeFeatureCodes.has('sponsored_listing') ? 'active' : 'inactive',
-        meta: activeFeatureCodes.has('sponsored_listing') ? l.statusActive : l.statusInactive,
-        usageHint: l.useSponsoredHint,
-        actionType: activeFeatureCodes.has('sponsored_listing') ? 'use' : 'buy',
-        selectId: 'sponsored_listing',
-        destination: '/MyListings'
-      },
-      {
-        key: 'data_room',
-        label: l.dataRoomService,
-        status: 'locked',
-        meta: l.soon,
-        usageHint: l.useSoonHint,
-        actionType: 'none',
-        selectId: null,
-        destination: null
-      },
-      {
-        key: 'nda_protection',
-        label: l.ndaService,
-        status: 'locked',
-        meta: l.soon,
-        usageHint: l.useSoonHint,
-        actionType: 'none',
-        selectId: null,
-        destination: null
+      if (code === 'sponsored_listing') {
+        acc.sponsoredPacks += 1;
       }
-    ],
-    [activeFeatureCodes, activeServices?.balances?.contacts, activeServices?.balances?.photos, l]
-  );
 
-  const serviceStatusClass = (status, selected) => {
-    const base =
-      'rounded-full border px-3 py-2 text-left transition-all duration-200 min-w-[150px] flex-shrink-0';
+      if (code === 'smart_matching') {
+        acc.smartMatchingPacks += 1;
+      }
 
-    if (status === 'locked') {
-      return `${base} border-gray-200 bg-gray-50 text-muted-foreground opacity-90`;
-    }
+      return acc;
+    }, base);
+  }, [activeServices?.entitlements]);
 
-    if (selected) {
-      return `${base} border-primary bg-primary/10 text-foreground shadow-sm`;
-    }
-
-    if (status === 'active') {
-      return `${base} border-success/30 bg-success/5 text-foreground hover:border-success/50`;
-    }
-
-    return `${base} border-gray-200 bg-white text-foreground hover:border-primary/40`;
-  };
-
-  const handleQuickSelectService = (item) => {
-    if (!item?.selectable || !item?.selectId) return;
-    setSelectedId(item.selectId);
-  };
-
-  const scrollToComposer = () => {
+  const scrollToServices = () => {
     if (typeof document === 'undefined') return;
-    const el = document.getElementById('order-composer');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const scrollToManagement = () => {
-    if (typeof document === 'undefined') return;
-    const el = document.getElementById('service-management');
+    const el = document.getElementById('service-hub');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const goToBillingHistory = () => {
     window.location.href = '/Settings?tab=billing';
-  };
-
-  const handleManageAction = (item) => {
-    if (!item) return;
-
-    if (item.actionType === 'use' && item.destination) {
-      window.location.href = item.destination;
-      return;
-    }
-
-    if (item.actionType === 'buy' && item.selectId) {
-      setSelectedId(item.selectId);
-      scrollToComposer();
-    }
-  };
-
-  const formatOrderDate = (dateValue) => {
-    if (!dateValue) return '-';
-    return new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'fr-FR', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(new Date(dateValue));
-  };
-
-  const formatOrderStatus = (status) => {
-    const normalized = String(status || '').toLowerCase();
-    if (normalized === 'paid') return l.orderStatusPaid;
-    if (normalized === 'succeeded') return l.orderStatusSucceeded;
-    if (normalized === 'complete') return l.orderStatusComplete;
-    if (normalized === 'pending' || normalized === 'processing') return l.orderStatusPending;
-    if (normalized === 'failed' || normalized === 'canceled') return l.orderStatusFailed;
-    return status || '-';
-  };
-
-  const getStatusBadgeClass = (status) => {
-    const normalized = String(status || '').toLowerCase();
-    if (normalized === 'paid' || normalized === 'succeeded' || normalized === 'complete') {
-      return 'bg-success/15 text-success';
-    }
-    if (normalized === 'failed' || normalized === 'canceled') {
-      return 'bg-red-100 text-red-700';
-    }
-    return 'bg-gray-100 text-muted-foreground';
-  };
-
-  const productLabelByCode = useMemo(
-    () =>
-      options.reduce((acc, option) => {
-        acc[option.id] = language === 'fr' ? option.frenchLabel : option.englishLabel;
-        return acc;
-      }, {}),
-    [language, options]
-  );
-
-  const formatOrderItems = (codes) => {
-    if (!Array.isArray(codes) || codes.length === 0) return l.orderItemsFallback;
-    return codes
-      .slice(0, 2)
-      .map((code) => productLabelByCode[code] || code)
-      .join(' • ');
   };
 
   const loadActiveServices = async () => {
@@ -473,21 +226,8 @@ export default function Abonnement() {
     }
   };
 
-  const loadRecentOrders = async () => {
-    try {
-      setOrdersLoading(true);
-      const data = await billingService.getMyTransactions(6);
-      setRecentOrders(data || []);
-    } catch {
-      setRecentOrders([]);
-    } finally {
-      setOrdersLoading(false);
-    }
-  };
-
   useEffect(() => {
     loadActiveServices();
-    loadRecentOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -505,7 +245,6 @@ export default function Abonnement() {
   useEffect(() => {
     if (!showPaymentSuccess) return;
     loadActiveServices();
-    loadRecentOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPaymentSuccess]);
 
@@ -571,7 +310,7 @@ export default function Abonnement() {
           <p className="text-sm text-foreground mt-1">{l.paymentSuccessDescription}</p>
           <p className="text-xs text-muted-foreground mt-1">{l.paymentSuccessEmail}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="outline" className="rounded-full" onClick={scrollToManagement}>
+            <Button variant="outline" className="rounded-full" onClick={scrollToServices}>
               <Sparkles className="w-4 h-4 mr-2" />
               {l.paymentSuccessManage}
             </Button>
@@ -583,65 +322,37 @@ export default function Abonnement() {
         </div>
       ) : null}
 
-      <section className="sticky top-2 z-20 rounded-2xl border border-gray-200 bg-white/95 backdrop-blur px-3 py-3 shadow-sm">
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <h2 className="text-sm font-semibold text-foreground">{l.servicesTitle}</h2>
-          <p className="text-xs text-muted-foreground hidden sm:block">{l.servicesSubtitle}</p>
+      <section id="service-hub" className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+        <div>
+          <div>
+            <h2 className="text-base font-semibold text-foreground">{l.servicesTitle}</h2>
+            <p className="text-xs text-muted-foreground mt-1">{l.servicesSubtitle}</p>
+          </div>
         </div>
 
         {servicesLoading ? (
-          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground py-1">
+          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground py-3">
             <Loader2 className="w-4 h-4 animate-spin" />
             {language === 'fr' ? 'Chargement des services…' : 'Loading services...'}
           </div>
         ) : (
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-2 min-w-max">
-              {serviceBarItems.map((item) => {
-                const selected = item.selectId === selectedId;
-                const isLocked = item.status === 'locked';
-                const Content = (
-                  <>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold">{item.label}</span>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full ${
-                          isLocked
-                            ? 'bg-gray-200 text-gray-600'
-                            : item.status === 'active'
-                              ? 'bg-success/15 text-success'
-                              : 'bg-gray-100 text-muted-foreground'
-                        }`}
-                      >
-                        {item.statusLabel}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-1 inline-flex items-center gap-1">
-                      {isLocked ? <Lock className="w-3 h-3" /> : null}
-                      {item.meta || '—'}
-                    </div>
-                  </>
-                );
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-xs text-muted-foreground">{l.photosPacksPurchased}</p>
+              <p className="text-2xl font-semibold text-foreground mt-1">{purchasedCounters.photoPacks}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{l.packsPurchasedSuffix}</p>
+            </div>
 
-                if (!item.selectable) {
-                  return (
-                    <div key={item.key} className={serviceStatusClass(item.status, false)}>
-                      {Content}
-                    </div>
-                  );
-                }
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-xs text-muted-foreground">{l.sponsoredPacksPurchased}</p>
+              <p className="text-2xl font-semibold text-foreground mt-1">{purchasedCounters.sponsoredPacks}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{l.packsPurchasedSuffix}</p>
+            </div>
 
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    className={serviceStatusClass(item.status, selected)}
-                    onClick={() => handleQuickSelectService(item)}
-                  >
-                    {Content}
-                  </button>
-                );
-              })}
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-xs text-muted-foreground">{l.smartMatchingPurchased}</p>
+              <p className="text-2xl font-semibold text-foreground mt-1">{purchasedCounters.smartMatchingPacks}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{l.packsPurchasedSuffix}</p>
             </div>
           </div>
         )}
@@ -651,67 +362,6 @@ export default function Abonnement() {
         <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">{l.title}</h1>
         <p className="text-sm text-muted-foreground mt-1">{l.subtitle}</p>
       </div>
-
-      <section id="service-management" className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">{l.manageTitle}</h3>
-            <p className="text-xs text-muted-foreground">{l.manageSubtitle}</p>
-          </div>
-          <button
-            type="button"
-            className="text-xs text-[#FF6B4A] font-medium inline-flex items-center gap-1"
-            onClick={goToBillingHistory}
-          >
-            {l.manageHistory}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="divide-y divide-gray-100">
-          {serviceManagementItems.map((item) => (
-            <div key={item.key} className="py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">{item.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{item.usageHint}</p>
-                <p className="text-xs text-muted-foreground mt-1">{item.meta}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full ${
-                    item.status === 'locked'
-                      ? 'bg-gray-200 text-gray-600'
-                      : item.status === 'active'
-                        ? 'bg-success/15 text-success'
-                        : 'bg-gray-100 text-muted-foreground'
-                  }`}
-                >
-                  {item.status === 'locked'
-                    ? l.statusLocked
-                    : item.status === 'active'
-                      ? l.statusActive
-                      : l.statusInactive}
-                </span>
-
-                {item.actionType !== 'none' ? (
-                  <Button
-                    variant={item.actionType === 'use' ? 'default' : 'outline'}
-                    className={`rounded-full ${
-                      item.actionType === 'use'
-                        ? 'bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white'
-                        : ''
-                    }`}
-                    onClick={() => handleManageAction(item)}
-                  >
-                    {item.actionType === 'use' ? l.manageUseNow : l.manageBuyNow}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <div id="order-composer" className="border border-gray-200 rounded-2xl bg-white p-4 sm:p-5 space-y-4 shadow-sm">
         <div className="space-y-2">
@@ -899,89 +549,6 @@ export default function Abonnement() {
           {l.continue}
         </Button>
       </div>
-
-      <section className="space-y-2">
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">{l.recentOrdersTitle}</h3>
-              <p className="text-xs text-muted-foreground">{l.recentOrdersSubtitle}</p>
-            </div>
-            <button
-              type="button"
-              className="text-xs text-[#FF6B4A] font-medium inline-flex items-center gap-1"
-              onClick={goToBillingHistory}
-            >
-              {l.manageHistory}
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {ordersLoading ? (
-            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground py-1">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {language === 'fr' ? 'Chargement des commandes…' : 'Loading orders...'}
-            </div>
-          ) : recentOrders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{l.recentOrdersEmpty}</p>
-          ) : (
-            <div className="space-y-2">
-              {recentOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="rounded-xl border border-gray-100 px-3 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{formatOrderItems(order.item_codes)}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {l.orderDate}: {formatOrderDate(order.created_at)}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                    <span className="text-sm font-semibold text-foreground">
-                      {formatPrice(Number(order.amount_paid_cents || 0) / 100, language)}
-                    </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${getStatusBadgeClass(order.status)}`}>
-                      {formatOrderStatus(order.status)}
-                    </span>
-                    {order.invoice_url ? (
-                      <a
-                        href={order.invoice_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-[#FF6B4A] font-medium"
-                      >
-                        {l.orderInvoice}: {l.orderOpenInvoice}
-                      </a>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <h3 className="text-sm font-semibold text-foreground">{l.usageTitle}</h3>
-        {(activeServices.usageLogs || []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">{l.noUsage}</p>
-        ) : (
-          <div className="space-y-1">
-            {(activeServices.usageLogs || []).slice(0, 8).map((item) => (
-              <div
-                key={item.id}
-                className="text-sm text-muted-foreground flex items-center justify-between border-b border-gray-100 py-2"
-              >
-                <span>
-                  {item.usage_type}
-                  {item.product_code ? ` • ${item.product_code}` : ''}
-                </span>
-                <span className="font-numbers">-{Number(item.quantity || 0)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
 
     </div>
   );
