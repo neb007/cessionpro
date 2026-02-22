@@ -476,10 +476,10 @@ export default function MyListings() {
                     exit={{ opacity: 0, y: -20 }}
                     layout
                   >
-                    <Card className="group overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl">
+                    <Card className="group overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl">
                       <div className="flex flex-col lg:flex-row">
                         {/* Zone média gauche */}
-                        <div className="relative h-52 lg:h-auto lg:w-72 shrink-0 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
+                        <div className="relative h-40 sm:h-44 lg:h-auto lg:w-56 shrink-0 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
                           <img
                             src={getPrimaryImageUrl(listing)}
                             alt={listing.title}
@@ -508,8 +508,8 @@ export default function MyListings() {
                         </div>
 
                         {/* Zone contenu + prix */}
-                        <CardContent className="p-4 sm:p-5 lg:p-6 flex-1">
-                          <div className="flex flex-col h-full gap-4">
+                        <CardContent className="p-3 sm:p-4 lg:p-4 flex-1">
+                          <div className="flex flex-col h-full gap-3">
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
@@ -530,11 +530,11 @@ export default function MyListings() {
                                   )}
                                 </div>
 
-                                <h3 className="font-semibold text-gray-900 text-2xl leading-tight line-clamp-2 mb-2">
+                                <h3 className="font-semibold text-gray-900 text-xl leading-tight line-clamp-2 mb-1.5">
                                   {listing.title}
                                 </h3>
 
-                                <p className="text-base text-gray-500 flex items-center gap-1.5">
+                                <p className="text-sm text-gray-500 flex items-center gap-1.5">
                                   <MapPin className="w-4 h-4" />
                                   <span>{listing.location || (language === 'fr' ? 'Localisation non précisée' : 'Location not specified')}</span>
                                 </p>
@@ -544,7 +544,7 @@ export default function MyListings() {
                                 <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
                                   {language === 'fr' ? 'Prix' : 'Price'}
                                 </p>
-                                <p className="font-mono text-4xl font-bold text-primary leading-none">
+                                <p className="font-mono text-3xl font-bold text-primary leading-none">
                                   {new Intl.NumberFormat('fr-FR', {
                                     style: 'currency',
                                     currency: 'EUR',
@@ -555,10 +555,10 @@ export default function MyListings() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 pt-4 border-t border-gray-100">
+                            <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 pt-3 border-t border-gray-100">
                               <div>
-                                <p className="text-sm text-gray-400 mb-1">{language === 'fr' ? 'CA annuel' : 'Annual revenue'}</p>
-                                <p className="font-mono text-2xl font-semibold text-gray-700 leading-none">
+                                <p className="text-xs text-gray-400 mb-1">{language === 'fr' ? 'CA annuel' : 'Annual revenue'}</p>
+                                <p className="font-mono text-lg font-semibold text-gray-700 leading-none">
                                   {listing.annual_revenue
                                     ? new Intl.NumberFormat('fr-FR', {
                                         style: 'currency',
@@ -571,22 +571,22 @@ export default function MyListings() {
                               </div>
 
                               <div>
-                                <p className="text-sm text-gray-400 mb-1">{language === 'fr' ? 'Employés' : 'Employees'}</p>
-                                <p className="font-mono text-2xl font-semibold text-gray-700 leading-none">
+                                <p className="text-xs text-gray-400 mb-1">{language === 'fr' ? 'Employés' : 'Employees'}</p>
+                                <p className="font-mono text-lg font-semibold text-gray-700 leading-none">
                                   {listing.employees ?? '—'}
                                 </p>
                               </div>
 
                               <div>
-                                <p className="text-sm text-gray-400 mb-1">{language === 'fr' ? 'Certif.' : 'Certified'}</p>
-                                <p className="text-2xl font-semibold leading-none text-gray-700">
+                                <p className="text-xs text-gray-400 mb-1">{language === 'fr' ? 'Certif.' : 'Certified'}</p>
+                                <p className="text-lg font-semibold leading-none text-gray-700">
                                   {listing.is_certified ? '✓' : '—'}
                                 </p>
                               </div>
 
                               <div>
-                                <p className="text-sm text-gray-400 mb-1">{language === 'fr' ? 'Vues' : 'Views'}</p>
-                                <p className="font-mono text-2xl font-semibold text-gray-700 leading-none inline-flex items-center gap-1">
+                                <p className="text-xs text-gray-400 mb-1">{language === 'fr' ? 'Vues' : 'Views'}</p>
+                                <p className="font-mono text-lg font-semibold text-gray-700 leading-none inline-flex items-center gap-1">
                                   <Eye className="w-4 h-4" />
                                   {listing.views_count || 0}
                                 </p>
@@ -597,13 +597,13 @@ export default function MyListings() {
                       </div>
 
                       {/* Barre actions basse */}
-                      <div className="border-t border-gray-100 bg-gray-50/70 px-4 sm:px-5 lg:px-6 py-3">
+                      <div className="border-t border-gray-100 bg-gray-50/70 px-3 sm:px-4 lg:px-4 py-2.5">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                           <div className="flex flex-wrap items-center gap-2">
                             <Button
                               size="sm"
                               variant={isFeatured ? 'secondary' : 'outline'}
-                              className="h-9"
+                              className="h-8"
                               onClick={() => (isFeatured ? handleDeactivateFeatured(listing) : handleActivateFeatured(listing))}
                               disabled={
                                 updating[listing.id] ||
@@ -627,7 +627,7 @@ export default function MyListings() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-9"
+                              className="h-8"
                               onClick={() => navigate(createPageUrl(`CreateBusiness?edit=${listing.id}`))}
                               disabled={updating[listing.id]}
                               title={language === 'fr' ? 'Modifier' : 'Edit'}
@@ -639,7 +639,7 @@ export default function MyListings() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-9"
+                              className="h-8"
                               onClick={() => handleDuplicate(listing)}
                               disabled={duplicating === listing.id}
                               title={language === 'fr' ? 'Dupliquer' : 'Duplicate'}
@@ -650,7 +650,7 @@ export default function MyListings() {
 
                             <Button
                               size="sm"
-                              className="h-9 bg-success hover:bg-success/90 text-white"
+                              className="h-8 bg-success hover:bg-success/90 text-white"
                               onClick={() => handleStatusChange(listing.id, 'sold')}
                               disabled={updating[listing.id] || listing.status === 'sold'}
                               title={language === 'fr' ? 'Marquer comme vendu' : 'Mark as sold'}
@@ -662,7 +662,7 @@ export default function MyListings() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              className="h-9"
+                              className="h-8"
                               onClick={() => handleDelete(listing.id)}
                               disabled={updating[listing.id]}
                               title={language === 'fr' ? 'Supprimer' : 'Delete'}
@@ -674,7 +674,7 @@ export default function MyListings() {
 
                           <Button
                             size="sm"
-                            className="h-10 bg-primary hover:bg-primary-hover text-primary-foreground px-5 self-start lg:self-auto"
+                            className="h-9 bg-primary hover:bg-primary-hover text-primary-foreground px-4 self-start lg:self-auto"
                             onClick={() => window.open(createPageUrl(`BusinessDetails?id=${listing.id}`), '_blank')}
                             title={language === 'fr' ? 'Voir l’annonce' : 'View listing'}
                           >
