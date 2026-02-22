@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createBusinessDetailsUrl, createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -275,7 +275,7 @@ export default function Leads() {
                           </div>
 
                           <Link 
-                            to={createPageUrl(`BusinessDetails?id=${lead.business_id}`)}
+                            to={createBusinessDetailsUrl(business || { id: lead.business_id, title: business?.title || 'annonce' })}
                             className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary transition-colors mb-3"
                           >
                             <Building2 className="w-4 h-4" />

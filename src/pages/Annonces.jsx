@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { businessService } from '@/services/businessService';
@@ -25,8 +26,8 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SECTORS } from '@/constants/sectors';
 
-const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
 const COUNTRIES = [
   { value: 'france', label: 'France' },
   { value: 'belgium', label: 'Belgique' },

@@ -110,6 +110,20 @@ const AuthenticatedApp = () => {
               path={`/${path}`}
               element={element}
             />
+            {path === 'BusinessDetails' ? (
+              <>
+                <Route
+                  key={`${path}-slug`}
+                  path={`/${path}/:listingSlug`}
+                  element={element}
+                />
+                <Route
+                  key={`${path}-slug-lower`}
+                  path={`/${lowerPath}/:listingSlug`}
+                  element={element}
+                />
+              </>
+            ) : null}
             {needsLowerAlias ? (
               <Route
                 key={`${path}-lower`}

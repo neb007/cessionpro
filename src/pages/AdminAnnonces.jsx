@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { announcementService } from '@/services/announcementService';
 import { emailNotificationService } from '@/services/emailNotificationService';
+import { createBusinessDetailsUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -453,7 +454,7 @@ export default function AdminAnnonces() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => window.open(`/BusinessDetails?id=${announcement.id}`, '_blank')}
+                            onClick={() => window.open(createBusinessDetailsUrl(announcement), '_blank')}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>

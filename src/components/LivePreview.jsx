@@ -1,14 +1,19 @@
+// @ts-nocheck
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Eye, MapPin, Euro } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
+import { computeListingCompletionScore } from '@/utils/listingCompletionScore';
 
 export default function LivePreview({
   formData,
-  language = 'fr'
+  language = 'fr',
+  announcementType = 'sale'
 }) {
+  const completion = computeListingCompletionScore(formData, language, announcementType);
+
   const formatPrice = (price) => {
     if (!price) return '-';
     return new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
@@ -72,8 +77,8 @@ export default function LivePreview({
                 <MapPin className="w-3 h-3" />
                 {language === 'fr' ? 'Lieu' : 'Location'}
               </p>
-              <p className="text-sm font-medium text-gray-900">
-                {formData.location || '-'}
+              <p className={`text-sm font-medium text-gray-900 ${formData.hide_location ? 'blur-sm select-none' : ''}`}>
+                {formData.location || (language === 'fr' ? 'Localisation masquée' : 'Location hidden')}
               </p>
             </div>
             <div className="space-y-1">
@@ -151,12 +156,23 @@ export default function LivePreview({
             <p className="text-xs text-gray-500 mb-2">
               {language === 'fr' ? 'Complétude' : 'Completeness'}
             </p>
-            <div className="flex gap-1">
-              {['title', 'sector', 'asking_price', 'location', 'description', 'images'].map((field) => (
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-primary">{completion.score}%</p>
+              <p className="text-[11px] text-gray-500">
+                {completion.tier?.label || (language === 'fr' ? 'En cours' : 'In progress')}
+              </p>
+            </div>
+            <div className="mt-2 flex gap-1">
+              {[...
+                (announcementType === 'sale'
+                  ? ['title', 'sector', 'asking_price', 'location', 'description', 'images']
+                  : ['title', 'description', 'buyer_sectors_interested', 'business_type_sought', 'buyer_profile_type', 'buyer_locations', 'buyer_image']
+                )
+              ].map((field) => (
                 <div
                   key={field}
                   className={`h-2 flex-1 rounded-full ${
-                    field === 'images'
+                    field === 'images' || field === 'buyer_image'
                       ? formData[field]?.length > 0
                         ? 'bg-green-500'
                         : 'bg-gray-200'

@@ -13,48 +13,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, Plus, Save, Send, Loader2, Building2 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
+import { X, Plus, Save, Send, Loader2, Building2, Eye, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FinancialYearsManager from '@/components/Financial/FinancialYearsManager';
 import ImageGallery from '@/components/ImageGallery';
 import { getDefaultImageForSector } from '@/constants/defaultImages';
 import { getRegionForFrenchCity } from '@/utils/frenchCitiesToRegions';
 import { toast } from '@/components/ui/use-toast';
-
-const SECTORS = [
-  'technology',
-  'retail',
-  'hospitality',
-  'manufacturing',
-  'services',
-  'healthcare',
-  'construction',
-  'transport',
-  'agriculture',
-  'real_estate',
-  'finance',
-  'ecommerce',
-  'beauty',
-  'education',
-  'events',
-  'logistics',
-  'food_beverage',
-  'other'
-];
+import { SECTORS } from '@/constants/sectors';
 const REASONS = ['retirement', 'new_project', 'health', 'relocation', 'other'];
 const COUNTRIES = ['france', 'belgium', 'switzerland', 'luxembourg', 'germany', 'spain', 'italy', 'netherlands', 'portugal', 'other'];
 const LEGAL_STRUCTURES = ['sarl', 'sas', 'sa', 'eurl', 'sasu', 'sci', 'snc', 'auto_entrepreneur', 'other'];
 const BUSINESS_TYPES = ['entreprise', 'fond_de_commerce', 'franchise'];
+const TITLE_MAX_LENGTH = 55;
 
 export default function SellerForm({
   formData,
   onFormChange,
   onSubmit,
+  onPreviewPublish,
   saving,
   language,
   t,
   user,
-  editingId
+  editingId,
+  completion
 }) {
   const [newAsset, setNewAsset] = useState('');
   const publishToastRef = useRef(null);
@@ -104,7 +93,11 @@ export default function SellerForm({
   }, []);
 
   const handleChange = (field, value) => {
-    const updatedData = { ...formData, [field]: value };
+    const nextValue = field === 'title' && typeof value === 'string'
+      ? value.slice(0, TITLE_MAX_LENGTH)
+      : value;
+
+    const updatedData = { ...formData, [field]: nextValue };
     
     if (field === 'sector' && value) {
       const defaultImageUrl = getDefaultImageForSector(value);
@@ -140,12 +133,35 @@ export default function SellerForm({
     handleChange('assets_included', newAssets);
   };
 
+  const withTooltip = (label, hint) => (
+    <div className="flex items-center gap-2">
+      <span className="inline-flex items-center gap-1.5">
+        <span>{label}</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+              aria-label={language === 'fr' ? 'Aide' : 'Help'}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {hint}
+          </TooltipContent>
+        </Tooltip>
+      </span>
+    </div>
+  );
+
   return (
-    <div className="w-full flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto pr-4 scrollbar-hide">
-        <div className="space-y-4 md:space-y-6">
-          {/* Main Form */}
+    <TooltipProvider delayDuration={120}>
+      <div className="w-full flex flex-col h-full overflow-hidden">
+        <div className="flex-1 overflow-y-auto pr-4 scrollbar-hide">
           <div className="space-y-4 md:space-y-6">
+            {/* Main Form */}
+            <div className="space-y-4 md:space-y-6">
             {/* Basic Info */}
             <Card className="border-0 shadow-sm">
               <CardHeader>
@@ -162,11 +178,15 @@ export default function SellerForm({
                     onChange={(e) => handleChange('title', e.target.value)}
                     placeholder={language === 'fr' ? 'Ex: Restaurant gastronomique Paris 8ème' : 'Ex: Gourmet restaurant Paris 8th'}
                     className="mt-2"
+                    maxLength={TITLE_MAX_LENGTH}
                   />
+                  <p className="text-[11px] text-gray-500 mt-1 text-right">
+                    {(formData.title || '').length}/{TITLE_MAX_LENGTH}
+                  </p>
                 </div>
 
                 <div>
-                  <Label>{t('description')}</Label>
+                  <Label>{withTooltip(t('description'), language === 'fr' ? 'Décrivez clairement l’activité et ses atouts.' : 'Describe the business clearly and highlight strengths.')}</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => handleChange('description', e.target.value)}
@@ -177,7 +197,7 @@ export default function SellerForm({
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <Label><span className="text-red-500">*</span> {t('sector')}</Label>
+                    <Label>{withTooltip(<><span className="text-red-500">*</span> {t('sector')}</>, language === 'fr' ? 'Secteur principal de votre activité.' : 'Primary sector of your business.')}</Label>
                     <Select value={formData.sector} onValueChange={(v) => handleChange('sector', v)}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder={t('filter_by_sector')} />
@@ -191,7 +211,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Type de Cession' : 'Business Type'}</Label>
+                    <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Type de Cession' : 'Business Type'}</>, language === 'fr' ? 'Nature de la transaction proposée.' : 'Nature of transaction proposed.')}</Label>
                     <Select value={formData.business_type} onValueChange={(v) => handleChange('business_type', v)}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder={language === 'fr' ? 'Sélectionner un type' : 'Select type'} />
@@ -211,7 +231,7 @@ export default function SellerForm({
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <Label>{t('reason_for_sale')}</Label>
+                    <Label>{withTooltip(t('reason_for_sale'), language === 'fr' ? 'Pourquoi vous cédez cette activité.' : 'Why you are selling this business.')}</Label>
                     <Select value={formData.reason_for_sale} onValueChange={(v) => handleChange('reason_for_sale', v)}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder={t('reason_for_sale')} />
@@ -225,7 +245,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{language === 'fr' ? 'Type de cession proposée' : 'Sell-side business type'}</Label>
+                    <Label>{withTooltip(language === 'fr' ? 'Type de cession proposée' : 'Sell-side business type', language === 'fr' ? 'Type juridique/commercial de la cession.' : 'Commercial/legal sell-side type.')}</Label>
                     <Select value={formData.seller_business_type || ''} onValueChange={(v) => handleChange('seller_business_type', v)}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder={language === 'fr' ? 'Sélectionner un type' : 'Select type'} />
@@ -245,7 +265,7 @@ export default function SellerForm({
 
                 <div className="grid sm:grid-cols-4 gap-4">
                   <div>
-                    <Label><span className="text-red-500">*</span> {t('location')}</Label>
+                    <Label>{withTooltip(<><span className="text-red-500">*</span> {t('location')}</>, language === 'fr' ? 'Ville principale de l’activité.' : 'Main city of the activity.')}</Label>
                     <Input
                       value={formData.location}
                       onChange={(e) => handleChange('location', e.target.value)}
@@ -256,7 +276,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{language === 'fr' ? 'Département' : 'Department'}</Label>
+                    <Label>{withTooltip(language === 'fr' ? 'Département' : 'Department', language === 'fr' ? 'Code ou nom du département.' : 'Department code or name.')}</Label>
                     <Input
                       value={formData.department}
                       onChange={(e) => handleChange('department', e.target.value)}
@@ -266,7 +286,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{language === 'fr' ? 'Région' : 'Region'}</Label>
+                    <Label>{withTooltip(language === 'fr' ? 'Région' : 'Region', language === 'fr' ? 'Région administrative.' : 'Administrative region.')}</Label>
                     <Input
                       value={formData.region}
                       onChange={(e) => handleChange('region', e.target.value)}
@@ -276,7 +296,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{t('country')}</Label>
+                    <Label>{withTooltip(t('country'), language === 'fr' ? 'Pays principal de l’activité.' : 'Primary country of operation.')}</Label>
                     <Select value={formData.country} onValueChange={(v) => handleChange('country', v)}>
                       <SelectTrigger className="mt-2">
                         <SelectValue />
@@ -324,7 +344,7 @@ export default function SellerForm({
                 )}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <Label><span className="text-red-500">*</span> {t('price')} (€)</Label>
+                    <Label>{withTooltip(<><span className="text-red-500">*</span> {t('price')} (€)</>, language === 'fr' ? 'Prix demandé pour la cession.' : 'Asking price for the transfer.')}</Label>
                     <Input
                       type="number"
                       value={formData.asking_price}
@@ -336,7 +356,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{t('annual_revenue')} (€)</Label>
+                    <Label>{withTooltip(`${t('annual_revenue')} (€)`, language === 'fr' ? 'Chiffre d’affaires annuel le plus représentatif.' : 'Most representative annual revenue.')}</Label>
                     <Input
                       type="number"
                       value={formData.annual_revenue}
@@ -347,7 +367,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>EBITDA (€)</Label>
+                    <Label>{withTooltip('EBITDA (€)', language === 'fr' ? 'Résultat opérationnel avant amortissements.' : 'Operating result before depreciation/amortization.')}</Label>
                     <Input
                       type="number"
                       value={formData.ebitda}
@@ -358,7 +378,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{t('employees')}</Label>
+                    <Label>{withTooltip(t('employees'), language === 'fr' ? 'Nombre total de collaborateurs.' : 'Total number of employees.')}</Label>
                     <Input
                       type="number"
                       value={formData.employees}
@@ -369,7 +389,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{t('year_founded')}</Label>
+                    <Label>{withTooltip(t('year_founded'), language === 'fr' ? 'Année de création de l’activité.' : 'Year of business creation.')}</Label>
                     <Input
                       type="number"
                       value={formData.year_founded}
@@ -392,7 +412,7 @@ export default function SellerForm({
               <CardContent className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <Label>{language === 'fr' ? 'Structure juridique' : 'Legal Structure'}</Label>
+                    <Label>{withTooltip(language === 'fr' ? 'Structure juridique' : 'Legal Structure', language === 'fr' ? 'Forme juridique de l’entreprise.' : 'Legal form of the company.')}</Label>
                     <Select value={formData.legal_structure} onValueChange={(v) => handleChange('legal_structure', v)}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder={language === 'fr' ? 'Sélectionner' : 'Select'} />
@@ -406,7 +426,7 @@ export default function SellerForm({
                   </div>
 
                   <div>
-                    <Label>{language === 'fr' ? 'Numéro SIREN/SIRET' : 'Registration Number'}</Label>
+                    <Label>{withTooltip(language === 'fr' ? 'Numéro SIREN/SIRET' : 'Registration Number', language === 'fr' ? 'Identifiant d’immatriculation.' : 'Business registration identifier.')}</Label>
                     <Input
                       value={formData.registration_number}
                       onChange={(e) => handleChange('registration_number', e.target.value)}
@@ -417,7 +437,7 @@ export default function SellerForm({
                 </div>
 
                 <div>
-                  <Label>{language === 'fr' ? 'Baux commerciaux' : 'Commercial Leases'}</Label>
+                  <Label>{withTooltip(language === 'fr' ? 'Baux commerciaux' : 'Commercial Leases', language === 'fr' ? 'Conditions de bail: loyer, durée, clauses.' : 'Lease terms: rent, duration, clauses.')}</Label>
                   <Textarea
                     value={formData.lease_info}
                     onChange={(e) => handleChange('lease_info', e.target.value)}
@@ -427,7 +447,7 @@ export default function SellerForm({
                 </div>
 
                 <div>
-                  <Label>{language === 'fr' ? 'Licences et autorisations' : 'Licenses & Permits'}</Label>
+                  <Label>{withTooltip(language === 'fr' ? 'Licences et autorisations' : 'Licenses & Permits', language === 'fr' ? 'Autorisations nécessaires à l’exploitation.' : 'Authorizations required to operate.')}</Label>
                   <Textarea
                     value={formData.licenses}
                     onChange={(e) => handleChange('licenses', e.target.value)}
@@ -447,7 +467,7 @@ export default function SellerForm({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>{language === 'fr' ? 'Positionnement sur le marché' : 'Market Position'}</Label>
+                  <Label>{withTooltip(language === 'fr' ? 'Positionnement sur le marché' : 'Market Position', language === 'fr' ? 'Comment votre entreprise se distingue.' : 'How your company is positioned.')}</Label>
                   <Textarea
                     value={formData.market_position}
                     onChange={(e) => handleChange('market_position', e.target.value)}
@@ -457,7 +477,7 @@ export default function SellerForm({
                 </div>
 
                 <div>
-                  <Label>{language === 'fr' ? 'Avantages concurrentiels' : 'Competitive Advantages'}</Label>
+                  <Label>{withTooltip(language === 'fr' ? 'Avantages concurrentiels' : 'Competitive Advantages', language === 'fr' ? 'Forces qui vous différencient.' : 'Differentiating strengths.')}</Label>
                   <Textarea
                     value={formData.competitive_advantages}
                     onChange={(e) => handleChange('competitive_advantages', e.target.value)}
@@ -467,7 +487,7 @@ export default function SellerForm({
                 </div>
 
                 <div>
-                  <Label>{language === 'fr' ? 'Opportunités de développement' : 'Growth Opportunities'}</Label>
+                  <Label>{withTooltip(language === 'fr' ? 'Opportunités de développement' : 'Growth Opportunities', language === 'fr' ? 'Pistes de croissance futures.' : 'Future growth levers.')}</Label>
                   <Textarea
                     value={formData.growth_opportunities}
                     onChange={(e) => handleChange('growth_opportunities', e.target.value)}
@@ -477,7 +497,7 @@ export default function SellerForm({
                 </div>
 
                 <div>
-                  <Label>{language === 'fr' ? 'Description de la clientèle' : 'Customer Base'}</Label>
+                  <Label>{withTooltip(language === 'fr' ? 'Description de la clientèle' : 'Customer Base', language === 'fr' ? 'Typologie et fidélité des clients.' : 'Customer typology and loyalty.')}</Label>
                   <Textarea
                     value={formData.customer_base}
                     onChange={(e) => handleChange('customer_base', e.target.value)}
@@ -497,7 +517,7 @@ export default function SellerForm({
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-3">
-                  <Label>{language === 'fr' ? 'Détails concernant la cession' : 'Cession details'}</Label>
+                  <Label>{withTooltip(language === 'fr' ? 'Détails concernant la cession' : 'Cession details', language === 'fr' ? 'Précisions utiles pour les repreneurs.' : 'Useful details for buyers.')}</Label>
                   <Textarea
                     value={formData.cession_details}
                     onChange={(e) => handleChange('cession_details', e.target.value)}
@@ -521,7 +541,7 @@ export default function SellerForm({
                 </div>
 
                 <div className="space-y-3">
-                  <Label>{language === 'fr' ? 'Taille de la surface' : 'Surface area'}</Label>
+                  <Label>{withTooltip(language === 'fr' ? 'Taille de la surface' : 'Surface area', language === 'fr' ? 'Surface exploitable (m²).' : 'Usable floor area (sqm).')}</Label>
                   <Input
                     value={formData.surface_area}
                     onChange={(e) => handleChange('surface_area', e.target.value)}
@@ -598,7 +618,9 @@ export default function SellerForm({
             {/* Images */}
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle className="font-display">{t('upload_images')}</CardTitle>
+                <CardTitle className="font-display">
+                  {withTooltip(t('upload_images'), language === 'fr' ? 'Ajoutez des photos pour renforcer la confiance des acheteurs.' : 'Add photos to build buyer trust.')}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ImageGallery
@@ -626,8 +648,25 @@ export default function SellerForm({
               </Button>
               <Button
                 onClick={() => {
-                  onSubmit('active');
-                  showPublishToast();
+                  if (typeof onPreviewPublish === 'function') {
+                    onPreviewPublish();
+                  }
+                }}
+                variant="outline"
+                disabled={saving}
+                className="flex-1 py-6"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                {language === 'fr' ? 'Preview' : 'Preview'}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (typeof onPreviewPublish === 'function') {
+                    onPreviewPublish();
+                  } else {
+                    onSubmit('active');
+                    showPublishToast();
+                  }
                 }}
                 disabled={saving}
                 className="flex-1 py-6 bg-primary text-white hover:bg-primary/90"
@@ -640,9 +679,10 @@ export default function SellerForm({
                 {t('publish')}
               </Button>
             </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

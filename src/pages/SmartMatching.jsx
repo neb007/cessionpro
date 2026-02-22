@@ -23,7 +23,7 @@ import { billingService } from '@/services/billingService';
 import { favoriteService } from '@/services/favoriteService';
 import BusinessCard from '@/components/ui/BusinessCard';
 import { toast } from '@/components/ui/use-toast';
-import { createPageUrl } from '@/utils';
+import { createBusinessDetailsUrl, createPageUrl } from '@/utils';
 
 const SECTORS = [
   { value: 'technology', label: 'Technologie' },
@@ -1368,14 +1368,6 @@ export default function SmartMatching() {
                   )}
                 </div>
 
-                <div className="border-t border-gray-200 pt-3">
-                  <p className="text-xs text-[#6B7280]">
-                    {language === 'fr'
-                      ? `Le moteur Smart Matching affiche automatiquement les annonces entre ${SMART_MATCHING_MIN_SCORE}% et 100% de compatibilité.`
-                      : `The Smart Matching engine automatically displays listings between ${SMART_MATCHING_MIN_SCORE}% and 100% compatibility.`}
-                  </p>
-                </div>
-
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
                   <button
                     type="button"
@@ -1492,6 +1484,8 @@ export default function SmartMatching() {
                     <BusinessCard
                       key={listing.id}
                       business={listing}
+                      isFavorite={false}
+                      onToggleFavorite={() => {}}
                       fetchSellerLogo={false}
                       detailsUrl={createPageUrl('Abonnement')}
                       hideMessageButton
@@ -1505,7 +1499,7 @@ export default function SmartMatching() {
                   const tone = getScoreTone(listing.smartMatchScore || 0);
                   const detailsUrl = listing.isMock
                     ? createPageUrl('Abonnement')
-                    : createPageUrl(`BusinessDetails?id=${listing.id}`);
+                    : createBusinessDetailsUrl(listing);
                   const highlights = listing.smartMatchMeta?.highlights?.slice(0, 3) || [];
                   const isFavorite = favoriteIds.includes(listing.id);
 

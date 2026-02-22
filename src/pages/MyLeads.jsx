@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createBusinessDetailsUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -137,7 +137,7 @@ export default function MyLeads() {
                         <p className="text-xs text-gray-500 mt-1">
                           {language === 'fr' ? 'Annonce:' : 'Listing:'} 
                           <Link 
-                            to={createPageUrl(`BusinessDetails?id=${lead.business_id}`)}
+                            to={createBusinessDetailsUrl({ id: lead.business_id, title: getBusinessTitle(lead.business_id) })}
                             className="font-medium text-primary hover:underline ml-1"
                           >
                             {getBusinessTitle(lead.business_id)}

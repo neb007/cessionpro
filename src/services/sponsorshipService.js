@@ -4,11 +4,16 @@ const isSchemaGapError = (error) => {
   const code = String(error?.code || '');
   const message = String(error?.message || '').toLowerCase();
   const details = String(error?.details || '').toLowerCase();
+  const status = Number(error?.status || 0);
 
   return (
+    status === 404 ||
     code === '42P01' ||
     code === '42703' ||
+    code.startsWith('PGRST2') ||
     message.includes('does not exist') ||
+    message.includes('could not find the table') ||
+    message.includes('relation') ||
     message.includes('schema cache') ||
     details.includes('schema cache')
   );
@@ -74,7 +79,15 @@ export const sponsorshipService = {
           .in('usage_type', ['sponsored_listing_activation', 'sponsored_listing_days_consumed'])
       ]);
 
-    if (featuredError) throw featuredError;
+    if (featuredError) {
+      if (isSchemaGapError(featuredError)) {
+        return {
+          activeFeaturedCount: 0,
+          activations: 0
+        };
+      }
+      throw featuredError;
+    }
     if (activationsError && !isSchemaGapError(activationsError)) throw activationsError;
 
     return {

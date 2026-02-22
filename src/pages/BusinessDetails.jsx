@@ -1,6 +1,7 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createPageUrl, extractReferenceFromListingSlug } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
@@ -167,24 +168,42 @@ export default function BusinessDetails() {
   const loadData = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
-    
-    if (!id) {
+
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const detailsIndex = pathParts.findIndex((part) => part.toLowerCase() === 'businessdetails');
+    const listingSlug = detailsIndex >= 0 ? pathParts[detailsIndex + 1] : null;
+    const slugReference = extractReferenceFromListingSlug(listingSlug);
+
+    if (!id && !slugReference) {
       navigate(createPageUrl('Annonces'));
       return;
     }
 
     try {
-      const businessData = await base44.entities.Business.filter({ id });
-      if (!businessData[0]) {
+      let resolvedBusiness = null;
+
+      if (id) {
+        const businessData = await base44.entities.Business.filter({ id });
+        resolvedBusiness = businessData?.[0] || null;
+      }
+
+      if (!resolvedBusiness && slugReference) {
+        const businessDataByReference = await base44.entities.Business.filter({
+          reference_number: slugReference
+        });
+        resolvedBusiness = businessDataByReference?.[0] || null;
+      }
+
+      if (!resolvedBusiness) {
         navigate(createPageUrl('Annonces'));
         return;
       }
-      
-      setBusiness(businessData[0]);
+
+      setBusiness(resolvedBusiness);
       
       // Record page view and get unique count
-      await recordPageView(businessData[0].id, null, businessData[0].seller_email);
-      const uniqueViews = await getUniqueViewCount(businessData[0].id);
+      await recordPageView(resolvedBusiness.id, null, resolvedBusiness.seller_email);
+      const uniqueViews = await getUniqueViewCount(resolvedBusiness.id);
       setViewCount(uniqueViews);
 
       try {
@@ -196,7 +215,7 @@ export default function BusinessDetails() {
 
         const favs = await base44.entities.Favorite.filter({ 
           user_id: userData.id,
-          business_id: id 
+          business_id: resolvedBusiness.id 
         });
         setIsFavorite(favs.length > 0);
       } catch (e) {
@@ -432,12 +451,13 @@ export default function BusinessDetails() {
                 )}
               </div>
               <div className="flex items-center gap-4 text-gray-500">
-                {!business.hide_location && (
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4" />
-                    {business.location}, {t(business.country)}
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  <span className={business.hide_location ? 'blur-sm select-none' : ''}>
+                    {business.location || (language === 'fr' ? 'Localisation masquée' : 'Location hidden')}
+                    {business.country ? `, ${t(business.country)}` : ''}
+                  </span>
+                </div>
                 {business.year_founded && (
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />

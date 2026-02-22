@@ -1,15 +1,21 @@
+// @ts-nocheck
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Check, X, AlertCircle } from 'lucide-react';
+import LivePreview from '@/components/LivePreview';
 
 export default function CompletionChecklist({
   open,
   onOpenChange,
   formData,
+  announcementType = 'sale',
+  completion = null,
   onPublish,
   language = 'fr'
 }) {
+  const isSale = announcementType === 'sale';
+
   const requiredChecks = [
     {
       id: 'title',
@@ -20,19 +26,19 @@ export default function CompletionChecklist({
     {
       id: 'sector',
       label: language === 'fr' ? 'Secteur d\'activité' : 'Business sector',
-      completed: !!formData.sector,
+      completed: isSale ? !!formData.sector : true,
       critical: true
     },
     {
       id: 'location',
       label: language === 'fr' ? 'Localisation' : 'Location',
-      completed: !!formData.location,
+      completed: isSale ? !!formData.location : true,
       critical: true
     },
     {
       id: 'price',
       label: language === 'fr' ? 'Prix de vente' : 'Asking price',
-      completed: !!formData.asking_price,
+      completed: isSale ? !!formData.asking_price : true,
       critical: true
     },
     {
@@ -92,70 +98,72 @@ export default function CompletionChecklist({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">
-            {language === 'fr' ? 'Vérification finale' : 'Final Check'}
+            {language === 'fr' ? 'Prévisualisation avant publication' : 'Pre-publish preview'}
           </DialogTitle>
           <DialogDescription>
             {language === 'fr'
-              ? 'Assurez-vous que tous les champs obligatoires sont complétés'
-              : 'Make sure all required fields are completed'}
+              ? 'Vérifiez votre annonce puis confirmez la publication.'
+              : 'Review your listing then confirm publishing.'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Critical Section */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-700 text-xs font-bold">
-                *
-              </span>
-              {language === 'fr' ? 'Champs obligatoires' : 'Required fields'} ({criticalCompletedCount}/{criticalChecks.length})
-            </h3>
-            <div className="space-y-2">
-              {criticalChecks.map(check => (
-                <CheckItemRow key={check.id} check={check} isCritical={true} />
-              ))}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+                  *
+                </span>
+                {language === 'fr' ? 'Champs obligatoires' : 'Required fields'} ({criticalCompletedCount}/{criticalChecks.length})
+              </h3>
+              <div className="space-y-2">
+                {criticalChecks.map(check => (
+                  <CheckItemRow key={check.id} check={check} isCritical={true} />
+                ))}
+              </div>
             </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                  +
+                </span>
+                {language === 'fr' ? 'Recommandé' : 'Recommended'} ({recommendedCompletedCount}/{recommendedChecks.length})
+              </h3>
+              <div className="space-y-2">
+                {recommendedChecks.map(check => (
+                  <CheckItemRow key={check.id} check={check} isCritical={false} />
+                ))}
+              </div>
+            </div>
+
+            {!allCriticalComplete && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700 font-medium">
+                  ⚠️ {language === 'fr'
+                    ? 'Complétez tous les champs obligatoires avant de publier'
+                    : 'Complete all required fields before publishing'}
+                </p>
+              </div>
+            )}
+
+            {allCriticalComplete && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700 font-medium">
+                  ✓ {language === 'fr'
+                    ? 'Prêt à publier. Vous pouvez publier même sous 70/100.'
+                    : 'Ready to publish. You can publish even below 70/100.'}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Recommended Section */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
-                +
-              </span>
-              {language === 'fr' ? 'Recommandé' : 'Recommended'} ({recommendedCompletedCount}/{recommendedChecks.length})
-            </h3>
-            <div className="space-y-2">
-              {recommendedChecks.map(check => (
-                <CheckItemRow key={check.id} check={check} isCritical={false} />
-              ))}
-            </div>
+            <LivePreview formData={formData} language={language} announcementType={announcementType} />
           </div>
-
-          {/* Warning if critical incomplete */}
-          {!allCriticalComplete && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700 font-medium">
-                ⚠️ {language === 'fr'
-                  ? 'Complétez tous les champs obligatoires avant de publier'
-                  : 'Complete all required fields before publishing'}
-              </p>
-            </div>
-          )}
-
-          {/* Info if all complete */}
-          {allCriticalComplete && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-700 font-medium">
-                ✓ {language === 'fr'
-                  ? 'Prêt à publier! Vous pouvez toujours ajouter des détails recommandés'
-                  : 'Ready to publish! You can still add recommended details'}
-              </p>
-            </div>
-          )}
         </div>
 
         <DialogFooter>

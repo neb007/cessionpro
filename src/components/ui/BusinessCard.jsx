@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createBusinessDetailsUrl } from '@/utils';
 import { MapPin, Heart, MessageCircle, CheckCircle2, Eye, TrendingUp, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -109,7 +109,7 @@ export default function BusinessCard({
   const growthPercentage = calculateGrowthPercentage(business.financial_years);
   const shouldShowLogo = Boolean(sellerProfile?.logo_url || sellerFallbackLogo);
   const displayLogoUrl = sellerProfile?.logo_url || sellerFallbackLogo;
-  const cardDetailsUrl = detailsUrl || createPageUrl(`BusinessDetails?id=${business.id}`);
+  const cardDetailsUrl = detailsUrl || createBusinessDetailsUrl(business);
 
   return (
     <motion.div
@@ -205,14 +205,14 @@ export default function BusinessCard({
           </div>
 
           {/* Localisation */}
-          {!business.hide_location && (
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500 }} className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
-                <MapPin className="w-4 h-4 mr-1.5 text-gray-400 flex-shrink-0" />
-                <span className="truncate">{business.location}</span>
-              </div>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div style={{ fontFamily: 'Plus Jakarta Sans', fontWeight: 500 }} className="flex items-center text-sm text-gray-500 flex-1 min-w-0">
+              <MapPin className="w-4 h-4 mr-1.5 text-gray-400 flex-shrink-0" />
+              <span className={`truncate ${business.hide_location ? 'blur-sm select-none' : ''}`}>
+                {business.location || (language === 'fr' ? 'Localisation masquée' : 'Location hidden')}
+              </span>
             </div>
-          )}
+          </div>
 
           {/* Détails financiers - CESSION */}
           {business.type === 'cession' && (

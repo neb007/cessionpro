@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createBusinessDetailsUrl, createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -51,6 +51,10 @@ export default function MyListings() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isTestLikeEnv =
+    import.meta.env.DEV ||
+    import.meta.env.MODE === 'test' ||
+    String(import.meta.env.VITE_APP_ENV || '').toLowerCase() === 'test';
   
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState({});
@@ -281,11 +285,15 @@ export default function MyListings() {
     } catch (error) {
       const msg = String(error?.message || '');
       if (msg.includes('BILLING_RUNTIME_UNAVAILABLE')) {
-        alert(
-          language === 'fr'
-            ? 'La facturation sponsorisée n’est pas encore activée sur cet environnement.'
-            : 'Sponsored billing is not enabled on this environment yet.'
-        );
+        if (isTestLikeEnv) {
+          console.info('[MyListings][Sponsorship] Billing runtime unavailable in test-like environment');
+        } else {
+          alert(
+            language === 'fr'
+              ? 'La facturation sponsorisée n’est pas encore activée sur cet environnement.'
+              : 'Sponsored billing is not enabled on this environment yet.'
+          );
+        }
       } else
       if (msg.includes('NO_SPONSORED_DAYS_AVAILABLE') || msg.includes('NO_SPONSORED_SLOT_AVAILABLE')) {
         alert(
@@ -336,11 +344,15 @@ export default function MyListings() {
     } catch (error) {
       const msg = String(error?.message || '');
       if (msg.includes('BILLING_RUNTIME_UNAVAILABLE')) {
-        alert(
-          language === 'fr'
-            ? 'La facturation sponsorisée n’est pas encore activée sur cet environnement.'
-            : 'Sponsored billing is not enabled on this environment yet.'
-        );
+        if (isTestLikeEnv) {
+          console.info('[MyListings][Sponsorship] Billing runtime unavailable in test-like environment');
+        } else {
+          alert(
+            language === 'fr'
+              ? 'La facturation sponsorisée n’est pas encore activée sur cet environnement.'
+              : 'Sponsored billing is not enabled on this environment yet.'
+          );
+        }
       } else if (msg.includes('SPONSORSHIP_NOT_ACTIVE')) {
         alert(language === 'fr' ? 'Cette annonce n’est pas actuellement À la une.' : 'This listing is not currently featured.');
       } else {
@@ -675,7 +687,7 @@ export default function MyListings() {
                           <Button
                             size="sm"
                             className="h-9 bg-primary hover:bg-primary-hover text-primary-foreground px-4 self-start lg:self-auto"
-                            onClick={() => window.open(createPageUrl(`BusinessDetails?id=${listing.id}`), '_blank')}
+                            onClick={() => window.open(createBusinessDetailsUrl(listing), '_blank')}
                             title={language === 'fr' ? 'Voir l’annonce' : 'View listing'}
                           >
                             <ExternalLink className="w-4 h-4" />

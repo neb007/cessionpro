@@ -1,49 +1,15 @@
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Check, AlertCircle } from 'lucide-react';
+import { computeListingCompletionScore } from '@/utils/listingCompletionScore';
 
 export default function FormProgress({
   formData,
   language = 'fr',
   announcementType = 'sale'
 }) {
-  // Calculer le taux de complétude
-  const calculateProgress = () => {
-    let completedFields = 0;
-    let totalFields = 0;
-
-    // Champs requis
-    const requiredFields = ['title', 'sector', 'asking_price', 'location'];
-    requiredFields.forEach(field => {
-      totalFields++;
-      if (formData[field]) completedFields++;
-    });
-
-    // Champs optionnels mais recommandés
-    const recommendedFields = [
-      'description',
-      'annual_revenue',
-      'ebitda',
-      'employees',
-      'images'
-    ];
-    recommendedFields.forEach(field => {
-      totalFields++;
-      if (field === 'images' ? formData[field]?.length > 0 : formData[field]) {
-        completedFields++;
-      }
-    });
-
-    // Market info
-    if (formData.market_position) completedFields++;
-    if (formData.competitive_advantages) completedFields++;
-    if (formData.growth_opportunities) completedFields++;
-    totalFields += 3;
-
-    return Math.round((completedFields / totalFields) * 100);
-  };
-
-  const progress = calculateProgress();
+  const completion = computeListingCompletionScore(formData, language, announcementType);
+  const progress = completion.score;
 
   // Sections de complétude
   const sections = [
@@ -54,7 +20,7 @@ export default function FormProgress({
     },
     {
       name: language === 'fr' ? 'Financier' : 'Financial',
-      fields: ['asking_price', 'annual_revenue', 'ebitda', 'employees'],
+      fields: ['asking_price', 'annual_revenue', 'ebitda', 'employees', 'year_founded'],
       required: ['asking_price']
     },
     {

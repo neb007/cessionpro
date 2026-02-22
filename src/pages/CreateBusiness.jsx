@@ -8,11 +8,16 @@ import { useAuth } from '@/lib/AuthContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import AnnouncementTypeRadio from '@/components/AnnouncementTypeRadio';
 import CompletionChecklist from '@/components/CompletionChecklist';
+import FormCompletionExperience from '@/components/FormCompletionExperience';
 import SellerForm from '@/components/SellerForm';
 import BuyerForm from '@/components/BuyerForm';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { normalizeImageArray } from '@/utils/imageHelpers';
 import { generateUniqueReference } from '@/utils/referenceGenerator';
+import { computeListingCompletionScore } from '@/utils/listingCompletionScore';
+import { getDefaultImageForSector } from '@/constants/defaultImages';
+
+const TITLE_MAX_LENGTH = 55;
 
 const BUSINESS_FIELDS_SUPPORTED = true;
 
@@ -175,7 +180,20 @@ export default function CreateBusiness() {
   };
 
   const handleFormChange = (updatedFormData) => {
-    setFormData(updatedFormData);
+    const nextTitle = typeof updatedFormData?.title === 'string'
+      ? updatedFormData.title.slice(0, TITLE_MAX_LENGTH)
+      : updatedFormData?.title;
+
+    setFormData({
+      ...updatedFormData,
+      title: nextTitle
+    });
+  };
+
+  const completion = computeListingCompletionScore(formData, language, announcementType);
+
+  const openPublishPreview = () => {
+    setChecklistOpen(true);
   };
 
   const handleSubmit = async (status) => {
@@ -214,7 +232,6 @@ export default function CreateBusiness() {
 
       // Only include seller/business fields, filter out buyer-specific fields
       const isSaleAnnouncement = announcementType === 'sale';
-      const referenceNumber = formData.reference_number || generateUniqueReference();
 
       const baseData = {
         title: formData.title,
@@ -250,7 +267,7 @@ export default function CreateBusiness() {
         show_surface_area: formData.show_surface_area,
         seller_id: user?.id,  // Use user ID instead of email
         seller_email: user?.email || null,
-        status: editingId ? 'pending' : 'pending'
+        status: status === 'draft' ? 'draft' : 'pending'
       };
 
       if (!BUSINESS_FIELDS_SUPPORTED) {
@@ -263,7 +280,7 @@ export default function CreateBusiness() {
       const data = {
         ...baseData,
         business_type: formData.business_type || null,
-        reference_number: referenceNumber,
+        reference_number: formData.reference_number || null,
         type: isSaleAnnouncement ? 'cession' : 'acquisition',
         // Add buyer-specific fields if this is an acquisition announcement
         ...(
@@ -286,6 +303,10 @@ export default function CreateBusiness() {
         ),
       };
 
+      if (isSaleAnnouncement && (!Array.isArray(data.images) || data.images.length === 0)) {
+        data.images = [getDefaultImageForSector(formData.sector)];
+      }
+
       console.log('Saving business with data:', data);
 
       if (editingId) {
@@ -293,7 +314,30 @@ export default function CreateBusiness() {
         await base44.entities.Business.update(editingId, data);
       } else {
         console.log('Creating new business');
-        const result = await base44.entities.Business.create(data);
+
+        let result = null;
+        let lastCreateError = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const referenceNumber = await generateUniqueReference();
+          try {
+            result = await base44.entities.Business.create({
+              ...data,
+              reference_number: referenceNumber
+            });
+            break;
+          } catch (createError) {
+            lastCreateError = createError;
+            const message = String(createError?.message || '').toLowerCase();
+            if (!message.includes('reference_number')) {
+              throw createError;
+            }
+          }
+        }
+
+        if (!result && lastCreateError) {
+          throw lastCreateError;
+        }
+
         console.log('Business created successfully:', result);
         
         // Save logo info to Supabase business_logos table
@@ -411,23 +455,31 @@ export default function CreateBusiness() {
           hideOption={null}
         />
 
+        <FormCompletionExperience
+          completion={completion}
+          language={language}
+        />
+
         {/* Conditional Form Rendering */}
         {announcementType === 'sale' ? (
           <SellerForm
             formData={formData}
             onFormChange={handleFormChange}
             onSubmit={handleSubmit}
+            onPreviewPublish={openPublishPreview}
             saving={saving}
             language={language}
             t={t}
             user={user}
             editingId={editingId}
+            completion={completion}
           />
         ) : (
           <BuyerForm
             formData={formData}
             onFormChange={handleFormChange}
             onSubmit={handleSubmit}
+            onPreviewPublish={openPublishPreview}
             saving={saving}
             language={language}
             t={t}
@@ -441,6 +493,8 @@ export default function CreateBusiness() {
           open={checklistOpen}
           onOpenChange={setChecklistOpen}
           formData={formData}
+          announcementType={announcementType}
+          completion={completion}
           onPublish={() => {
             setChecklistOpen(false);
             handleSubmit('pending');

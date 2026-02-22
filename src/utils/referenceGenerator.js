@@ -1,41 +1,60 @@
+import { supabase } from '@/api/supabaseClient';
+
+export const REFERENCE_START_SEQUENCE = 2164;
+export const REFERENCE_PREFIX = 'RIV-';
+
 /**
- * Generate a unique reference number in format REF-XXXX
+ * Generate a unique reference number in format RIV-XXXX
  * @param {number} sequence - Sequential number to convert to XXXX format
- * @returns {string} Reference in format REF-XXXX
+ * @returns {string} Reference in format RIV-XXXX
  */
 export const generateReference = (sequence) => {
   if (!sequence || sequence < 1) {
-    return 'REF-0001';
+    return `${REFERENCE_PREFIX}${REFERENCE_START_SEQUENCE}`;
   }
-  
-  // Pad the sequence number with zeros to 4 digits
-  const paddedNumber = String(sequence).padStart(4, '0');
-  return `REF-${paddedNumber}`;
+
+  return `${REFERENCE_PREFIX}${String(sequence)}`;
 };
 
 /**
- * Generate a unique reference using timestamp and random number
- * @returns {string} Reference in format REF-XXXX
+ * Generate the next unique reference from existing businesses
+ * @returns {Promise<string>} Reference in format RIV-XXXX
  */
-export const generateUniqueReference = () => {
-  // Combine timestamp and random number to create unique reference
-  const timestamp = Date.now() % 10000; // Get last 4 digits
-  const random = Math.floor(Math.random() * 10000);
-  const combined = (timestamp + random) % 10000;
-  const paddedNumber = String(combined).padStart(4, '0');
-  return `REF-${paddedNumber}`;
+export const generateUniqueReference = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('reference_number')
+      .like('reference_number', `${REFERENCE_PREFIX}%`);
+
+    if (error) {
+      throw error;
+    }
+
+    let maxSequence = REFERENCE_START_SEQUENCE - 1;
+    for (const item of data || []) {
+      const sequence = extractSequenceFromReference(item?.reference_number);
+      if (sequence > maxSequence) {
+        maxSequence = sequence;
+      }
+    }
+
+    return generateReference(Math.max(REFERENCE_START_SEQUENCE, maxSequence + 1));
+  } catch {
+    return generateReference(REFERENCE_START_SEQUENCE);
+  }
 };
 
 /**
- * Extract sequence number from a reference (e.g., "REF-0042" -> 42)
+ * Extract sequence number from a reference (e.g., "RIV-0042" -> 42)
  * @param {string} reference - Reference string
  * @returns {number} Sequence number
  */
 export const extractSequenceFromReference = (reference) => {
-  if (!reference || !reference.startsWith('REF-')) {
+  if (!reference || !reference.startsWith(REFERENCE_PREFIX)) {
     return 0;
   }
-  
-  const number = reference.replace('REF-', '');
+
+  const number = reference.replace(REFERENCE_PREFIX, '');
   return parseInt(number, 10) || 0;
 };

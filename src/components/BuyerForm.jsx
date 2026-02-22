@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,33 +12,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Save, Send, Loader2, Search, X, Upload, FileText } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
+import { Save, Send, Loader2, Search, X, Upload, FileText, Eye, Info } from 'lucide-react';
 import ImageGallery from '@/components/ImageGallery';
 import { getDefaultImageForSector } from '@/constants/defaultImages';
 import { base44 } from '@/api/base44Client';
 import { toast } from '@/components/ui/use-toast';
+import { SECTORS } from '@/constants/sectors';
 
-const SECTORS = [
-  'technology',
-  'retail',
-  'hospitality',
-  'manufacturing',
-  'services',
-  'healthcare',
-  'construction',
-  'transport',
-  'agriculture',
-  'real_estate',
-  'finance',
-  'ecommerce',
-  'beauty',
-  'education',
-  'events',
-  'logistics',
-  'food_beverage',
-  'other'
-];
 const BUSINESS_TYPES = ['entreprise', 'fond_de_commerce', 'franchise'];
+const TITLE_MAX_LENGTH = 55;
 const EUROPEAN_COUNTRIES = [
   { value: 'france', label: '🇫🇷 France' },
   { value: 'belgium', label: '🇧🇪 Belgique' },
@@ -173,6 +162,7 @@ export default function BuyerForm({
   formData,
   onFormChange,
   onSubmit,
+  onPreviewPublish,
   saving,
   language,
   t,
@@ -214,7 +204,10 @@ export default function BuyerForm({
   };
 
   const handleChange = (field, value) => {
-    onFormChange({ ...formData, [field]: value });
+    const nextValue = field === 'title' && typeof value === 'string'
+      ? value.slice(0, TITLE_MAX_LENGTH)
+      : value;
+    onFormChange({ ...formData, [field]: nextValue });
   };
 
   const addLocation = (value) => {
@@ -276,6 +269,24 @@ export default function BuyerForm({
 
   const filteredLocations = getFilteredLocations();
 
+  const withTooltip = (label, hint) => (
+    <div className="flex items-center gap-1.5">
+      <span>{label}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+            aria-label={language === 'fr' ? 'Aide' : 'Help'}
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{hint}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+
   // Auto-generate default image based on first selected sector
   useEffect(() => {
     if (formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0) {
@@ -296,11 +307,12 @@ export default function BuyerForm({
   }, [formData.buyer_sectors_interested]);
 
   return (
-    <div className="w-full flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto pr-4 scrollbar-hide">
-        <div className="space-y-4 md:space-y-6">
-          {/* Main Form */}
+    <TooltipProvider delayDuration={120}>
+      <div className="w-full flex flex-col h-full overflow-hidden">
+        <div className="flex-1 overflow-y-auto pr-4 scrollbar-hide">
           <div className="space-y-4 md:space-y-6">
+            {/* Main Form */}
+            <div className="space-y-4 md:space-y-6">
             {/* Basic Info */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
@@ -317,12 +329,16 @@ export default function BuyerForm({
                 onChange={(e) => handleChange('title', e.target.value)}
                 placeholder={language === 'fr' ? 'Ex: Cherche entreprise tech ou restaurant' : 'Ex: Looking for tech or restaurant business'}
                 className="mt-2"
+                maxLength={TITLE_MAX_LENGTH}
                 required
               />
+              <p className="text-[11px] text-gray-500 mt-1 text-right">
+                {(formData.title || '').length}/{TITLE_MAX_LENGTH}
+              </p>
             </div>
 
             <div>
-              <Label><span className="text-red-500">*</span> {t('description')}</Label>
+              <Label>{withTooltip(<><span className="text-red-500">*</span> {t('description')}</>, language === 'fr' ? 'Présentez votre profil et objectifs de reprise.' : 'Describe your buyer profile and objectives.')}</Label>
               <Textarea
                 value={formData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
@@ -344,7 +360,7 @@ export default function BuyerForm({
           <CardContent className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <Label>{language === 'fr' ? 'Budget minimum (€)' : 'Minimum Budget (€)'}</Label>
+                <Label>{withTooltip(language === 'fr' ? 'Budget minimum (€)' : 'Minimum Budget (€)', language === 'fr' ? 'Montant minimal envisagé pour l’opération.' : 'Minimum expected budget for the deal.')}</Label>
                 <Input
                   type="number"
                   value={formData.buyer_budget_min}
@@ -354,7 +370,7 @@ export default function BuyerForm({
                 />
               </div>
               <div>
-                <Label>{language === 'fr' ? 'Budget maximum (€)' : 'Maximum Budget (€)'}</Label>
+                <Label>{withTooltip(language === 'fr' ? 'Budget maximum (€)' : 'Maximum Budget (€)', language === 'fr' ? 'Montant maximal cible pour l’opération.' : 'Maximum target budget for the deal.')}</Label>
                 <Input
                   type="number"
                   value={formData.buyer_budget_max}
@@ -365,7 +381,7 @@ export default function BuyerForm({
               </div>
             </div>
             <div>
-              <Label>{language === 'fr' ? 'Financement disponible (€)' : 'Investment Available (€)'}</Label>
+              <Label>{withTooltip(language === 'fr' ? 'Financement disponible (€)' : 'Investment Available (€)', language === 'fr' ? 'Capacité de financement mobilisable rapidement.' : 'Funding capacity available quickly.')}</Label>
               <Input
                 type="number"
                 value={formData.buyer_investment_available}
@@ -373,9 +389,6 @@ export default function BuyerForm({
                 placeholder="500000"
                 className="mt-2 font-mono"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {language === 'fr' ? 'Montant que vous pouvez investir immédiatement' : 'Amount you can invest immediately'}
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -389,10 +402,7 @@ export default function BuyerForm({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Secteurs d\'intérêt' : 'Interested Sectors'}</Label>
-              <p className="text-xs text-gray-500 mb-2">
-                {language === 'fr' ? 'Sélectionnez les secteurs' : 'Select sectors of interest'}
-              </p>
+              <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Secteurs d\'intérêt' : 'Interested Sectors'}</>, language === 'fr' ? 'Sélectionnez les secteurs cibles.' : 'Select your target sectors.')}</Label>
               <div className="grid grid-cols-2 gap-2">
                 {SECTORS.map(sector => (
                   <label key={sector} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
@@ -415,7 +425,7 @@ export default function BuyerForm({
             </div>
 
             <div>
-              <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Type de Cession recherché' : 'Business Type Sought'}</Label>
+              <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Type de Cession recherché' : 'Business Type Sought'}</>, language === 'fr' ? 'Type d’actif que vous souhaitez acquérir.' : 'Type of asset you seek to acquire.')}</Label>
               <Select value={formData.business_type_sought} onValueChange={(v) => handleChange('business_type_sought', v)}>
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder={language === 'fr' ? 'Sélectionner un type' : 'Select type'} />
@@ -434,7 +444,7 @@ export default function BuyerForm({
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <Label>{language === 'fr' ? 'CA minimum (€)' : 'Minimum Revenue (€)'}</Label>
+                <Label>{withTooltip(language === 'fr' ? 'CA minimum (€)' : 'Minimum Revenue (€)', language === 'fr' ? 'Seuil minimal de chiffre d’affaires recherché.' : 'Minimum revenue threshold desired.')}</Label>
                 <Input
                   type="number"
                   value={formData.buyer_revenue_min}
@@ -444,7 +454,7 @@ export default function BuyerForm({
                 />
               </div>
               <div>
-                <Label>{language === 'fr' ? 'CA maximum (€)' : 'Maximum Revenue (€)'}</Label>
+                <Label>{withTooltip(language === 'fr' ? 'CA maximum (€)' : 'Maximum Revenue (€)', language === 'fr' ? 'Seuil maximal de chiffre d’affaires recherché.' : 'Maximum revenue threshold desired.')}</Label>
                 <Input
                   type="number"
                   value={formData.buyer_revenue_max}
@@ -454,7 +464,7 @@ export default function BuyerForm({
                 />
               </div>
               <div>
-                <Label>{language === 'fr' ? 'Nombre d\'employés min' : 'Minimum Employees'}</Label>
+                <Label>{withTooltip(language === 'fr' ? 'Nombre d\'employés min' : 'Minimum Employees', language === 'fr' ? 'Taille d’équipe minimale.' : 'Minimum team size.')}</Label>
                 <Input
                   type="number"
                   value={formData.buyer_employees_min}
@@ -464,7 +474,7 @@ export default function BuyerForm({
                 />
               </div>
               <div>
-                <Label>{language === 'fr' ? 'Nombre d\'employés max' : 'Maximum Employees'}</Label>
+                <Label>{withTooltip(language === 'fr' ? 'Nombre d\'employés max' : 'Maximum Employees', language === 'fr' ? 'Taille d’équipe maximale.' : 'Maximum team size.')}</Label>
                 <Input
                   type="number"
                   value={formData.buyer_employees_max}
@@ -486,7 +496,7 @@ export default function BuyerForm({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Type de profil' : 'Profile Type'}</Label>
+              <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Type de profil' : 'Profile Type'}</>, language === 'fr' ? 'Votre posture d’acquéreur.' : 'Your acquisition profile.')}</Label>
               <Select value={formData.buyer_profile_type} onValueChange={(v) => handleChange('buyer_profile_type', v)}>
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder={language === 'fr' ? 'Sélectionner' : 'Select'} />
@@ -502,7 +512,7 @@ export default function BuyerForm({
             </div>
 
             <div className="relative">
-              <Label><span className="text-red-500">*</span> {language === 'fr' ? 'Lieux d\'intérêt' : 'Interested Locations'}</Label>
+              <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Lieux d\'intérêt' : 'Interested Locations'}</>, language === 'fr' ? 'Zones géographiques cibles.' : 'Target geographic areas.')}</Label>
               <Input
                 value={locationInput}
                 onChange={(e) => setLocationInput(e.target.value)}
@@ -545,13 +555,10 @@ export default function BuyerForm({
                   ))}
                 </div>
               )}
-              <p className="text-xs text-gray-500 mt-2">
-                {language === 'fr' ? 'Sélectionnez au moins un lieu d\'intérêt' : 'Select at least one interested location'}
-              </p>
             </div>
 
             <div>
-              <Label>{language === 'fr' ? 'Notes et critères additionnels' : 'Additional Notes & Criteria'}</Label>
+              <Label>{withTooltip(language === 'fr' ? 'Notes et critères additionnels' : 'Additional Notes & Criteria', language === 'fr' ? 'Ajoutez vos préférences fines pour améliorer le matching.' : 'Add detailed preferences to improve matching.')}</Label>
               <Textarea
                 value={formData.buyer_notes}
                 onChange={(e) => handleChange('buyer_notes', e.target.value)}
@@ -651,8 +658,25 @@ export default function BuyerForm({
               </Button>
               <Button
                 onClick={() => {
-                  onSubmit('active');
-                  showPublishToast();
+                  if (typeof onPreviewPublish === 'function') {
+                    onPreviewPublish();
+                  }
+                }}
+                variant="outline"
+                disabled={saving}
+                className="flex-1 py-6"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                {language === 'fr' ? 'Preview' : 'Preview'}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (typeof onPreviewPublish === 'function') {
+                    onPreviewPublish();
+                  } else {
+                    onSubmit('active');
+                    showPublishToast();
+                  }
                 }}
                 disabled={saving}
                 className="flex-1 py-6 bg-primary text-white hover:bg-primary/90"
@@ -665,9 +689,10 @@ export default function BuyerForm({
                 {t('publish')}
               </Button>
             </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

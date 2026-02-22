@@ -19,6 +19,10 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
   const [editingYearIndex, setEditingYearIndex] = useState(null);
   const [editedYear, setEditedYear] = useState(null);
 
+  const keepNumericInput = (value) => String(value ?? '').replace(/[^0-9.-]/g, '');
+
+  const keepIntegerInput = (value) => String(value ?? '').replace(/[^0-9]/g, '');
+
   const addYear = () => {
     if (!newYear.year) return;
     const yearData = {
@@ -133,7 +137,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
                         <Input
                           type="number"
                           value={editedYear.revenue}
-                          onChange={(e) => setEditedYear({...editedYear, revenue: e.target.value})}
+                          onChange={(e) => setEditedYear({...editedYear, revenue: keepNumericInput(e.target.value)})}
                           className="mt-1 font-mono text-sm"
                         />
                       </div>
@@ -142,7 +146,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
                         <Input
                           type="number"
                           value={editedYear.ebitda || ''}
-                          onChange={(e) => setEditedYear({...editedYear, ebitda: e.target.value})}
+                          onChange={(e) => setEditedYear({...editedYear, ebitda: keepNumericInput(e.target.value)})}
                           className="mt-1 font-mono text-sm"
                         />
                       </div>
@@ -151,7 +155,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
                         <Input
                           type="number"
                           value={editedYear.ebit || ''}
-                          onChange={(e) => setEditedYear({...editedYear, ebit: e.target.value})}
+                          onChange={(e) => setEditedYear({...editedYear, ebit: keepNumericInput(e.target.value)})}
                           className="mt-1 font-mono text-sm"
                         />
                       </div>
@@ -160,7 +164,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
                         <Input
                           type="number"
                           value={editedYear.net_result || ''}
-                          onChange={(e) => setEditedYear({...editedYear, net_result: e.target.value})}
+                          onChange={(e) => setEditedYear({...editedYear, net_result: keepNumericInput(e.target.value)})}
                           className="mt-1 font-mono text-sm"
                         />
                       </div>
@@ -169,7 +173,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
                         <Input
                           type="number"
                           value={editedYear.employees_count || ''}
-                          onChange={(e) => setEditedYear({...editedYear, employees_count: e.target.value})}
+                          onChange={(e) => setEditedYear({...editedYear, employees_count: keepIntegerInput(e.target.value)})}
                           className="mt-1 font-mono text-sm"
                         />
                       </div>
@@ -255,7 +259,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
               <Input
                 type="number"
                 value={newYear.year}
-                onChange={(e) => setNewYear({...newYear, year: parseInt(e.target.value)})}
+                onChange={(e) => setNewYear({...newYear, year: parseInt(keepIntegerInput(e.target.value))})}
                 placeholder="2023"
                 className="mt-1 font-mono"
               />
@@ -265,7 +269,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
               <Input
                 type="number"
                 value={newYear.revenue}
-                onChange={(e) => setNewYear({...newYear, revenue: e.target.value})}
+                onChange={(e) => setNewYear({...newYear, revenue: keepNumericInput(e.target.value)})}
                 placeholder="1000000"
                 className="mt-1 font-mono"
               />
@@ -275,7 +279,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
               <Input
                 type="number"
                 value={newYear.ebitda}
-                onChange={(e) => setNewYear({...newYear, ebitda: e.target.value})}
+                onChange={(e) => setNewYear({...newYear, ebitda: keepNumericInput(e.target.value)})}
                 placeholder="200000"
                 className="mt-1 font-mono"
               />
@@ -285,7 +289,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
               <Input
                 type="number"
                 value={newYear.ebit}
-                onChange={(e) => setNewYear({...newYear, ebit: e.target.value})}
+                onChange={(e) => setNewYear({...newYear, ebit: keepNumericInput(e.target.value)})}
                 placeholder="180000"
                 className="mt-1 font-mono"
               />
@@ -295,7 +299,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
               <Input
                 type="number"
                 value={newYear.net_result}
-                onChange={(e) => setNewYear({...newYear, net_result: e.target.value})}
+                onChange={(e) => setNewYear({...newYear, net_result: keepNumericInput(e.target.value)})}
                 placeholder="120000"
                 className="mt-1 font-mono"
               />
@@ -305,7 +309,7 @@ export default function FinancialYearsManager({ financialYears, onChange, langua
               <Input
                 type="number"
                 value={newYear.employees_count}
-                onChange={(e) => setNewYear({...newYear, employees_count: e.target.value})}
+                onChange={(e) => setNewYear({...newYear, employees_count: keepIntegerInput(e.target.value)})}
                 placeholder="10"
                 className="mt-1 font-mono"
               />

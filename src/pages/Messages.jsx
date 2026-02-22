@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createBusinessDetailsUrl, createPageUrl } from '@/utils';
 import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -1471,7 +1471,7 @@ export default function Messages() {
             />
             <div className="flex-1 min-w-0">
               <Link
-                to={createPageUrl(`BusinessDetails?id=${selectedConversation.business_id}`)}
+                to={createBusinessDetailsUrl(selectedBusiness || { id: selectedConversation.business_id, title: getConversationTitle(selectedConversation) })}
                 className="font-heading font-semibold text-foreground hover:text-primary transition-colors truncate block"
               >
                 {getConversationTitle(selectedConversation)}
@@ -1884,7 +1884,7 @@ export default function Messages() {
                   className="w-full"
                   onClick={() => {
                     if (selectedConversation?.business_id) {
-                      navigate(createPageUrl(`BusinessDetails?id=${selectedConversation.business_id}`));
+                      navigate(createBusinessDetailsUrl(selectedBusiness || { id: selectedConversation.business_id, title: getConversationTitle(selectedConversation) }));
                     }
                   }}
                 >
