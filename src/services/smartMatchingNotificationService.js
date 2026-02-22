@@ -1,3 +1,6 @@
+import { EUROPEAN_COUNTRIES } from '@/utils/europeanCountries';
+import { FRENCH_DEPARTMENTS } from '@/utils/frenchDepartmentsData';
+
 const SMART_MATCHING_CRITERIA_STORAGE_PREFIX = 'smartMatchingCriteria';
 const SMART_MATCHING_ALERTS_STORAGE_PREFIX = 'smartMatchingAlerts';
 
@@ -22,8 +25,7 @@ export const SMART_MATCHING_SECTORS = [
   { value: 'other', label: 'Autre' },
 ];
 
-export const SMART_MATCHING_LOCATIONS = [
-  { value: 'france', label: 'France' },
+const SMART_MATCHING_CITY_LOCATIONS = [
   { value: 'paris', label: 'Paris' },
   { value: 'lyon', label: 'Lyon' },
   { value: 'marseille', label: 'Marseille' },
@@ -33,6 +35,33 @@ export const SMART_MATCHING_LOCATIONS = [
   { value: 'lille', label: 'Lille' },
   { value: 'strasbourg', label: 'Strasbourg' },
 ];
+
+const SMART_MATCHING_COUNTRY_LOCATIONS = EUROPEAN_COUNTRIES.map((country) => ({
+  value: String(country.value || '').toLowerCase(),
+  label: country.label,
+}));
+
+const SMART_MATCHING_DEPARTMENT_LOCATIONS = FRENCH_DEPARTMENTS.map((department) => ({
+  value: String(department.value || '').toLowerCase(),
+  label: `${String(department.value || '').toUpperCase()} - ${department.label}`,
+}));
+
+const uniqueLocations = (locations) => {
+  const map = new Map();
+  locations.forEach((location) => {
+    const key = String(location.value || '').toLowerCase();
+    if (!map.has(key)) {
+      map.set(key, { ...location, value: key });
+    }
+  });
+  return Array.from(map.values());
+};
+
+export const SMART_MATCHING_LOCATIONS = uniqueLocations([
+  ...SMART_MATCHING_COUNTRY_LOCATIONS,
+  ...SMART_MATCHING_DEPARTMENT_LOCATIONS,
+  ...SMART_MATCHING_CITY_LOCATIONS,
+]);
 
 export const SMART_MATCHING_BUYER_PROFILE_TYPES = [
   { value: 'individual', label: 'Reprise personnelle' },

@@ -1197,7 +1197,7 @@ export default function Messages() {
 
   if (isConversationView) {
     return (
-      <div className="h-[calc(100vh-80px)] min-h-0 w-full min-w-0 flex bg-background overflow-hidden">
+      <div className="h-full min-h-0 w-full min-w-0 flex bg-background overflow-hidden">
         <div className="flex-1 min-h-0 flex flex-col bg-background">
           {/* Chat Header */}
           <div className="bg-card border-b border-border px-4 py-3 sm:p-4 flex items-center gap-3 sm:gap-4 sticky top-0 z-10">
@@ -1296,7 +1296,7 @@ export default function Messages() {
           )}
 
           {/* Messages */}
-          <div className="flex-1 min-h-0 flex">
+          <div className="flex-1 min-h-0 flex overflow-hidden">
             <ScrollArea className="flex-1 min-h-0 px-4 py-4 sm:p-4 bg-background">
               <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5">
               {hasMoreMessages && (
@@ -1427,8 +1427,8 @@ export default function Messages() {
             </ScrollArea>
 
             {/* Business Panel */}
-            <div className="hidden lg:block w-80 border-l border-border bg-card p-4">
-              <div className="sticky top-0 space-y-4">
+            <div className="hidden lg:block w-80 min-h-0 overflow-y-auto border-l border-border bg-card p-4">
+              <div className="space-y-4 pb-6">
                 <div>
                   <p className="text-xs uppercase tracking-widest text-muted-foreground">
                     {language === 'fr' ? 'Annonce' : 'Listing'}
@@ -1540,7 +1540,7 @@ export default function Messages() {
           </div>
 
           {/* Input */}
-          <div data-messages-input className="bg-card border-t border-border px-4 py-3 sm:p-4 sticky bottom-0 z-10">
+          <div data-messages-input className="bg-card border-t border-border px-4 py-3 sm:p-4">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1593,7 +1593,7 @@ export default function Messages() {
   }
 
   return (
-    <div className="h-[calc(100vh-80px)] min-h-0 w-full min-w-0 flex bg-background overflow-hidden">
+    <div className="h-full min-h-0 w-full min-w-0 flex bg-background overflow-hidden">
       {/* Conversations List */}
       <div className="w-full min-w-0 bg-card border-r border-border flex flex-col min-h-0">
         <div className="px-4 sm:px-6 py-5 border-b border-border bg-card">

@@ -13,6 +13,7 @@ function LayoutContent({ children, currentPageName }) {
   const { user, logout } = useAuth();
   const { toggleMobile, isMobileOpen } = useSidebar();
   const shouldRenderSidebar = currentPageName !== 'Home' && currentPageName !== 'Login' && currentPageName !== 'Register';
+  const isMessagesPage = currentPageName === 'Messages';
 
   const handleLogout = () => {
     logout(false);
@@ -73,13 +74,14 @@ function LayoutContent({ children, currentPageName }) {
           </button>
         ) : null}
 
-        <div className={`${shouldRenderSidebar ? 'md:ml-56 md:w-[calc(100%-14rem)]' : 'w-full'} min-h-screen flex flex-col`}>
-          <main className={`min-w-0 w-full flex-1 px-0 sm:px-0 md:px-0 lg:px-0 ml-0 ${shouldRenderSidebar ? 'pt-12 md:pt-0' : ''}`}>
+        <div className={`${shouldRenderSidebar ? 'md:ml-56 md:w-[calc(100%-14rem)]' : 'w-full'} ${isMessagesPage ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
+          <main className={`min-w-0 w-full flex-1 px-0 sm:px-0 md:px-0 lg:px-0 ml-0 ${shouldRenderSidebar ? 'pt-12 md:pt-0' : ''} ${isMessagesPage ? 'h-full overflow-hidden' : ''}`}>
             {children}
           </main>
 
           {/* Footer */}
-          <footer className={`bg-[#3B4759] text-[#8A98AD] py-16 w-full ${currentPageName === 'Messages' ? 'mt-0' : 'mt-20'}`}>
+          {!isMessagesPage && (
+          <footer className="bg-[#3B4759] text-[#8A98AD] py-16 w-full mt-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div className="md:col-span-2">
@@ -115,6 +117,7 @@ function LayoutContent({ children, currentPageName }) {
               </div>
             </div>
           </footer>
+          )}
         </div>
       </div>
     </div>

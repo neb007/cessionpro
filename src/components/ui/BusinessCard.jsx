@@ -34,6 +34,9 @@ export default function BusinessCard({
   isFavorite,
   onToggleFavorite,
   fetchSellerLogo = true,
+  detailsUrl = null,
+  hideMessageButton = false,
+  hideFavoriteButton = false,
   isFeatured = false,
   featuredLabel = 'À la une'
 }) {
@@ -106,6 +109,7 @@ export default function BusinessCard({
   const growthPercentage = calculateGrowthPercentage(business.financial_years);
   const shouldShowLogo = Boolean(sellerProfile?.logo_url || sellerFallbackLogo);
   const displayLogoUrl = sellerProfile?.logo_url || sellerFallbackLogo;
+  const cardDetailsUrl = detailsUrl || createPageUrl(`BusinessDetails?id=${business.id}`);
 
   return (
     <motion.div
@@ -122,7 +126,7 @@ export default function BusinessCard({
       >
         {/* Image Section with Category and Views */}
         <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
-          <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)}>
+          <Link to={cardDetailsUrl}>
             <img
               src={imageUrl}
               alt={business.title}
@@ -147,31 +151,33 @@ export default function BusinessCard({
           </div>
 
           {/* Message Button - Bottom Left */}
-          <button
-            onClick={async (e) => {
-              e.preventDefault();
-              try {
-                const { data: authData } = await supabase.auth.getUser();
-                const currentUser = authUser || user || authData?.user;
-                if (!currentUser) {
-                  window.location.href = '/login';
-                  return;
+          {!hideMessageButton && (
+            <button
+              onClick={async (e) => {
+                e.preventDefault();
+                try {
+                  const { data: authData } = await supabase.auth.getUser();
+                  const currentUser = authUser || user || authData?.user;
+                  if (!currentUser) {
+                    window.location.href = '/login';
+                    return;
+                  }
+                  setUser(currentUser);
+                  setShowMessageModal(true);
+                } catch (error) {
+                  console.error('Failed to open message modal:', error);
                 }
-                setUser(currentUser);
-                setShowMessageModal(true);
-              } catch (error) {
-                console.error('Failed to open message modal:', error);
-              }
-            }}
-            className="absolute bottom-3 left-3 p-2 rounded-full bg-black/50 text-white hover:bg-primary transition-colors z-50"
-            aria-label={language === 'fr' ? 'Envoyer un message' : 'Send message'}
-            title={language === 'fr' ? 'Envoyer un message' : 'Send message'}
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button>
+              }}
+              className="absolute bottom-3 left-3 p-2 rounded-full bg-black/50 text-white hover:bg-primary transition-colors z-50"
+              aria-label={language === 'fr' ? 'Envoyer un message' : 'Send message'}
+              title={language === 'fr' ? 'Envoyer un message' : 'Send message'}
+            >
+              <MessageCircle className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Favorite Button - Bottom Right */}
-          {onToggleFavorite && (
+          {!hideFavoriteButton && onToggleFavorite && (
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -191,7 +197,7 @@ export default function BusinessCard({
         <CardContent className="p-4 flex flex-col flex-grow">
           {/* Titre */}
           <div className="mb-2">
-            <Link to={createPageUrl(`BusinessDetails?id=${business.id}`)} className="flex-1 min-w-0">
+            <Link to={cardDetailsUrl} className="flex-1 min-w-0">
               <h3 style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: '16px' }} className="text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2 leading-tight">
                 {business.title}
               </h3>

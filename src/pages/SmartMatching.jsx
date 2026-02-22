@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowUpDown,
   BarChart3,
   Calendar,
   Heart,
@@ -22,6 +21,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { billingService } from '@/services/billingService';
 import { favoriteService } from '@/services/favoriteService';
+import BusinessCard from '@/components/ui/BusinessCard';
 import { toast } from '@/components/ui/use-toast';
 import { createPageUrl } from '@/utils';
 
@@ -333,7 +333,6 @@ export default function SmartMatching() {
   const [accessStatus, setAccessStatus] = useState('loading');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showFiltersPanel, setShowFiltersPanel] = useState(true);
-  const [sortBy, setSortBy] = useState('score_desc');
   const [sectorSearch, setSectorSearch] = useState('');
   const [showSectorDropdown, setShowSectorDropdown] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
@@ -382,8 +381,6 @@ export default function SmartMatching() {
           ? 'Aperçu non contractuel pour illustrer la qualité des matchs Smart Matching.'
           : 'Non-contractual preview to showcase Smart Matching result quality.',
       previewCardBadge: language === 'fr' ? 'Aperçu' : 'Preview',
-      previewPrimaryCta: language === 'fr' ? 'Débloquer ce niveau de match' : 'Unlock this match quality',
-      previewSecondaryCta: language === 'fr' ? 'Voir les bénéfices premium' : 'See premium benefits',
     }),
     [language, smartMatchingMode]
   );
@@ -394,10 +391,24 @@ export default function SmartMatching() {
     () =>
       (SMART_MATCHING_PREVIEW_DATA[smartMatchingMode] || []).map((item, index) => ({
         id: `preview-${smartMatchingMode}-${index + 1}`,
+        type: smartMatchingMode === 'buyer' ? 'cession' : 'acquisition',
         title: language === 'fr' ? item.titleFr : item.titleEn,
+        description: (language === 'fr' ? item.highlightsFr : item.highlightsEn).join(' • '),
         location: language === 'fr' ? item.locationFr : item.locationEn,
         sector: language === 'fr' ? item.sectorFr : item.sectorEn,
         matchBudget: item.matchBudget,
+        asking_price: smartMatchingMode === 'buyer' ? item.matchBudget : null,
+        annual_revenue: smartMatchingMode === 'buyer' ? Math.round(item.matchBudget * 0.75) : null,
+        buyer_budget_min: smartMatchingMode === 'seller' ? Math.round(item.matchBudget * 0.8) : null,
+        buyer_budget_max: smartMatchingMode === 'seller' ? item.matchBudget : null,
+        buyer_investment_available: smartMatchingMode === 'seller' ? item.matchBudget : null,
+        buyer_sectors_interested: smartMatchingMode === 'seller' ? [normalize(item.sectorEn)] : [],
+        financial_years: [],
+        views_count: 120 + index * 17,
+        reference_number: `SM-${smartMatchingMode.toUpperCase()}-${index + 1}`,
+        hide_location: false,
+        is_certified: true,
+        images: [],
         employees: item.employees,
         year_founded: item.yearFounded,
         smartMatchScore: item.score,
@@ -811,23 +822,13 @@ export default function SmartMatching() {
         .filter((listing) => listing.smartMatchScore >= SMART_MATCHING_MIN_SCORE);
 
       results.sort((a, b) => {
-        if (sortBy === 'score_asc') {
-          return a.smartMatchScore - b.smartMatchScore;
-        }
+        const byScore = (b.smartMatchScore || 0) - (a.smartMatchScore || 0);
+        if (byScore !== 0) return byScore;
 
-        if (sortBy === 'budget_desc') {
-          return (b.matchBudget || 0) - (a.matchBudget || 0);
-        }
+        const byBudget = (b.matchBudget || 0) - (a.matchBudget || 0);
+        if (byBudget !== 0) return byBudget;
 
-        if (sortBy === 'budget_asc') {
-          return (a.matchBudget || 0) - (b.matchBudget || 0);
-        }
-
-        if (sortBy === 'newest') {
-          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-        }
-
-        return b.smartMatchScore - a.smartMatchScore;
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
 
       if (accessStatus === 'inactive') {
@@ -847,7 +848,7 @@ export default function SmartMatching() {
       setHasSearched(true);
       setSearching(false);
     },
-    [accessStatus, allListings, getMatchAnalysis, language, smartMatchingMode, sortBy, user?.id]
+    [accessStatus, allListings, getMatchAnalysis, language, smartMatchingMode, user?.id]
   );
 
   useEffect(() => {
@@ -878,11 +879,6 @@ export default function SmartMatching() {
       document.removeEventListener('keydown', handleEscape);
     };
   }, [showSectorDropdown, showLocationDropdown]);
-
-  useEffect(() => {
-    if (!hasSearched) return;
-    searchMatches();
-  }, [sortBy, hasSearched, searchMatches]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1405,8 +1401,7 @@ export default function SmartMatching() {
 
           <section className="space-y-4">
             <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-5">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm min-w-0">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm min-w-0">
                   <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
                     <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Résultats' : 'Results'}</p>
                     <p className="text-lg font-bold text-[#3B4759]">{displayedListings.length}</p>
@@ -1431,25 +1426,6 @@ export default function SmartMatching() {
                           : 'Buyer profiles'}
                     </p>
                   </div>
-                </div>
-
-                <div className="w-full lg:w-[260px]">
-                  <label className="text-xs font-semibold text-[#3B4759] mb-1 block">{language === 'fr' ? 'Tri des résultats' : 'Sort results'}</label>
-                  <div className="relative">
-                    <ArrowUpDown className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#FF6B4A] focus:border-[#FF6B4A]"
-                    >
-                      <option value="score_desc">{language === 'fr' ? 'Pertinence décroissante' : 'Relevance descending'}</option>
-                      <option value="score_asc">{language === 'fr' ? 'Pertinence croissante' : 'Relevance ascending'}</option>
-                      <option value="newest">{language === 'fr' ? 'Plus récents' : 'Newest first'}</option>
-                      <option value="budget_desc">{language === 'fr' ? 'Budget décroissant' : 'Budget descending'}</option>
-                      <option value="budget_asc">{language === 'fr' ? 'Budget croissant' : 'Budget ascending'}</option>
-                    </select>
-                  </div>
-                </div>
               </div>
 
               {isPreviewMode && (
@@ -1510,6 +1486,20 @@ export default function SmartMatching() {
             )}
 
             {!loading && !searching && displayedListings.length > 0 && (
+              isPreviewMode ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-2">
+                  {displayedListings.map((listing) => (
+                    <BusinessCard
+                      key={listing.id}
+                      business={listing}
+                      fetchSellerLogo={false}
+                      detailsUrl={createPageUrl('Abonnement')}
+                      hideMessageButton
+                      hideFavoriteButton
+                    />
+                  ))}
+                </div>
+              ) : (
               <div className="grid sm:grid-cols-2 gap-4 xl:gap-5">
                 {displayedListings.map((listing) => {
                   const tone = getScoreTone(listing.smartMatchScore || 0);
@@ -1613,27 +1603,20 @@ export default function SmartMatching() {
                           to={detailsUrl}
                           className="inline-flex items-center justify-center py-2 rounded-lg bg-[#FF6B4A] text-white font-semibold text-sm hover:bg-[#FF5A3A]"
                         >
-                          {listing.isMock
-                            ? labels.previewPrimaryCta
-                            : language === 'fr'
-                              ? 'Voir l\'annonce'
-                              : 'View listing'}
+                          {language === 'fr' ? 'Voir l\'annonce' : 'View listing'}
                         </Link>
                         <Link
                           to={detailsUrl}
                           className="inline-flex items-center justify-center py-2 rounded-lg border border-gray-300 text-[#3B4759] font-semibold text-sm hover:bg-gray-50"
                         >
-                          {listing.isMock
-                            ? labels.previewSecondaryCta
-                            : language === 'fr'
-                              ? 'Détails du match'
-                              : 'Match details'}
+                          {language === 'fr' ? 'Détails du match' : 'Match details'}
                         </Link>
                       </div>
                     </article>
                   );
                 })}
               </div>
+              )
             )}
           </section>
         </div>
