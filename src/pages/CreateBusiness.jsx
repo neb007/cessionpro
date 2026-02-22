@@ -20,6 +20,94 @@ const TITLE_MAX_LENGTH = 55;
 
 const BUSINESS_FIELDS_SUPPORTED = true;
 
+const SALE_REQUIRED_FIELDS = ['title', 'sector', 'business_type', 'asking_price', 'location'];
+const SALE_TRACKED_FIELDS = [
+  'title',
+  'description',
+  'sector',
+  'business_type',
+  'reason_for_sale',
+  'seller_business_type',
+  'location',
+  'department',
+  'region',
+  'country',
+  'asking_price',
+  'annual_revenue',
+  'ebitda',
+  'employees',
+  'year_founded',
+  'legal_structure',
+  'registration_number',
+  'lease_info',
+  'licenses',
+  'market_position',
+  'competitive_advantages',
+  'growth_opportunities',
+  'customer_base',
+  'cession_details',
+  'surface_area',
+  'financial_years',
+  'assets_included',
+  'images'
+];
+
+const BUYER_REQUIRED_FIELDS = [
+  'title',
+  'description',
+  'buyer_sectors_interested',
+  'business_type_sought',
+  'buyer_profile_type',
+  'buyer_locations'
+];
+
+const BUYER_TRACKED_FIELDS = [
+  'title',
+  'description',
+  'buyer_budget_min',
+  'buyer_budget_max',
+  'buyer_investment_available',
+  'buyer_sectors_interested',
+  'business_type_sought',
+  'buyer_revenue_min',
+  'buyer_revenue_max',
+  'buyer_employees_min',
+  'buyer_employees_max',
+  'buyer_profile_type',
+  'buyer_locations',
+  'buyer_notes',
+  'buyer_image',
+  'buyer_document_url'
+];
+
+const isFieldFilled = (value) => {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'string') return value.trim().length > 0;
+  return Boolean(value);
+};
+
+const computeRawCompletion = (formData = {}, announcementType = 'sale') => {
+  const requiredFields = announcementType === 'sale' ? SALE_REQUIRED_FIELDS : BUYER_REQUIRED_FIELDS;
+  const trackedFields = announcementType === 'sale' ? SALE_TRACKED_FIELDS : BUYER_TRACKED_FIELDS;
+
+  const requiredFilledCount = requiredFields.filter((field) => isFieldFilled(formData[field])).length;
+  const trackedFilledCount = trackedFields.filter((field) => isFieldFilled(formData[field])).length;
+
+  const requiredCompletion = Math.round((requiredFilledCount / Math.max(1, requiredFields.length)) * 100);
+  const score = Math.round((trackedFilledCount / Math.max(1, trackedFields.length)) * 100);
+
+  return {
+    score,
+    requiredCompletion,
+    allRequiredFilled: requiredFilledCount === requiredFields.length,
+    requiredFields,
+    trackedFields,
+    requiredFilledCount,
+    trackedFilledCount
+  };
+};
+
 export default function CreateBusiness() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
@@ -190,6 +278,19 @@ export default function CreateBusiness() {
   };
 
   const completion = computeListingCompletionScore(formData, language, announcementType);
+  const rawCompletion = computeRawCompletion(formData, announcementType);
+
+  useEffect(() => {
+    console.debug('[completion-indicator-diagnosis]', {
+      announcementType,
+      weightedScore: completion?.score ?? 0,
+      rawScoreAllFields: rawCompletion.score,
+      requiredCompletionPercent: rawCompletion.requiredCompletion,
+      allRequiredFilled: rawCompletion.allRequiredFilled,
+      requiredFields: rawCompletion.requiredFields,
+      requiredMissingFields: rawCompletion.requiredFields.filter((field) => !isFieldFilled(formData[field]))
+    });
+  }, [announcementType, completion?.score, formData, rawCompletion]);
 
   const openPublishPreview = () => {
     setChecklistOpen(true);
@@ -466,7 +567,7 @@ export default function CreateBusiness() {
             t={t}
             user={user}
             editingId={editingId}
-            completion={completion}
+            completion={rawCompletion}
           />
         ) : (
           <BuyerForm
@@ -479,7 +580,7 @@ export default function CreateBusiness() {
             t={t}
             user={user}
             editingId={editingId}
-            completion={completion}
+            completion={rawCompletion}
           />
         )}
 

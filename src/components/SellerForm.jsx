@@ -51,7 +51,9 @@ export default function SellerForm({
   const publishToastTimerRef = useRef(null);
   const scrollAreaRef = useRef(null);
   const completionScore = Math.max(0, Math.min(100, Number(completion?.score || 0)));
-  const isHighCompletion = completionScore >= 69;
+  const requiredCompletionScore = Math.max(0, Math.min(100, Number(completion?.requiredCompletion || 0)));
+  const allRequiredFilled = Boolean(completion?.allRequiredFilled);
+  const isHighCompletion = completionScore >= 69 && allRequiredFilled;
   const activeRingColor = isHighCompletion ? '#22c55e' : '#ef4444';
   const activeShadowClass = isHighCompletion
     ? 'shadow-[0_2px_10px_rgba(34,197,94,0.28)]'
@@ -168,6 +170,16 @@ export default function SellerForm({
   useEffect(() => () => {
     clearPublishToast();
   }, []);
+
+  useEffect(() => {
+    console.debug('[completion-indicator-form]', {
+      form: 'seller',
+      completionScore,
+      requiredCompletionScore,
+      allRequiredFilled,
+      isHighCompletion
+    });
+  }, [completionScore, requiredCompletionScore, allRequiredFilled, isHighCompletion]);
 
   const handleChange = (field, value) => {
     const nextValue = field === 'title' && typeof value === 'string'
