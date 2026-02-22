@@ -38,6 +38,8 @@ export default function Messages() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
+  const defaultDocumentTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'RIVIQO');
+  const activeBrowserNotificationsRef = useRef([]);
   const HIDDEN_CONTACT_ID = '8c14c80a-75d2-41b1-ab33-7fbabffec252';
   const MAX_MESSAGE_LENGTH = 2000;
   const MESSAGES_PAGE_SIZE = 30;
@@ -79,7 +81,58 @@ export default function Messages() {
   const [featureAlertLoading, setFeatureAlertLoading] = useState(false);
   const [featureAlertStatus, setFeatureAlertStatus] = useState('idle');
   const [featureAlertMessage, setFeatureAlertMessage] = useState('');
+  const [isTabVisible, setIsTabVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
+  const [backgroundNotificationCount, setBackgroundNotificationCount] = useState(0);
   const lastDealActionRef = useRef(0);
+
+  const closeActiveBrowserNotifications = () => {
+    activeBrowserNotificationsRef.current.forEach((notification) => {
+      try {
+        notification?.close?.();
+      } catch (_error) {
+        // no-op
+      }
+    });
+    activeBrowserNotificationsRef.current = [];
+  };
+
+  const notifyIncomingMessageInBackground = async (incomingMessage) => {
+    if (!incomingMessage || incomingMessage.receiver_id !== user?.id) return;
+    if (typeof document === 'undefined' || !document.hidden) return;
+
+    setBackgroundNotificationCount((prev) => prev + 1);
+
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+
+    try {
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      if (permission !== 'granted') return;
+
+      const senderLabel = getParticipantLabel(incomingMessage.sender_id);
+      const fallbackTitle = language === 'fr' ? 'Nouveau message' : 'New message';
+      const title = senderLabel || fallbackTitle;
+      const body = incomingMessage.content?.trim() || (language === 'fr'
+        ? 'Vous avez reçu un nouveau message.'
+        : 'You received a new message.');
+
+      const notification = new Notification(title, {
+        body,
+        tag: `message-${incomingMessage.conversation_id || 'default'}`
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+
+      activeBrowserNotificationsRef.current.push(notification);
+    } catch (error) {
+      console.warn('Browser notification failed:', error);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -118,6 +171,7 @@ export default function Messages() {
         setShouldAutoScroll(true);
 
         if (newMessage.receiver_id === user?.id) {
+          notifyIncomingMessageInBackground(newMessage);
           messageService.updateMessage(newMessage.id, { read: true })
             .then(() => persistUnreadResetForConversation(selectedConversation, selectedConversation.id))
             .catch((error) => console.warn('Failed to update read receipt:', error));
@@ -209,6 +263,51 @@ export default function Messages() {
       scrollToBottom();
     }
   }, [messages, shouldAutoScroll]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    const handleVisibilityOrFocus = () => {
+      const visible = !document.hidden;
+      setIsTabVisible(visible);
+      if (visible) {
+        setBackgroundNotificationCount(0);
+        closeActiveBrowserNotifications();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      closeActiveBrowserNotifications();
+      document.title = defaultDocumentTitleRef.current;
+    };
+  }, []);
+
+  const totalUnreadAcrossConversations = useMemo(() => {
+    return conversations.reduce((sum, conv) => {
+      const unread = Number(conv?.unread_count?.[user?.id] || 0);
+      return sum + (Number.isFinite(unread) ? unread : 0);
+    }, 0);
+  }, [conversations, user?.id]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const unreadForTitle = Math.max(backgroundNotificationCount, totalUnreadAcrossConversations);
+    if (isTabVisible || unreadForTitle <= 0) {
+      document.title = defaultDocumentTitleRef.current;
+      return;
+    }
+
+    const unreadLabel = language === 'fr'
+      ? `(${unreadForTitle}) Nouveau${unreadForTitle > 1 ? 'x' : ''} message${unreadForTitle > 1 ? 's' : ''}`
+      : `(${unreadForTitle}) New message${unreadForTitle > 1 ? 's' : ''}`;
+    document.title = `${unreadLabel} • ${defaultDocumentTitleRef.current}`;
+  }, [isTabVisible, backgroundNotificationCount, totalUnreadAcrossConversations, language]);
 
   const normalizeUnreadCount = (conv) => {
     const normalized = { ...(conv?.unread_count || {}) };

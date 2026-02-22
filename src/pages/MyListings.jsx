@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -29,7 +29,11 @@ import {
   XCircle,
   Loader2,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Star,
+  LayoutList,
+  MapPin,
+  CalendarDays
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
@@ -47,15 +51,12 @@ export default function MyListings() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
   
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState({});
   const [myListings, setMyListings] = useState([]);
   const [filteredListings, setFilteredListings] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [editingId, setEditingId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
   const [duplicating, setDuplicating] = useState(null);
   const [availableFeaturedSlots, setAvailableFeaturedSlots] = useState(0);
   const [sponsorshipByBusinessId, setSponsorshipByBusinessId] = useState({});
@@ -63,7 +64,13 @@ export default function MyListings() {
     activeFeaturedCount: 0,
     activations: 0
   });
-  const [featuredDaysByListing, setFeaturedDaysByListing] = useState({});
+
+  const getRemainingFeaturedDays = (sponsorship) => {
+    if (!sponsorship?.ends_at) return 0;
+    const remainingMs = new Date(sponsorship.ends_at).getTime() - Date.now();
+    if (Number.isNaN(remainingMs) || remainingMs <= 0) return 0;
+    return Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+  };
 
   useEffect(() => {
     loadData();
@@ -108,6 +115,14 @@ export default function MyListings() {
         return acc;
       }, {});
 
+      console.log('[MyListings][Sponsorship][loadData]', {
+        userId: user.id,
+        totalListings: Number((listings || []).length),
+        availableFeaturedSlots: Number(slots || 0),
+        activeSponsorships: Number(Object.keys(sponsorshipMap).length),
+        sponsorshipsRawCount: Number((sponsorships || []).length)
+      });
+
       setAvailableFeaturedSlots(Number(slots || 0));
       setFeaturedKpi(kpi || { activeFeaturedCount: 0, activations: 0 });
       setSponsorshipByBusinessId(sponsorshipMap);
@@ -138,7 +153,6 @@ export default function MyListings() {
     try {
       await base44.entities.Business.delete(id);
       setMyListings(myListings.filter(l => l.id !== id));
-      setDeletingId(null);
     } catch (e) {
       console.error('Error deleting listing:', e);
       alert(language === 'fr' ? 'Erreur lors de la suppression' : 'Error deleting listing');
@@ -226,7 +240,13 @@ export default function MyListings() {
   const handleActivateFeatured = async (listing) => {
     try {
       setUpdating(prev => ({ ...prev, [listing.id]: 'featuring' }));
-      const requestedDays = Math.max(1, Math.min(Number(featuredDaysByListing[listing.id] || 30), 365));
+      const requestedDays = 1;
+      console.log('[MyListings][Sponsorship][activate][before]', {
+        listingId: listing.id,
+        requestedDays,
+        listingStatus: listing.status,
+        availableFeaturedSlots
+      });
       await sponsorshipService.activateSponsoredListingForDays(listing.id, requestedDays);
 
       const [slots, sponsorships, kpi] = await Promise.all([
@@ -241,6 +261,13 @@ export default function MyListings() {
         }
         return acc;
       }, {});
+
+      console.log('[MyListings][Sponsorship][activate][after]', {
+        listingId: listing.id,
+        availableFeaturedSlots: Number(slots || 0),
+        activeSponsorships: Number(Object.keys(sponsorshipMap).length),
+        activeSponsorshipEndsAt: sponsorshipMap[listing.id]?.ends_at || null
+      });
 
       setAvailableFeaturedSlots(Number(slots || 0));
       setFeaturedKpi(kpi || { activeFeaturedCount: 0, activations: 0 });
@@ -336,29 +363,58 @@ export default function MyListings() {
     <div className="min-h-screen py-8 lg:py-12 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              {t('my_listings')}
-            </h1>
-            <p className="text-gray-500">
-              {myListings.length} {language === 'fr' ? 'annonce(s)' : 'listing(s)'} • {activeListings} {language === 'fr' ? 'actif(s)' : 'active'} • 👁 {totalViews} {language === 'fr' ? 'vues' : 'views'}
-            </p>
-            <p className="text-xs text-[#B5472F] mt-1">
-              {language === 'fr'
-                ? `Jours À la une disponibles : ${availableFeaturedSlots}`
-                : `Featured days available: ${availableFeaturedSlots}`}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {language === 'fr'
-                ? `Actives: ${featuredKpi.activeFeaturedCount} • Activations totales: ${featuredKpi.activations}`
-                : `Active: ${featuredKpi.activeFeaturedCount} • Total activations: ${featuredKpi.activations}`}
-            </p>
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-1">
+                {t('my_listings')}
+              </h1>
+              <p className="text-sm sm:text-base text-gray-500">
+                {language === 'fr'
+                  ? 'Pilotez vos annonces, leurs performances et vos mises à la une.'
+                  : 'Manage your listings, performance, and featured activations.'}
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate(createPageUrl('CreateBusiness'))}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground shadow-sm"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {t('create_listing')}
+            </Button>
           </div>
-          <Button onClick={() => navigate(createPageUrl('CreateBusiness'))} className="bg-gradient-to-r from-primary to-blue-600">
-            <Plus className="w-4 h-4 mr-2" />
-            {t('create_listing')}
-          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Card className="border border-primary/10 bg-white shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    {language === 'fr' ? 'Mes annonces' : 'My listings'}
+                  </p>
+                  <LayoutList className="w-4 h-4 text-primary" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900 leading-none">{myListings.length}</p>
+                <p className="text-xs text-gray-500 mt-3">
+                  {activeListings} {language === 'fr' ? 'actif(s)' : 'active'} • {totalViews} {language === 'fr' ? 'vues' : 'views'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-[#FFD8CC] bg-[#FFF9F7] shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#B5472F]">
+                    {language === 'fr' ? 'À la une' : 'Featured days'}
+                  </p>
+                  <CalendarDays className="w-4 h-4 text-[#B5472F]" />
+                </div>
+                <p className="text-2xl font-bold text-[#B5472F] leading-none">{availableFeaturedSlots}</p>
+                <p className="text-xs text-[#B5472F]/80 mt-3">
+                  {language === 'fr' ? 'Jours disponibles' : 'Available days'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Status Filter */}
@@ -395,15 +451,22 @@ export default function MyListings() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-4">
             <AnimatePresence>
               {filteredListings.map((listing) => {
                 const status = statusConfig[listing.status] || statusConfig.active;
                 const StatusIcon = status.icon;
                 const activeSponsorship = sponsorshipByBusinessId[listing.id];
                 const isFeatured = Boolean(activeSponsorship);
-                const requestedDays = Math.max(1, Math.min(Number(featuredDaysByListing[listing.id] || 30), 365));
-                const hasEnoughDays = availableFeaturedSlots >= requestedDays;
+                const remainingFeaturedDays = isFeatured ? getRemainingFeaturedDays(activeSponsorship) : 0;
+
+                if (isFeatured) {
+                  console.log('[MyListings][Sponsorship][render][featured]', {
+                    listingId: listing.id,
+                    endsAt: activeSponsorship?.ends_at || null,
+                    remainingFeaturedDays
+                  });
+                }
                 
                 return (
                   <motion.div
@@ -411,189 +474,223 @@ export default function MyListings() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="h-full"
+                    layout
                   >
-                    <Card className="group overflow-hidden border-0 shadow-sm hover:shadow-xl transition-all duration-500 h-full flex flex-col">
-                      {/* Image Section */}
-                      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
-                        <img 
-                          src={getPrimaryImageUrl(listing)} 
-                          alt={listing.title} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        
-                        {/* Status Badge */}
-                        <div className="absolute top-3 left-3">
-                          <Badge className={`${status.color} border-0 text-xs`}>
-                            <StatusIcon className="w-3 h-3 mr-1" />
-                            {t(status.label)}
-                          </Badge>
-                          {isFeatured && (
-                            <Badge className="mt-2 bg-[#FFF4EF] text-[#B5472F] border border-[#FFD8CC] text-[10px]">
-                              {activeSponsorship.display_label || (language === 'fr' ? 'À la une' : 'Featured')}
+                    <Card className="group overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl">
+                      <div className="flex flex-col lg:flex-row">
+                        {/* Zone média gauche */}
+                        <div className="relative h-52 lg:h-auto lg:w-72 shrink-0 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
+                          <img
+                            src={getPrimaryImageUrl(listing)}
+                            alt={listing.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+
+                          <div className="absolute top-3 left-3 flex flex-col gap-2">
+                            <Badge className={`${status.color} border-0 text-xs`}>
+                              <StatusIcon className="w-3 h-3 mr-1" />
+                              {t(status.label)}
                             </Badge>
-                          )}
+                            {isFeatured && (
+                              <Badge className="bg-[#FFF4EF] text-[#B5472F] border border-[#FFD8CC] text-[10px]">
+                                <Star className="w-3 h-3 mr-1" />
+                                {activeSponsorship.display_label || (language === 'fr' ? 'À la une' : 'Featured')}
+                              </Badge>
+                            )}
+                            {isFeatured && (
+                              <Badge className="bg-[#FFF4EF] text-[#B5472F] border border-[#FFD8CC] text-[10px]">
+                                {language === 'fr'
+                                  ? `${remainingFeaturedDays} jour(s) restant(s)`
+                                  : `${remainingFeaturedDays} day(s) remaining`}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Views */}
-                        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs text-gray-700 font-medium">
-                          <Eye className="w-3.5 h-3.5" />
-                          <span className="font-mono">{listing.views_count || 0}</span>
-                        </div>
-                      </div>
+                        {/* Zone contenu + prix */}
+                        <CardContent className="p-4 sm:p-5 lg:p-6 flex-1">
+                          <div className="flex flex-col h-full gap-4">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
+                                  <Badge className="bg-blue-50 text-blue-700 border-0 text-[10px]">
+                                    {listing.type === 'acquisition'
+                                      ? (language === 'fr' ? 'Acquisition' : 'Acquisition')
+                                      : (language === 'fr' ? 'Cession' : 'Sale')}
+                                  </Badge>
+                                  {listing.business_type && (
+                                    <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-[10px]">
+                                      {t(listing.business_type)}
+                                    </Badge>
+                                  )}
+                                  {listing.reference_number && (
+                                    <Badge variant="secondary" className="bg-gray-900 text-white font-mono text-[10px]">
+                                      {listing.reference_number}
+                                    </Badge>
+                                  )}
+                                </div>
 
-                      <CardContent className="p-4 flex flex-col flex-grow">
-                        {/* Reference & Verified */}
-                        <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
-                          <Badge className="bg-blue-50 text-blue-700 border-0 text-[10px]">
-                            {listing.type === 'acquisition' ? (language === 'fr' ? 'Acquisition' : 'Acquisition') : (language === 'fr' ? 'Cession' : 'Sale')}
-                          </Badge>
-                          {listing.business_type && (
-                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-[10px]">
-                              {t(listing.business_type)}
-                            </Badge>
-                          )}
-                          {listing.reference_number && (
-                            <Badge variant="secondary" className="bg-gray-900 text-white font-mono text-[10px]">
-                              {listing.reference_number}
-                            </Badge>
-                          )}
-                          {listing.is_certified && (
-                            <Badge className="bg-green-100 text-green-700 border-0 text-[10px]">
-                              ✓ {language === 'fr' ? 'Vérifié' : 'Verified'}
-                            </Badge>
-                          )}
-                        </div>
+                                <h3 className="font-semibold text-gray-900 text-2xl leading-tight line-clamp-2 mb-2">
+                                  {listing.title}
+                                </h3>
 
-                        {/* Title & Location */}
-                        <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1">
-                          {listing.title}
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-4">{listing.location}</p>
+                                <p className="text-base text-gray-500 flex items-center gap-1.5">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{listing.location || (language === 'fr' ? 'Localisation non précisée' : 'Location not specified')}</span>
+                                </p>
+                              </div>
 
-                        {/* Financial Info */}
-                        <div className="py-3 border-t border-gray-100 mb-4">
-                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                            {language === 'fr' ? 'Prix' : 'Price'}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <p className="font-mono text-lg font-bold text-primary">
-                              {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                maximumFractionDigits: 0,
-                                notation: 'compact'
-                              }).format(listing.asking_price)}
-                            </p>
-                            {listing.annual_revenue && (
-                              <div className="text-right">
-                                <p className="text-xs text-gray-500 uppercase">CA</p>
-                                <p className="font-mono text-sm text-blue-600">
+                              <div className="sm:text-right shrink-0">
+                                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                                  {language === 'fr' ? 'Prix' : 'Price'}
+                                </p>
+                                <p className="font-mono text-4xl font-bold text-primary leading-none">
                                   {new Intl.NumberFormat('fr-FR', {
                                     style: 'currency',
                                     currency: 'EUR',
                                     maximumFractionDigits: 0,
                                     notation: 'compact'
-                                  }).format(listing.annual_revenue)}
+                                  }).format(listing.asking_price)}
                                 </p>
                               </div>
-                            )}
-                          </div>
-                        </div>
+                            </div>
 
-                        {/* Actions - Option B: All buttons visible */}
-                        <div className="mt-auto grid grid-cols-6 gap-2">
+                            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 pt-4 border-t border-gray-100">
+                              <div>
+                                <p className="text-sm text-gray-400 mb-1">{language === 'fr' ? 'CA annuel' : 'Annual revenue'}</p>
+                                <p className="font-mono text-2xl font-semibold text-gray-700 leading-none">
+                                  {listing.annual_revenue
+                                    ? new Intl.NumberFormat('fr-FR', {
+                                        style: 'currency',
+                                        currency: 'EUR',
+                                        maximumFractionDigits: 0,
+                                        notation: 'compact'
+                                      }).format(listing.annual_revenue)
+                                    : '—'}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-sm text-gray-400 mb-1">{language === 'fr' ? 'Employés' : 'Employees'}</p>
+                                <p className="font-mono text-2xl font-semibold text-gray-700 leading-none">
+                                  {listing.employees ?? '—'}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-sm text-gray-400 mb-1">{language === 'fr' ? 'Certif.' : 'Certified'}</p>
+                                <p className="text-2xl font-semibold leading-none text-gray-700">
+                                  {listing.is_certified ? '✓' : '—'}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-sm text-gray-400 mb-1">{language === 'fr' ? 'Vues' : 'Views'}</p>
+                                <p className="font-mono text-2xl font-semibold text-gray-700 leading-none inline-flex items-center gap-1">
+                                  <Eye className="w-4 h-4" />
+                                  {listing.views_count || 0}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </div>
+
+                      {/* Barre actions basse */}
+                      <div className="border-t border-gray-100 bg-gray-50/70 px-4 sm:px-5 lg:px-6 py-3">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant={isFeatured ? 'secondary' : 'outline'}
+                              className="h-9"
+                              onClick={() => (isFeatured ? handleDeactivateFeatured(listing) : handleActivateFeatured(listing))}
+                              disabled={
+                                updating[listing.id] ||
+                                listing.status !== 'active' ||
+                                (!isFeatured && availableFeaturedSlots <= 0)
+                              }
+                              title={
+                                isFeatured
+                                  ? (language === 'fr' ? 'Désactiver À la une' : 'Disable featured')
+                                  : availableFeaturedSlots <= 0
+                                  ? (language === 'fr' ? 'Aucun jour sponsorisé disponible' : 'No sponsored days available')
+                                  : (language === 'fr' ? 'Activer À la une' : 'Activate featured')
+                              }
+                            >
+                              {updating[listing.id] === 'featuring' || updating[listing.id] === 'unfeaturing'
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Star className="w-4 h-4" />}
+                              {isFeatured ? (language === 'fr' ? 'Retirer' : 'Remove') : (language === 'fr' ? 'À la une' : 'Featured')}
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-9"
+                              onClick={() => navigate(createPageUrl(`CreateBusiness?edit=${listing.id}`))}
+                              disabled={updating[listing.id]}
+                              title={language === 'fr' ? 'Modifier' : 'Edit'}
+                            >
+                              <Edit className="w-4 h-4" />
+                              {language === 'fr' ? 'Modifier' : 'Edit'}
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-9"
+                              onClick={() => handleDuplicate(listing)}
+                              disabled={duplicating === listing.id}
+                              title={language === 'fr' ? 'Dupliquer' : 'Duplicate'}
+                            >
+                              {duplicating === listing.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                              {language === 'fr' ? 'Dupliquer' : 'Duplicate'}
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              className="h-9 bg-success hover:bg-success/90 text-white"
+                              onClick={() => handleStatusChange(listing.id, 'sold')}
+                              disabled={updating[listing.id] || listing.status === 'sold'}
+                              title={language === 'fr' ? 'Marquer comme vendu' : 'Mark as sold'}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              {language === 'fr' ? 'Vendue' : 'Sold'}
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-9"
+                              onClick={() => handleDelete(listing.id)}
+                              disabled={updating[listing.id]}
+                              title={language === 'fr' ? 'Supprimer' : 'Delete'}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              {language === 'fr' ? 'Supprimer' : 'Delete'}
+                            </Button>
+                          </div>
+
                           <Button
                             size="sm"
-                            className={isFeatured ? 'bg-gray-900 hover:bg-gray-800 text-white' : 'bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white'}
-                            onClick={() => (isFeatured ? handleDeactivateFeatured(listing) : handleActivateFeatured(listing))}
-                            disabled={
-                              updating[listing.id] ||
-                              listing.status !== 'active' ||
-                              (!isFeatured && (availableFeaturedSlots <= 0 || !hasEnoughDays))
-                            }
-                            title={
-                              isFeatured
-                                ? (language === 'fr' ? 'Désactiver À la une' : 'Disable featured')
-                                : !hasEnoughDays
-                                ? (language === 'fr' ? 'Pas assez de jours disponibles' : 'Not enough days available')
-                                : (language === 'fr' ? 'Activer À la une' : 'Activate featured')
-                            }
-                          >
-                            {updating[listing.id] === 'featuring' || updating[listing.id] === 'unfeaturing'
-                              ? <Loader2 className="w-4 h-4 animate-spin" />
-                              : isFeatured
-                              ? (language === 'fr' ? 'Retirer' : 'Remove')
-                              : (language === 'fr' ? 'À la une' : 'Featured')}
-                          </Button>
-
-                          {!isFeatured && (
-                            <input
-                              type="number"
-                              min={1}
-                              max={365}
-                              value={featuredDaysByListing[listing.id] || 30}
-                              onChange={(e) =>
-                                setFeaturedDaysByListing((prev) => ({
-                                  ...prev,
-                                  [listing.id]: Math.max(1, Math.min(365, Number(e.target.value || 1)))
-                                }))
-                              }
-                              className="h-9 rounded-md border border-gray-200 px-2 text-xs"
-                              title={language === 'fr' ? 'Nombre de jours À la une' : 'Number of featured days'}
-                            />
-                          )}
-
-                          <Button 
-                            size="sm" 
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => navigate(createPageUrl(`CreateBusiness?edit=${listing.id}`))}
-                            disabled={updating[listing.id]}
-                            title={language === 'fr' ? 'Modifier' : 'Edit'}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-
-                          <Button 
-                            size="sm" 
-                            variant="outline"
+                            className="h-10 bg-primary hover:bg-primary-hover text-primary-foreground px-5 self-start lg:self-auto"
                             onClick={() => window.open(createPageUrl(`BusinessDetails?id=${listing.id}`), '_blank')}
-                            title={language === 'fr' ? 'Voir' : 'View'}
+                            title={language === 'fr' ? 'Voir l’annonce' : 'View listing'}
                           >
                             <ExternalLink className="w-4 h-4" />
-                          </Button>
-
-                          <Button 
-                            size="sm" 
-                            className="bg-cyan-600 hover:bg-cyan-700 text-white"
-                            onClick={() => handleDuplicate(listing)}
-                            disabled={duplicating === listing.id}
-                            title={language === 'fr' ? 'Dupliquer' : 'Duplicate'}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-
-                          <Button 
-                            size="sm" 
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                            onClick={() => handleStatusChange(listing.id, 'sold')}
-                            disabled={updating[listing.id] || listing.status === 'sold'}
-                            title={language === 'fr' ? 'Marquer comme vendu' : 'Mark as sold'}
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-
-                          <Button 
-                            size="sm" 
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                            onClick={() => handleDelete(listing.id)}
-                            disabled={updating[listing.id]}
-                            title={language === 'fr' ? 'Supprimer' : 'Delete'}
-                          >
-                            <Trash2 className="w-4 h-4" />
+                            {language === 'fr' ? 'Voir l’annonce' : 'View listing'}
                           </Button>
                         </div>
-                      </CardContent>
+
+                        {listing.status !== 'active' && (
+                          <p className="text-[11px] text-gray-500 leading-snug mt-2">
+                            {language === 'fr'
+                              ? 'Mettez l’annonce en actif pour activer la mise à la une.'
+                              : 'Set listing to active before enabling featured mode.'}
+                          </p>
+                        )}
+                      </div>
                     </Card>
                   </motion.div>
                 );
