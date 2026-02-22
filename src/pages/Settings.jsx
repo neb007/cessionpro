@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { User, CreditCard, Receipt, Bell } from 'lucide-react';
+import { User, CreditCard, Bell, FileText } from 'lucide-react';
 import Profile from './Profile';
 import Abonnement from './Abonnement';
 import Billing from './Billing';
@@ -20,7 +20,7 @@ const tabs = [
   {
     key: 'billing',
     label: 'Facturation',
-    icon: Receipt
+    icon: FileText
   },
   {
     key: 'smartmatching-notifications',
@@ -72,7 +72,7 @@ export default function Settings() {
       <div className="mb-6 px-4 sm:px-6 lg:px-8">
         <h1 className="font-display text-2xl text-[#3B4759]">Paramètres</h1>
         <p className="text-sm text-[#111827]">
-          Gérez votre profil, votre abonnement et votre facturation sans quitter cette page.
+          Gérez votre profil, votre facturation et vos notifications sans quitter cette page.
         </p>
       </div>
 
@@ -90,7 +90,7 @@ export default function Settings() {
                   : 'border-transparent text-[#111827] hover:text-[#3B4759]'
               }`}
             >
-              <Icon className="w-4 h-4" />
+              {Icon ? <Icon className="w-4 h-4" /> : null}
               {tab.label}
             </button>
           );

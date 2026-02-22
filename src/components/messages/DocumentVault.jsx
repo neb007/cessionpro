@@ -18,12 +18,13 @@ import { Button } from '@/components/ui/button';
 const DocumentVault = ({
   documents = [],
   currentStage = 'contact',
-  onDownload = () => {},
-  onDelete = () => {},
-  onShare = () => {},
+  onDownload = (..._args) => {},
+  onDelete = (..._args) => {},
+  onShare = (..._args) => {},
   language = 'en',
   isSeller = false,
-  isNDASigned = false
+  isNDASigned = false,
+  isFeatureEnabled = true
 }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [filterType, setFilterType] = useState('all');
@@ -75,6 +76,8 @@ const DocumentVault = ({
     pending: documents.filter(d => !d.is_signed && d.requires_nda_signed).length
   };
 
+  const interactionsDisabled = !isFeatureEnabled;
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -90,7 +93,7 @@ const DocumentVault = ({
       </div>
 
       {/* Access Control Banner */}
-      {isDataRoomLocked && !canAccessDataRoom && (
+      {isFeatureEnabled && isDataRoomLocked && !canAccessDataRoom && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -149,15 +152,19 @@ const DocumentVault = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 whileHover={{ scale: 1.01 }}
-                onClick={() => setSelectedDocument(doc)}
-                className={`p-3 rounded-lg border transition-all cursor-pointer
-                  ${selectedDocument?.id === doc.id
-                    ? 'bg-primary/5 border-primary'
-                    : 'bg-white border-gray-200 hover:border-gray-300'
-                  }
-                  ${isDataRoomLocked && !canAccessDataRoom ? 'opacity-50 cursor-not-allowed' : ''}
-                `}
-              >
+                 onClick={() => {
+                   if (interactionsDisabled) return;
+                   setSelectedDocument(doc);
+                 }}
+                 className={`p-3 rounded-lg border transition-all cursor-pointer
+                   ${selectedDocument?.id === doc.id
+                     ? 'bg-primary/5 border-primary'
+                     : 'bg-white border-gray-200 hover:border-gray-300'
+                   }
+                   ${isDataRoomLocked && !canAccessDataRoom ? 'opacity-50 cursor-not-allowed' : ''}
+                   ${interactionsDisabled ? 'opacity-60 cursor-not-allowed' : ''}
+                 `}
+               >
                 <div className="flex items-start gap-3">
                   {/* File Icon */}
                   <div className="text-2xl flex-shrink-0">
@@ -217,12 +224,14 @@ const DocumentVault = ({
                   </div>
 
                   {/* Actions */}
-                  <div className={`flex gap-1 flex-shrink-0 ${isDataRoomLocked && !canAccessDataRoom ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className={`flex gap-1 flex-shrink-0 ${(isDataRoomLocked && !canAccessDataRoom) || interactionsDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
+                      disabled={interactionsDisabled}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (interactionsDisabled) return;
                         onDownload(doc.id);
                       }}
                       className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
@@ -235,8 +244,10 @@ const DocumentVault = ({
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
+                        disabled={interactionsDisabled}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (interactionsDisabled) return;
                           onShare(doc.id);
                         }}
                         className="p-2 rounded-lg hover:bg-purple-100 text-purple-600 transition-colors"
@@ -250,8 +261,10 @@ const DocumentVault = ({
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
+                        disabled={interactionsDisabled}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (interactionsDisabled) return;
                           onDelete(doc.id);
                         }}
                         className="p-2 rounded-lg hover:bg-red-100 text-red-600 transition-colors"
@@ -284,7 +297,7 @@ const DocumentVault = ({
 
       {/* Document Details Panel */}
       <AnimatePresence>
-        {selectedDocument && (
+        {selectedDocument && !interactionsDisabled && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

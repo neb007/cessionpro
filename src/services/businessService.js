@@ -134,9 +134,10 @@ export const businessService = {
         .from('businesses')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) return null;
       return data;
     } catch (error) {
       console.error('Error getting business:', error);

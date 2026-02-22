@@ -86,6 +86,12 @@ const serializeItemQuantities = (normalized: Map<string, number>) =>
     .map(([code, quantity]) => `${code}:${quantity}`)
     .join(',');
 
+const normalizeVatNumber = (rawValue: unknown) =>
+  String(rawValue || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .toUpperCase();
+
 const getBearerToken = (req: Request) => {
   const authHeader = req.headers.get('Authorization') || '';
   if (!authHeader.startsWith('Bearer ')) return null;
@@ -300,6 +306,45 @@ Deno.serve(async (req) => {
       );
     }
 
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('company_name, vat_number')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new Error('Failed to load profile billing data');
+    }
+
+    const companyName = String(profileData?.company_name || user.user_metadata?.company_name || '').trim();
+    const vatNumber = normalizeVatNumber(profileData?.vat_number || user.user_metadata?.vat_number);
+
+    if (companyName && !vatNumber) {
+      await logSecurityEvent({
+        supabase,
+        userId: user.id,
+        eventType: 'checkout_vat_missing',
+        req,
+        details: {
+          has_company_name: true,
+          has_vat_number: false
+        }
+      });
+
+      return jsonResponse(
+        400,
+        checkoutError({
+          code: 'VAT_NUMBER_REQUIRED',
+          message:
+            language === 'fr'
+              ? 'Le numéro de TVA est obligatoire quand la société est renseignée.'
+              : 'VAT number is required when company name is provided.',
+          retryable: false,
+          action: 'UPDATE_PROFILE'
+        })
+      );
+    }
+
     await logSecurityEvent({
       supabase,
       userId: user.id,
@@ -350,6 +395,26 @@ Deno.serve(async (req) => {
 
     diagStoredCustomerId = customerRow?.stripe_customer_id || null;
 
+    const customerDisplayName = companyName || user.user_metadata?.full_name || undefined;
+
+    const ensureCustomerVatId = async (customerId: string, vatValue: string) => {
+      const existingTaxIds = await stripe.customers.listTaxIds(customerId, { limit: 100 });
+      const existingEuVat = existingTaxIds.data.find((taxId) => taxId.type === 'eu_vat');
+
+      if (existingEuVat?.value === vatValue) {
+        return;
+      }
+
+      if (existingEuVat?.id) {
+        await stripe.customers.deleteTaxId(customerId, existingEuVat.id);
+      }
+
+      await stripe.customers.createTaxId(customerId, {
+        type: 'eu_vat',
+        value: vatValue
+      });
+    };
+
     await logSecurityEvent({
       supabase,
       userId: user.id,
@@ -359,6 +424,8 @@ Deno.serve(async (req) => {
           stripe_key_mode: diagStripeKeyMode,
           has_stored_customer: Boolean(diagStoredCustomerId),
           stored_customer_id: diagStoredCustomerId,
+          has_company_name: Boolean(companyName),
+          has_vat_number: Boolean(vatNumber),
           checkout_type: checkoutType,
           checkout_mode: mode,
           checkout_return_base: checkoutReturnBase
@@ -368,11 +435,15 @@ Deno.serve(async (req) => {
     const createAndPersistCustomer = async () => {
       const customer = await stripe.customers.create({
         email: user.email || undefined,
-        name: user.user_metadata?.full_name || undefined,
+        name: customerDisplayName,
         metadata: {
           user_id: user.id
         }
       });
+
+      if (vatNumber) {
+        await ensureCustomerVatId(customer.id, vatNumber);
+      }
 
       await supabase.from('billing_customers').upsert(
         {
@@ -391,6 +462,19 @@ Deno.serve(async (req) => {
     if (customerRow?.stripe_customer_id) {
       try {
         await stripe.customers.retrieve(customerRow.stripe_customer_id);
+
+        await stripe.customers.update(customerRow.stripe_customer_id, {
+          email: user.email || undefined,
+          name: customerDisplayName,
+          metadata: {
+            user_id: user.id
+          }
+        });
+
+        if (vatNumber) {
+          await ensureCustomerVatId(customerRow.stripe_customer_id, vatNumber);
+        }
+
         stripeCustomerId = customerRow.stripe_customer_id;
 
         await logSecurityEvent({

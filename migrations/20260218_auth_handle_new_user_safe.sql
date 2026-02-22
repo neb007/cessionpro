@@ -17,6 +17,7 @@ begin
       first_name,
       last_name,
       company_name,
+      vat_number,
       phone,
       created_at,
       updated_at
@@ -28,6 +29,7 @@ begin
       coalesce(new.raw_user_meta_data->>'first_name', ''),
       coalesce(new.raw_user_meta_data->>'last_name', ''),
       coalesce(new.raw_user_meta_data->>'company_name', ''),
+      coalesce(new.raw_user_meta_data->>'vat_number', ''),
       coalesce(new.raw_user_meta_data->>'phone', ''),
       now(),
       now()
@@ -38,6 +40,7 @@ begin
           first_name = excluded.first_name,
           last_name = excluded.last_name,
           company_name = excluded.company_name,
+          vat_number = excluded.vat_number,
           phone = excluded.phone,
           updated_at = now();
 

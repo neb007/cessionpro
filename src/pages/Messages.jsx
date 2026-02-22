@@ -15,7 +15,8 @@ import {
   Loader2,
   Check,
   CheckCheck,
-  AlertCircle
+  AlertCircle,
+  BellRing
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -23,9 +24,10 @@ import { fr, enUS } from 'date-fns/locale';
 
 // Import new messaging components
 // (Optional) future messaging components can be re-enabled when used
-import { DicebearAvatar } from '@/components/messages/DicebearAvatar';
 import { DealStageManager, DocumentVault } from '@/components/messages';
+import ConversationAvatar from '@/components/messages/ConversationAvatar';
 import { emailNotificationService } from '@/services/emailNotificationService';
+import { featureAlertService } from '@/services/featureAlertService';
 import { antiBypassService } from '@/services/antiBypassService';
 import { conversationService } from '@/services/conversationService';
 import { messageService } from '@/services/messageService';
@@ -40,6 +42,7 @@ export default function Messages() {
   const MAX_MESSAGE_LENGTH = 2000;
   const MESSAGES_PAGE_SIZE = 30;
   const NOTIFICATIONS_ENABLED = true;
+  const DEAL_ROOM_FEATURES_ENABLED = false;
   
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +68,7 @@ export default function Messages() {
   const [typingTimeout, setTypingTimeout] = useState(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [participantProfiles, setParticipantProfiles] = useState({});
+  const [conversationBusinessLogos, setConversationBusinessLogos] = useState({});
   const [selectedBusiness, setSelectedBusiness] = useState(null);
   const [conversationDocuments, setConversationDocuments] = useState([]);
   const [showInbox, setShowInbox] = useState(true);
@@ -72,6 +76,9 @@ export default function Messages() {
   const [archivingConversationId, setArchivingConversationId] = useState(null);
   const [blockingConversationId, setBlockingConversationId] = useState(null);
   const [dealActionLoading, setDealActionLoading] = useState(false);
+  const [featureAlertLoading, setFeatureAlertLoading] = useState(false);
+  const [featureAlertStatus, setFeatureAlertStatus] = useState('idle');
+  const [featureAlertMessage, setFeatureAlertMessage] = useState('');
   const lastDealActionRef = useRef(0);
 
   useEffect(() => {
@@ -295,9 +302,14 @@ export default function Messages() {
         }
       });
 
-      if (otherParticipantIds.size) {
+      const profileIds = new Set(otherParticipantIds);
+      if (userData?.id) {
+        profileIds.add(userData.id);
+      }
+
+      if (profileIds.size) {
         const profiles = await Promise.all(
-          Array.from(otherParticipantIds).map(async (id) => {
+          Array.from(profileIds).map(async (id) => {
             try {
               const profile = await getProfile(id);
               return [id, profile];
@@ -308,6 +320,28 @@ export default function Messages() {
           })
         );
         setParticipantProfiles(Object.fromEntries(profiles));
+      }
+
+      const businessIds = Array.from(new Set(myConvs.map((conv) => conv.business_id).filter(Boolean)));
+      if (businessIds.length > 0) {
+        const { data: logosData, error: logosError } = await supabase
+          .from('business_logos')
+          .select('business_id, logo_url')
+          .in('business_id', businessIds);
+
+        if (logosError) {
+          console.warn('Failed to load business logos for messaging:', logosError);
+        } else {
+          const logosMap = (logosData || []).reduce((acc, item) => {
+            if (item?.business_id && item?.logo_url && !acc[item.business_id]) {
+              acc[item.business_id] = item.logo_url;
+            }
+            return acc;
+          }, {});
+          setConversationBusinessLogos(logosMap);
+        }
+      } else {
+        setConversationBusinessLogos({});
       }
 
       // Check URL for specific conversation
@@ -725,6 +759,10 @@ export default function Messages() {
   };
 
   const getStageLabel = (stageValue) => {
+    if (!DEAL_ROOM_FEATURES_ENABLED && ['nda', 'data_room'].includes(stageValue)) {
+      return language === 'fr' ? 'Bientôt disponible' : 'Coming soon';
+    }
+
     const labels = {
       contact: language === 'fr' ? 'Contact' : 'Contact',
       nda: 'NDA',
@@ -821,6 +859,7 @@ export default function Messages() {
   };
 
   const handleDealStageChange = async (nextStage) => {
+    if (!DEAL_ROOM_FEATURES_ENABLED) return;
     if (!selectedConversation?.id || !user?.id || dealActionLoading) return;
     const now = Date.now();
     if (now - lastDealActionRef.current < 800) return;
@@ -857,6 +896,7 @@ export default function Messages() {
   };
 
   const handleShareDocument = async (presetName = '') => {
+    if (!DEAL_ROOM_FEATURES_ENABLED) return;
     if (!selectedConversation?.id || !user?.id || dealActionLoading) return;
     const defaultName = presetName || (language === 'fr' ? 'Document partage' : 'Shared document');
     const enteredName = window.prompt(
@@ -913,6 +953,7 @@ export default function Messages() {
   };
 
   const handleSignNDA = async () => {
+    if (!DEAL_ROOM_FEATURES_ENABLED) return;
     if (!selectedConversation?.id || !user?.id || dealActionLoading) return;
     setDealActionLoading(true);
     try {
@@ -951,6 +992,7 @@ export default function Messages() {
   };
 
   const handleDealActionClick = async (actionId) => {
+    if (!DEAL_ROOM_FEATURES_ENABLED) return;
     if (actionId === 'sign_nda') {
       await handleSignNDA();
       return;
@@ -958,6 +1000,30 @@ export default function Messages() {
     if (actionId === 'share_documents') {
       await handleShareDocument();
     }
+  };
+
+  const handleSubscribeFeatureAlert = async () => {
+    if (featureAlertLoading) return;
+    setFeatureAlertLoading(true);
+    setFeatureAlertMessage('');
+    try {
+      const response = await featureAlertService.subscribeToNdaDataroomAlert({ language });
+      const status = response?.status === 'already_subscribed' ? 'already' : 'success';
+      setFeatureAlertStatus(status);
+      setFeatureAlertMessage(
+        response?.message ||
+          (status === 'already'
+            ? (language === 'fr' ? 'Vous êtes déjà inscrit à cette alerte.' : 'You are already subscribed to this alert.')
+            : (language === 'fr'
+              ? 'Vous recevrez une alerte dès activation de NDA & Data Room.'
+              : 'You will be notified as soon as NDA & Data Room are available.'))
+      );
+    } catch (error) {
+      console.error('Feature alert subscription failed:', error);
+      setFeatureAlertStatus('error');
+      setFeatureAlertMessage('');
+    }
+    setFeatureAlertLoading(false);
   };
 
   const handleDocumentDownload = (documentId) => {
@@ -1028,6 +1094,21 @@ export default function Messages() {
     return conv?.business_title || conv?.subject || (language === 'fr' ? 'Conversation' : 'Conversation');
   };
 
+  const getParticipantProfile = (participantId) => {
+    if (!participantId) return null;
+    return participantProfiles?.[participantId] || null;
+  };
+
+  const isParticipantAnonymous = (participantId) => {
+    const profile = getParticipantProfile(participantId);
+    return profile?.show_real_identity === false;
+  };
+
+  const getConversationLogoUrl = (conv) => {
+    if (!conv?.business_id) return null;
+    return conversationBusinessLogos?.[conv.business_id] || null;
+  };
+
   const getNextStepLabel = (conv) => {
     if (!conv) return '-';
     if (conv.contact_status === 'pending') {
@@ -1035,6 +1116,10 @@ export default function Messages() {
     }
 
     const stage = conv.deal_stage || 'contact';
+    if (!DEAL_ROOM_FEATURES_ENABLED && ['contact', 'nda', 'data_room'].includes(stage)) {
+      return language === 'fr' ? 'Bientôt disponible' : 'Coming soon';
+    }
+
     const stageToNext = {
       contact: language === 'fr' ? 'Passer NDA' : 'Move to NDA',
       nda: language === 'fr' ? 'Signer NDA' : 'Sign NDA',
@@ -1047,8 +1132,11 @@ export default function Messages() {
   };
 
   const getParticipantLabel = (participantId) => {
-    const profile = participantProfiles?.[participantId];
+    const profile = getParticipantProfile(participantId);
     if (!profile) return language === 'fr' ? 'Contact inconnu' : 'Unknown contact';
+    if (profile.show_real_identity === false) {
+      return language === 'fr' ? 'Utilisateur anonyme' : 'Anonymous user';
+    }
     if (profile.full_name) return profile.full_name;
     const firstName = profile.first_name || '';
     const lastName = profile.last_name || '';
@@ -1057,16 +1145,35 @@ export default function Messages() {
   };
 
   const getParticipantFullName = (participantId) => {
-    const profile = participantProfiles?.[participantId];
+    const profile = getParticipantProfile(participantId);
     if (!profile) return '';
+    if (profile.show_real_identity === false) return '';
     const firstName = profile.first_name || '';
     const lastName = profile.last_name || '';
     return `${firstName} ${lastName}`.trim();
   };
 
   const getParticipantCompany = (participantId) => {
-    const profile = participantProfiles?.[participantId];
+    const profile = getParticipantProfile(participantId);
+    if (profile?.show_real_identity === false) return '';
     return profile?.company_name || '';
+  };
+
+  const getAvatarProps = (participantId, conv = null) => {
+    const profile = getParticipantProfile(participantId);
+    const isAnonymous = isParticipantAnonymous(participantId);
+    const logoUrl = isAnonymous
+      ? ''
+      : (profile?.logo_url || getConversationLogoUrl(conv) || '');
+
+    return {
+      isAnonymous,
+      logoUrl,
+      firstName: profile?.first_name || '',
+      lastName: profile?.last_name || '',
+      name: getParticipantLabel(participantId),
+      email: profile?.email || (participantId === user?.id ? user?.email : '')
+    };
   };
 
   const filteredConversations = useMemo(() => {
@@ -1166,6 +1273,53 @@ export default function Messages() {
     });
   }, [showInbox, selectedConversation?.id, messages.length, sending]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.localStorage.getItem('debugMessagingUx') !== '1') return;
+    const conversationView = Boolean(selectedConversation) && !showInbox;
+    if (!conversationView) return;
+
+    const conversationRow = document.querySelector('[data-messages-conversation-row]');
+    const inputBar = document.querySelector('[data-messages-input]');
+    const sidePanel = document.querySelector('[data-messages-sidepanel]');
+
+    if (!conversationRow || !inputBar) return;
+
+    const rowRect = conversationRow.getBoundingClientRect();
+    const inputRect = inputBar.getBoundingClientRect();
+    const sideRect = sidePanel?.getBoundingClientRect();
+
+    const overlapsSidePanel = Boolean(
+      sideRect &&
+      inputRect.left < sideRect.right &&
+      inputRect.right > sideRect.left &&
+      inputRect.top < sideRect.bottom &&
+      inputRect.bottom > sideRect.top
+    );
+
+    console.debug('[MessagingUX:conversation-layout]', {
+      dealRoomEnabled: DEAL_ROOM_FEATURES_ENABLED,
+      selectedConversationId: selectedConversation?.id || null,
+      dealStage: selectedConversation?.deal_stage || 'contact',
+      ndaSigned: Boolean(selectedConversation?.nda_signed),
+      rowBottom: Math.round(rowRect.bottom),
+      inputTop: Math.round(inputRect.top),
+      inputBottom: Math.round(inputRect.bottom),
+      sidePanelTop: sideRect ? Math.round(sideRect.top) : null,
+      sidePanelBottom: sideRect ? Math.round(sideRect.bottom) : null,
+      overlapsSidePanel,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight
+    });
+  }, [
+    showInbox,
+    selectedConversation?.id,
+    selectedConversation?.deal_stage,
+    selectedConversation?.nda_signed,
+    messages.length,
+    sending
+  ]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1184,6 +1338,7 @@ export default function Messages() {
   const isConversationView = Boolean(selectedConversation) && !showInbox;
   const isSelectedConversationReadOnly = isConversationReadOnly(selectedConversation);
   const isSelectedConversationBlockedByCurrentUser = isConversationBlockedByCurrentUser(selectedConversation);
+  const selectedOtherParticipantId = getOtherParticipantId(selectedConversation);
 
   if (isConversationView && getOtherParticipantId(selectedConversation) === HIDDEN_CONTACT_ID) {
     return (
@@ -1209,9 +1364,12 @@ export default function Messages() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-white font-medium">
-              {getConversationTitle(selectedConversation)?.[0]?.toUpperCase() || 'M'}
-            </div>
+            <ConversationAvatar
+              {...getAvatarProps(selectedOtherParticipantId, selectedConversation)}
+              size="md"
+              showBorder={false}
+              language={language === 'fr' ? 'fr' : 'en'}
+            />
             <div className="flex-1 min-w-0">
               <Link
                 to={createPageUrl(`BusinessDetails?id=${selectedConversation.business_id}`)}
@@ -1266,7 +1424,7 @@ export default function Messages() {
               <p className="text-sm text-red-600">
                 {isSelectedConversationBlockedByCurrentUser
                   ? (language === 'fr'
-                    ? 'Vous avez bloqué ce contact. Conversation en lecture seule. Débloquez pour réactiver la messagerie.'
+                    ? 'Vous avez bloqué cet expéditeur. Vous pouvez lire les messages et le débloquer à tout moment pour reprendre la discussion.'
                     : 'You blocked this contact. Conversation is read-only. Unblock to re-enable messaging.')
                   : (language === 'fr'
                     ? 'Ce contact vous a bloqué. Conversation en lecture seule jusqu’au déblocage.'
@@ -1296,9 +1454,10 @@ export default function Messages() {
           )}
 
           {/* Messages */}
-          <div className="flex-1 min-h-0 flex overflow-hidden">
+          <div data-messages-conversation-row className="flex-1 min-h-0 flex overflow-hidden">
+            <div className="flex-1 min-h-0 min-w-0 flex flex-col bg-background">
             <ScrollArea className="flex-1 min-h-0 px-4 py-4 sm:p-4 bg-background">
-              <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5">
+              <div className="max-w-5xl w-full mx-auto space-y-4 sm:space-y-5">
               {hasMoreMessages && (
                 <div className="flex justify-center">
                   <Button
@@ -1337,11 +1496,11 @@ export default function Messages() {
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         transition={{ duration: 0.3 }}
                       >
-                        <DicebearAvatar 
-                          email={senderId} 
-                          name={senderLabel}
+                        <ConversationAvatar
+                          {...getAvatarProps(senderId, selectedConversation)}
                           size="md"
                           showBorder={false}
+                          language={language === 'fr' ? 'fr' : 'en'}
                           className="group-hover:shadow-lg"
                         />
                       </motion.div>
@@ -1382,11 +1541,11 @@ export default function Messages() {
                     className="flex gap-3"
                   >
                     <div className="flex-shrink-0 mt-1">
-                      <DicebearAvatar 
-                        email={getOtherParticipantId(selectedConversation)} 
-                        name={getParticipantLabel(getOtherParticipantId(selectedConversation))}
+                      <ConversationAvatar
+                        {...getAvatarProps(selectedOtherParticipantId, selectedConversation)}
                         size="md"
                         showBorder={false}
+                        language={language === 'fr' ? 'fr' : 'en'}
                       />
                     </div>
                     <div>
@@ -1426,8 +1585,57 @@ export default function Messages() {
               </div>
             </ScrollArea>
 
+            <div data-messages-input className="bg-card border-t border-border px-4 py-3 sm:p-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendMessage();
+                }}
+                className="max-w-5xl mx-auto flex gap-3"
+              >
+                <div className="flex-1">
+                  <Input
+                    value={newMessage}
+                    onChange={handleMessageChange}
+                    placeholder={t('type_message')}
+                    className="flex-1"
+                    disabled={sending || isSelectedConversationReadOnly || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
+                  />
+                  <div className="flex items-center justify-between mt-1 text-[11px] sm:text-xs text-muted-foreground">
+                    <span>
+                      {newMessage.length}/{MAX_MESSAGE_LENGTH}
+                    </span>
+                    {messageError && (
+                      <span className="text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {messageError}
+                      </span>
+                    )}
+                  </div>
+                  {sendError && !messageError && (
+                    <div className="text-[11px] sm:text-xs text-red-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {sendError}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  type="submit"
+                  disabled={!newMessage.trim() || sending || !!messageError || isSelectedConversationReadOnly || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {sending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
+              </form>
+            </div>
+            </div>
+
             {/* Business Panel */}
-            <div className="hidden lg:block w-80 min-h-0 overflow-y-auto border-l border-border bg-card p-4">
+            <div data-messages-sidepanel className="hidden lg:block w-80 min-h-0 overflow-y-auto border-l border-border bg-card p-4">
               <div className="space-y-4 pb-6">
                 <div>
                   <p className="text-xs uppercase tracking-widest text-muted-foreground">
@@ -1494,34 +1702,82 @@ export default function Messages() {
                   <p className="text-xs uppercase tracking-widest text-muted-foreground">
                     {language === 'fr' ? 'Avancement du dossier' : 'Deal progress'}
                   </p>
-                  <DealStageManager
-                    currentStage={selectedConversation?.deal_stage || 'contact'}
-                    onStageChange={handleDealStageChange}
-                    onActionClick={handleDealActionClick}
-                    language={language === 'fr' ? 'fr' : 'en'}
-                    isBuyer={selectedConversation?.participant_1_id === user?.id}
-                  />
-                  {dealActionLoading && (
-                    <p className="text-xs text-muted-foreground">
-                      {language === 'fr' ? 'Mise a jour en cours...' : 'Updating...'}
-                    </p>
-                  )}
-                </div>
+                  {!DEAL_ROOM_FEATURES_ENABLED ? (
+                    <div className="rounded-xl border border-primary/20 bg-primary-light p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 text-primary">
+                          <BellRing className="w-4 h-4" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-foreground">
+                            {language === 'fr' ? 'NDA & Data Room bientôt disponibles' : 'NDA & Data Room coming soon'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {language === 'fr'
+                              ? 'Ces options ne sont pas encore actives. Activez une alerte pour être prévenu dès leur disponibilité.'
+                              : 'These options are not active yet. Enable an alert to be notified as soon as they are available.'}
+                          </p>
+                        </div>
+                      </div>
 
-                <div className="border-t border-border pt-3 space-y-3">
-                  <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                    {language === 'fr' ? 'Documents (MVP)' : 'Documents (MVP)'}
-                  </p>
-                  <DocumentVault
-                    documents={conversationDocuments}
-                    currentStage={selectedConversation?.deal_stage || 'contact'}
-                    onDownload={handleDocumentDownload}
-                    onDelete={handleDocumentDelete}
-                    onShare={() => handleShareDocument()}
-                    language={language === 'fr' ? 'fr' : 'en'}
-                    isSeller={selectedConversation?.participant_2_id === user?.id}
-                    isNDASigned={Boolean(selectedConversation?.nda_signed)}
-                  />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full h-auto min-h-10 whitespace-normal break-words text-center leading-snug px-3 py-2 border-primary/30 text-primary hover:bg-primary-light hover:text-black"
+                        disabled={featureAlertLoading || featureAlertStatus === 'success' || featureAlertStatus === 'already'}
+                        onClick={handleSubscribeFeatureAlert}
+                      >
+                        {featureAlertLoading
+                          ? (language === 'fr' ? 'Inscription...' : 'Subscribing...')
+                          : featureAlertStatus === 'success'
+                            ? (language === 'fr' ? 'Alerte activée' : 'Alert enabled')
+                            : featureAlertStatus === 'already'
+                              ? (language === 'fr' ? 'Déjà inscrit' : 'Already subscribed')
+                              : (language === 'fr'
+                                ? 'Recevoir une alerte quand NDA & Data Room seront disponibles'
+                                : 'Get an alert when both features are available')}
+                      </Button>
+
+                      {featureAlertMessage && (
+                        <p className={`text-xs ${featureAlertStatus === 'error' ? 'text-destructive' : 'text-foreground'}`}>
+                          {featureAlertMessage}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <DealStageManager
+                        currentStage={selectedConversation?.deal_stage || 'contact'}
+                        onStageChange={handleDealStageChange}
+                        onActionClick={handleDealActionClick}
+                        language={language === 'fr' ? 'fr' : 'en'}
+                        isBuyer={selectedConversation?.participant_1_id === user?.id}
+                        isFeatureEnabled
+                      />
+                      {dealActionLoading && (
+                        <p className="text-xs text-muted-foreground">
+                          {language === 'fr' ? 'Mise a jour en cours...' : 'Updating...'}
+                        </p>
+                      )}
+
+                      <div className="border-t border-border pt-3 space-y-3">
+                        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                          {language === 'fr' ? 'Documents (MVP)' : 'Documents (MVP)'}
+                        </p>
+                        <DocumentVault
+                          documents={conversationDocuments}
+                          currentStage={selectedConversation?.deal_stage || 'contact'}
+                          onDownload={handleDocumentDownload}
+                          onDelete={handleDocumentDelete}
+                          onShare={() => handleShareDocument()}
+                          language={language === 'fr' ? 'fr' : 'en'}
+                          isSeller={selectedConversation?.participant_2_id === user?.id}
+                          isNDASigned={Boolean(selectedConversation?.nda_signed)}
+                          isFeatureEnabled
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <Button
@@ -1537,55 +1793,6 @@ export default function Messages() {
                 </Button>
               </div>
             </div>
-          </div>
-
-          {/* Input */}
-          <div data-messages-input className="bg-card border-t border-border px-4 py-3 sm:p-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendMessage();
-              }}
-              className="max-w-3xl mx-auto flex gap-3"
-            >
-              <div className="flex-1">
-                <Input
-                  value={newMessage}
-                  onChange={handleMessageChange}
-                  placeholder={t('type_message')}
-                  className="flex-1"
-                  disabled={sending || isSelectedConversationReadOnly || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
-                />
-                <div className="flex items-center justify-between mt-1 text-[11px] sm:text-xs text-muted-foreground">
-                  <span>
-                    {newMessage.length}/{MAX_MESSAGE_LENGTH}
-                  </span>
-                  {messageError && (
-                    <span className="text-red-500 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      {messageError}
-                    </span>
-                  )}
-                </div>
-                {sendError && !messageError && (
-                  <div className="text-[11px] sm:text-xs text-red-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {sendError}
-                  </div>
-                )}
-              </div>
-              <Button
-                type="submit"
-                disabled={!newMessage.trim() || sending || !!messageError || isSelectedConversationReadOnly || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
-                className="bg-primary hover:bg-primary/90"
-              >
-                {sending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </Button>
-            </form>
           </div>
         </div>
       </div>
@@ -1688,7 +1895,11 @@ export default function Messages() {
                     <div className="lg:hidden px-4 sm:px-6 py-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3">
-                          <DicebearAvatar email={otherParticipantId} name={otherLabel} size="md" />
+                          <ConversationAvatar
+                            {...getAvatarProps(otherParticipantId, conv)}
+                            size="md"
+                            language={language === 'fr' ? 'fr' : 'en'}
+                          />
                           <div className="min-w-0">
                             <p className="font-semibold text-foreground truncate">{requesterName}</p>
                             {requesterCompany && (
@@ -1739,7 +1950,11 @@ export default function Messages() {
                           {formatConversationDate(conv.last_message_date || conv.updated_at)}
                         </span>
                         <div className="flex items-center gap-2">
-                          <DicebearAvatar email={otherParticipantId} name={otherLabel} size="sm" />
+                          <ConversationAvatar
+                            {...getAvatarProps(otherParticipantId, conv)}
+                            size="sm"
+                            language={language === 'fr' ? 'fr' : 'en'}
+                          />
                           <div className="min-w-0">
                             <span className="text-sm font-medium text-foreground truncate block">{requesterName}</span>
                             {requesterCompany && (

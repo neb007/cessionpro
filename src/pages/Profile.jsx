@@ -12,7 +12,6 @@ import {
 } from '@/services/smartMatchingNotificationService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,8 +41,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-const SECTORS = ['technology', 'retail', 'hospitality', 'manufacturing', 'services', 'healthcare', 'construction', 'transport', 'agriculture', 'other'];
-
 export default function Profile() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
@@ -66,20 +63,13 @@ export default function Profile() {
     first_name: '',
     last_name: '',
     company_name: '',
+    vat_number: '',
     phone: '',
-    bio: '',
     location: '',
     avatar_url: '',
     logo_url: '',
-    sectors_interest: [],
-    budget_min: '',
-    budget_max: '',
-    experience: '',
     linkedin_url: '',
-    message_vendeurs: '',
-    visible_in_directory: true,
     preferred_language: 'fr',
-    notification_emails_enabled: true,
     show_real_identity: true,
     is_buyer: false,
     is_seller: false,
@@ -121,20 +111,13 @@ export default function Profile() {
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
         company_name: profile.company_name || '',
+        vat_number: profile.vat_number || '',
         phone: profile.phone || '',
-        bio: profile.aide_vendeur_description || profile.bio || '',
         location: profile.location || '',
         avatar_url: profile.avatar_url || '',
         logo_url: profile.logo_url || profile.avatar_url || '',
-        sectors_interest: Array.isArray(profile.sectors) ? profile.sectors : [],
-        budget_min: profile.budget_min?.toString() || '',
-        budget_max: profile.budget_max?.toString() || '',
-        experience: profile.experience_professionnelle || profile.experience || '',
         linkedin_url: profile.linkedin_url || '',
-        message_vendeurs: profile.message_vendeurs || '',
-        visible_in_directory: profile.visible_in_directory !== false,
         preferred_language: profile.preferred_language || 'fr',
-        notification_emails_enabled: profile.notification_emails_enabled !== false,
         show_real_identity: profile.show_real_identity !== false,
         is_buyer: profile.is_buyer || false,
         is_seller: profile.is_seller || false,
@@ -150,20 +133,13 @@ export default function Profile() {
             first_name: user.first_name || '',
             last_name: user.last_name || '',
             company_name: user.company_name || '',
+            vat_number: user.vat_number || '',
             phone: user.phone || '',
-            bio: user.bio || '',
             location: user.location || '',
             avatar_url: user.avatar_url || '',
             logo_url: user.avatar_url || '',
-            sectors_interest: user.sectors_interest || [],
-            budget_min: user.budget_min?.toString() || '',
-            budget_max: user.budget_max?.toString() || '',
-            experience: user.experience || '',
             linkedin_url: user.linkedin_url || '',
-            message_vendeurs: user.message_vendeurs || '',
-            visible_in_directory: user.visible_in_directory !== false,
             preferred_language: user.preferred_language || 'fr',
-            notification_emails_enabled: user.notification_emails_enabled !== false,
             show_real_identity: user.show_real_identity !== false,
             is_buyer: true,
             is_seller: false,
@@ -192,15 +168,6 @@ export default function Profile() {
       setFormData(prev => ({ ...prev, [field]: value }));
     }
     setSaved(false);
-  };
-
-  const toggleSector = (sector) => {
-    const current = formData.sectors_interest;
-    if (current.includes(sector)) {
-      handleChange('sectors_interest', current.filter(s => s !== sector));
-    } else {
-      handleChange('sectors_interest', [...current, sector]);
-    }
   };
 
   const handleAvatarUpload = async (e) => {
@@ -301,6 +268,18 @@ export default function Profile() {
   };
 
   const handleSubmit = async () => {
+    const companyName = String(formData.company_name || '').trim();
+    const vatNumber = String(formData.vat_number || '').trim();
+
+    if (companyName && !vatNumber) {
+      alert(
+        language === 'fr'
+          ? 'Le numéro de TVA est obligatoire si le champ société est renseigné.'
+          : 'VAT number is required when company name is provided.'
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       // First, save the profile with all fields
@@ -309,17 +288,12 @@ export default function Profile() {
         first_name: formData.first_name,
         last_name: formData.last_name,
         company_name: formData.company_name,
+        vat_number: vatNumber || null,
         phone: formData.phone,
-        bio: formData.bio,
         location: formData.location,
         avatar_url: formData.avatar_url,
         logo_url: formData.logo_url || formData.avatar_url || null,
-        sectors: formData.sectors_interest,
-        budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
-        budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
-        experience_professionnelle: formData.experience,
         linkedin_url: formData.linkedin_url,
-        aide_vendeur_description: formData.bio,
         is_buyer: formData.is_buyer,
         is_seller: formData.is_seller,
         show_real_identity: formData.show_real_identity
@@ -335,13 +309,9 @@ export default function Profile() {
         last_name: formData.last_name,
         phone: formData.phone,
         company_name: formData.company_name,
-        sectors: formData.sectors_interest,
+        vat_number: vatNumber || null,
         profile_type: formData.user_type,
-        transaction_size: formData.budget_max,
-        motivation_reprise: formData.bio,
-        experience_professionnelle: formData.experience,
-        linkedin_url: '',
-        aideVendeurDescription: formData.bio
+        linkedin_url: formData.linkedin_url
       };
 
       // Update based on roles
@@ -349,11 +319,7 @@ export default function Profile() {
         await updateBuyerProfile(user.id, {
           ...data,
           firstName: formData.first_name,
-          lastName: formData.last_name,
-          budgetMin: formData.budget_min,
-          budgetMax: formData.budget_max,
-          motivationReprise: formData.bio,
-          experienceProfessionnelle: formData.experience
+          lastName: formData.last_name
         });
       }
 
@@ -362,9 +328,9 @@ export default function Profile() {
           firstName: formData.first_name,
           lastName: formData.last_name,
           companyName: formData.company_name,
+          vatNumber: vatNumber || null,
           phone: formData.phone,
-          profileType: formData.user_type,
-          transactionSize: formData.budget_max
+          profileType: formData.user_type
         });
       }
 
@@ -374,10 +340,9 @@ export default function Profile() {
           first_name: formData.first_name,
           last_name: formData.last_name,
           company_name: formData.company_name,
+          vat_number: vatNumber || null,
           phone: formData.phone,
           profile_type: formData.user_type,
-          transaction_size: formData.budget_max,
-          sectors: formData.sectors_interest,
           avatar_url: formData.avatar_url,
           logo_url: formData.logo_url || formData.avatar_url || null,
           show_real_identity: formData.show_real_identity
@@ -404,9 +369,6 @@ export default function Profile() {
       </div>
     );
   }
-
-  const isBuyer = formData.is_buyer;
-  const isSeller = formData.is_seller;
 
   return (
     <div className="py-4 lg:py-6">
@@ -531,13 +493,22 @@ export default function Profile() {
                 />
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-3 gap-4">
                 <div>
                   <Label>{t('company_name')}</Label>
                   <Input
                     value={formData.company_name}
                     onChange={(e) => handleChange('company_name', e.target.value)}
                     placeholder={language === 'fr' ? 'Nom de votre société' : 'Your company name'}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label>{language === 'fr' ? 'N° TVA' : 'VAT Number'}</Label>
+                  <Input
+                    value={formData.vat_number}
+                    onChange={(e) => handleChange('vat_number', e.target.value.toUpperCase())}
+                    placeholder="FR12345678901"
                     className="mt-2"
                   />
                 </div>
@@ -563,120 +534,17 @@ export default function Profile() {
               </div>
 
               <div>
-                <Label>{t('bio')}</Label>
-                <Textarea
-                  value={formData.bio}
-                  onChange={(e) => handleChange('bio', e.target.value)}
-                  placeholder={language === 'fr' ? 'Présentez-vous en quelques mots...' : 'Tell us about yourself...'}
-                  className="mt-2 min-h-24"
-                />
-              </div>
-
-              <div>
-                <Label>{t('experience')}</Label>
-                <Textarea
-                  value={formData.experience}
-                  onChange={(e) => handleChange('experience', e.target.value)}
-                  placeholder={language === 'fr' ? 'Décrivez votre expérience professionnelle...' : 'Describe your professional experience...'}
-                  className="mt-2 min-h-24"
+                <Label>{language === 'fr' ? 'URL LinkedIn' : 'LinkedIn URL'}</Label>
+                <Input
+                  type="url"
+                  value={formData.linkedin_url}
+                  onChange={(e) => handleChange('linkedin_url', e.target.value)}
+                  placeholder="https://linkedin.com/in/vous"
+                  className="mt-2"
                 />
               </div>
             </CardContent>
           </Card>
-
-          {/* Buyer Preferences */}
-          {isBuyer && (
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="font-display flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  {language === 'fr' ? 'Critères de recherche Acheteur' : 'Buyer Search Criteria'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label>{t('budget_range')} (€)</Label>
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <div>
-                      <Input
-                        type="number"
-                        value={formData.budget_min}
-                        onChange={(e) => handleChange('budget_min', e.target.value)}
-                        placeholder="Min"
-                        className="font-mono"
-                      />
-                    </div>
-                    <div>
-                      <Input
-                        type="number"
-                        value={formData.budget_max}
-                        onChange={(e) => handleChange('budget_max', e.target.value)}
-                        placeholder="Max"
-                        className="font-mono"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="mb-3 block">{t('sectors_interest')}</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {SECTORS.map(sector => (
-                      <button
-                        key={sector}
-                        onClick={() => toggleSector(sector)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                          formData.sectors_interest.includes(sector)
-                            ? 'bg-primary text-white shadow-md'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {t(sector)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>{language === 'fr' ? 'URL LinkedIn' : 'LinkedIn URL'}</Label>
-                  <Input
-                    type="url"
-                    value={formData.linkedin_url}
-                    onChange={(e) => handleChange('linkedin_url', e.target.value)}
-                    placeholder="https://linkedin.com/in/vous"
-                    className="mt-2"
-                  />
-                </div>
-
-                <div>
-                  <Label>{language === 'fr' ? 'Message personnalisé pour vendeurs' : 'Personalized message for sellers'}</Label>
-                  <Textarea
-                    value={formData.message_vendeurs}
-                    onChange={(e) => handleChange('message_vendeurs', e.target.value)}
-                    placeholder={language === 'fr' 
-                      ? 'Laissez un message que les vendeurs verront quand ils consultent votre profil...' 
-                      : 'Leave a message that sellers will see when viewing your profile...'}
-                    className="mt-2 min-h-20"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div>
-                    <p className="font-medium text-gray-900">{t('visible_directory')}</p>
-                    <p className="text-sm text-gray-500">
-                      {language === 'fr' 
-                        ? "Votre profil sera visible dans l'annuaire des repreneurs" 
-                        : 'Your profile will be visible in the buyers directory'}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.visible_in_directory}
-                    onCheckedChange={(v) => handleChange('visible_in_directory', v)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Messaging Settings */}
           <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-transparent">
@@ -702,34 +570,6 @@ export default function Profile() {
                   onCheckedChange={(v) => handleChange('show_real_identity', v)}
                 />
               </div>
-              <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl backdrop-blur-sm">
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {language === 'fr' ? 'Notifications par Email' : 'Email Notifications'}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {language === 'fr' 
-                      ? 'Recevoir une notification par email' 
-                      : 'Receive email notification'}
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.notification_emails_enabled}
-                  onCheckedChange={(v) => handleChange('notification_emails_enabled', v)}
-                />
-              </div>
-              {!formData.notification_emails_enabled && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800"
-                >
-                  {language === 'fr' 
-                    ? '🔕 Les notifications email sont désactivées' 
-                    : '🔕 Email notifications are disabled'}
-                </motion.div>
-              )}
-
               <div className="mt-4 p-4 bg-white/60 rounded-xl border border-[#FF6B4A]/20">
                 <p className="font-medium text-gray-900">
                   {language === 'fr' ? 'Notification Smart Matching' : 'Smart Matching notifications'}

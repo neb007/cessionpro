@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button';
  */
 const DealStageManager = ({
   currentStage = 'contact',
-  onStageChange = () => {},
-  onActionClick = () => {},
+  onStageChange = (..._args) => {},
+  onActionClick = (..._args) => {},
   language = 'en',
-  isBuyer = false
+  isBuyer = false,
+  isFeatureEnabled = true
 }) => {
   const [showActionConfirm, setShowActionConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
@@ -131,13 +132,18 @@ const DealStageManager = ({
 
   const currentStageData = stages.find(s => s.id === currentStage);
   const userRole = isBuyer ? 'buyer' : 'seller';
-
   const handleActionClick = (action) => {
+    if (!isFeatureEnabled) return;
     setPendingAction(action);
     setShowActionConfirm(true);
   };
 
   const handleConfirmAction = () => {
+    if (!isFeatureEnabled) {
+      setShowActionConfirm(false);
+      setPendingAction(null);
+      return;
+    }
     if (pendingAction) {
       onActionClick(pendingAction.id);
       if (pendingAction.consequence !== currentStage) {
@@ -178,7 +184,9 @@ const DealStageManager = ({
               </p>
             </div>
           </div>
-          <CheckCircle2 className="w-5 h-5 text-blue-600" />
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-blue-600" />
+          </div>
         </div>
 
         {/* Actions */}
@@ -194,7 +202,12 @@ const DealStageManager = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleActionClick(action)}
-                  className="px-3 py-1.5 rounded-lg bg-white border border-blue-300 text-xs font-medium text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-1"
+                  disabled={!isFeatureEnabled}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1 ${
+                    isFeatureEnabled
+                      ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50'
+                      : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
                 >
                   <span>{action.icon}</span>
                   {language === 'fr' ? action.labelFr : action.labelEn}
@@ -207,7 +220,7 @@ const DealStageManager = ({
 
       {/* Requirements Info */}
       <AnimatePresence>
-        {currentStage === 'nda' && (
+        {isFeatureEnabled && currentStage === 'nda' && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -229,7 +242,7 @@ const DealStageManager = ({
           </motion.div>
         )}
 
-        {currentStage === 'data_room' && (
+        {isFeatureEnabled && currentStage === 'data_room' && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
