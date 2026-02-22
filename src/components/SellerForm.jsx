@@ -46,8 +46,17 @@ export default function SellerForm({
   completion
 }) {
   const [newAsset, setNewAsset] = useState('');
+  const [focusIndicator, setFocusIndicator] = useState(null);
   const publishToastRef = useRef(null);
   const publishToastTimerRef = useRef(null);
+  const scrollAreaRef = useRef(null);
+  const completionScore = Math.max(0, Math.min(100, Number(completion?.score || 0)));
+  const isHighCompletion = completionScore >= 69;
+  const activeRingColor = isHighCompletion ? '#22c55e' : '#ef4444';
+  const activeShadowClass = isHighCompletion
+    ? 'shadow-[0_2px_10px_rgba(34,197,94,0.28)]'
+    : 'shadow-[0_2px_10px_rgba(239,68,68,0.28)]';
+  const activeTextClass = isHighCompletion ? 'text-green-700' : 'text-red-700';
   const publishMessage = language === 'fr'
     ? "Votre annonce est en cours de validation. Elle sera publiée après validation par la plateforme."
     : 'Your listing is under review and will be published after platform validation.';
@@ -75,6 +84,74 @@ export default function SellerForm({
       publishToastRef.current = null;
       publishToastTimerRef.current = null;
     }, 6000);
+  };
+
+  const isTrackableField = (target) => {
+    if (!target || typeof target.matches !== 'function') return false;
+
+    if (target.matches('input')) {
+      const inputType = String(target.getAttribute('type') || 'text').toLowerCase();
+      return !['button', 'submit', 'reset', 'hidden', 'file', 'checkbox', 'radio'].includes(inputType);
+    }
+
+    return target.matches('textarea, [role="combobox"], [contenteditable="true"]');
+  };
+
+  const updateFocusIndicator = (target) => {
+    if (!target || typeof target.getBoundingClientRect !== 'function') return;
+    if (!scrollAreaRef.current?.contains(target)) return;
+    if (!isTrackableField(target)) {
+      setFocusIndicator(null);
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const top = Math.max(20, Math.min(rect.top + (rect.height / 2), window.innerHeight - 20));
+    const indicatorSize = 32;
+    const insetRight = 8;
+    const rawLeft = rect.right - indicatorSize - insetRight;
+    const minInsideField = rect.left + 4;
+    const leftInsideField = Math.max(minInsideField, rawLeft);
+    const left = Math.max(8, Math.min(leftInsideField, window.innerWidth - indicatorSize - 8));
+
+    setFocusIndicator({ top, left });
+  };
+
+  const handleFormFocusCapture = (event) => {
+    const target = event?.target;
+    updateFocusIndicator(target);
+  };
+
+  const handleFormClickCapture = (event) => {
+    const target = event?.target;
+    if (!target?.closest) return;
+    const focusableTarget = target.closest('input, textarea, [role="combobox"], [contenteditable="true"]');
+    if (isTrackableField(focusableTarget)) {
+      updateFocusIndicator(focusableTarget);
+    }
+  };
+
+  const handleFormScroll = () => {
+    const activeElement = document.activeElement;
+    if (activeElement && scrollAreaRef.current?.contains(activeElement) && isTrackableField(activeElement)) {
+      updateFocusIndicator(activeElement);
+    }
+  };
+
+  const handleFormBlurCapture = (event) => {
+    const nextFocusedElement = event?.relatedTarget;
+    if (nextFocusedElement && scrollAreaRef.current?.contains(nextFocusedElement)) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const activeElement = document.activeElement;
+      if (activeElement && scrollAreaRef.current?.contains(activeElement) && isTrackableField(activeElement)) {
+        updateFocusIndicator(activeElement);
+        return;
+      }
+      setFocusIndicator(null);
+    });
   };
 
   // Auto-generate region for France when location changes
@@ -158,7 +235,29 @@ export default function SellerForm({
   return (
     <TooltipProvider delayDuration={120}>
       <div className="w-full flex flex-col h-full overflow-hidden">
-        <div className="flex-1 overflow-y-auto pr-4 scrollbar-hide">
+        <div
+          ref={scrollAreaRef}
+          onFocusCapture={handleFormFocusCapture}
+          onClickCapture={handleFormClickCapture}
+          onBlurCapture={handleFormBlurCapture}
+          onScroll={handleFormScroll}
+          className="relative flex-1 overflow-y-auto pr-4 scrollbar-hide"
+        >
+          {focusIndicator && (
+            <div
+              className="pointer-events-none fixed z-[70] -translate-y-1/2 transition-all duration-150 ease-out"
+              style={{ top: `${focusIndicator.top}px`, left: `${focusIndicator.left}px` }}
+            >
+              <div
+                className={`h-8 w-8 rounded-full p-[2px] ${activeShadowClass}`}
+                style={{ background: `conic-gradient(${activeRingColor} ${completionScore * 3.6}deg, #e5e7eb 0deg)` }}
+              >
+                <div className="h-full w-full rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center">
+                  <span className={`text-[9px] font-bold leading-none ${activeTextClass}`}>{completionScore}</span>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="space-y-4 md:space-y-6">
             {/* Main Form */}
             <div className="space-y-4 md:space-y-6">

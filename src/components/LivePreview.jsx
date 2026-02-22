@@ -162,27 +162,6 @@ export default function LivePreview({
                 {completion.tier?.label || (language === 'fr' ? 'En cours' : 'In progress')}
               </p>
             </div>
-            <div className="mt-2 flex gap-1">
-              {[...
-                (announcementType === 'sale'
-                  ? ['title', 'sector', 'asking_price', 'location', 'description', 'images']
-                  : ['title', 'description', 'buyer_sectors_interested', 'business_type_sought', 'buyer_profile_type', 'buyer_locations', 'buyer_image']
-                )
-              ].map((field) => (
-                <div
-                  key={field}
-                  className={`h-2 flex-1 rounded-full ${
-                    field === 'images' || field === 'buyer_image'
-                      ? formData[field]?.length > 0
-                        ? 'bg-green-500'
-                        : 'bg-gray-200'
-                      : formData[field]
-                        ? 'bg-green-500'
-                        : 'bg-gray-200'
-                  }`}
-                />
-              ))}
-            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React from 'react';
+import React, { useEffect } from 'react';
 
 export default function FormCompletionExperience({ completion, language = 'fr' }) {
   const score = completion?.score || 0;
@@ -16,6 +16,22 @@ export default function FormCompletionExperience({ completion, language = 'fr' }
   const ringStyle = {
     background: `conic-gradient(#f47e50 ${score * 3.6}deg, #e5e7eb 0deg)`
   };
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.debug('[completion-debug] FormCompletionExperience mounted');
+    return () => {
+      console.debug('[completion-debug] FormCompletionExperience unmounted');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    console.debug('[completion-debug] FormCompletionExperience update', {
+      score,
+      tierLabel
+    });
+  }, [score, tierLabel]);
 
   return (
     <div className="sticky top-2 z-20 rounded-xl border border-gray-200 bg-white/95 backdrop-blur p-4 mb-4 shadow-sm">

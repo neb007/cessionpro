@@ -8,7 +8,6 @@ import { useAuth } from '@/lib/AuthContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import AnnouncementTypeRadio from '@/components/AnnouncementTypeRadio';
 import CompletionChecklist from '@/components/CompletionChecklist';
-import FormCompletionExperience from '@/components/FormCompletionExperience';
 import SellerForm from '@/components/SellerForm';
 import BuyerForm from '@/components/BuyerForm';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -455,11 +454,6 @@ export default function CreateBusiness() {
           hideOption={null}
         />
 
-        <FormCompletionExperience
-          completion={completion}
-          language={language}
-        />
-
         {/* Conditional Form Rendering */}
         {announcementType === 'sale' ? (
           <SellerForm
@@ -485,6 +479,7 @@ export default function CreateBusiness() {
             t={t}
             user={user}
             editingId={editingId}
+            completion={completion}
           />
         )}
 
