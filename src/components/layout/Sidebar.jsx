@@ -188,6 +188,12 @@ export default function Sidebar({ user }) {
       path: '/admin/users',
       icon: Users,
       pageKey: 'admin-users'
+    },
+    {
+      label: language === 'fr' ? 'Outils' : 'Tools',
+      path: '/Outils',
+      icon: Zap,
+      pageKey: 'outils'
     }
   ];
 

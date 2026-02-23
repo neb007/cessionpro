@@ -12,7 +12,12 @@ function LayoutContent({ children, currentPageName }) {
   const { t, language, changeLanguage } = useLanguage();
   const { user, logout } = useAuth();
   const { toggleMobile, isMobileOpen } = useSidebar();
-  const shouldRenderSidebar = currentPageName !== 'Home' && currentPageName !== 'Login' && currentPageName !== 'Register';
+  const isAuthenticated = Boolean(user);
+  const shouldRenderSidebar =
+    isAuthenticated &&
+    currentPageName !== 'Home' &&
+    currentPageName !== 'Login' &&
+    currentPageName !== 'Register';
   const isMessagesPage = currentPageName === 'Messages';
 
   const handleLogout = () => {

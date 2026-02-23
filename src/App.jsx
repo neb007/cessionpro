@@ -18,13 +18,28 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // Pages that are public (no authentication required)
-const PUBLIC_PAGES = ['Home', 'Login', 'Register', 'AccountCreation', 'PasswordReset', 'AuthCallback', 'Checkout', 'Annonces'];
+const PUBLIC_PAGES = [
+  'Home',
+  'Contact',
+  'Login',
+  'Register',
+  'AccountCreation',
+  'PasswordReset',
+  'AuthCallback',
+  'Checkout',
+  'Annonces',
+  'Valuations',
+  'Financing',
+  'Targeting'
+];
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
-const ProtectedRoute = ({ page, path, isAuthenticated, isLoadingAuth }) => {
+const ADMIN_EMAIL = 'nebil007@hotmail.fr';
+
+const ProtectedRoute = ({ page, path, isAuthenticated, isLoadingAuth, requireAdmin = false, user = null }) => {
   if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -36,11 +51,16 @@ const ProtectedRoute = ({ page, path, isAuthenticated, isLoadingAuth }) => {
   if (!isAuthenticated) {
     return <UserNotRegisteredError />;
   }
+
+  if (requireAdmin && user?.email?.toLowerCase() !== ADMIN_EMAIL) {
+    return <PageNotFound />;
+  }
+
   return page;
 };
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated, user } = useAuth();
   const AdminAnnoncesPage = Pages?.AdminAnnonces ?? AdminAnnonces;
   const AdminDashboardPage = Pages?.AdminDashboard ?? AdminDashboard;
   const AdminUsersPage = Pages?.AdminUsers ?? AdminUsers;
@@ -69,7 +89,7 @@ const AuthenticatedApp = () => {
         path="/admin/annonces"
         element={
           <LayoutWrapper currentPageName="AdminAnnonces">
-            <ProtectedRoute page={<AdminAnnoncesPage />} path="AdminAnnonces" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
+            <ProtectedRoute page={<AdminAnnoncesPage />} path="AdminAnnonces" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} requireAdmin user={user} />
           </LayoutWrapper>
         }
       />
@@ -77,7 +97,7 @@ const AuthenticatedApp = () => {
         path="/admin/dashboard"
         element={
           <LayoutWrapper currentPageName="AdminDashboard">
-            <ProtectedRoute page={<AdminDashboardPage />} path="AdminDashboard" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
+            <ProtectedRoute page={<AdminDashboardPage />} path="AdminDashboard" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} requireAdmin user={user} />
           </LayoutWrapper>
         }
       />
@@ -85,12 +105,13 @@ const AuthenticatedApp = () => {
         path="/admin/users"
         element={
           <LayoutWrapper currentPageName="AdminUsers">
-            <ProtectedRoute page={<AdminUsersPage />} path="AdminUsers" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
+            <ProtectedRoute page={<AdminUsersPage />} path="AdminUsers" isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} requireAdmin user={user} />
           </LayoutWrapper>
         }
       />
       {Object.entries(Pages).map(([path, Page]) => {
         const isPublic = PUBLIC_PAGES.includes(path);
+        const requiresAdmin = path === 'Outils';
         const lowerPath = path.toLowerCase();
         const needsLowerAlias = lowerPath !== path;
         const element = isPublic ? (
@@ -99,7 +120,7 @@ const AuthenticatedApp = () => {
           </LayoutWrapper>
         ) : (
           <LayoutWrapper currentPageName={path}>
-            <ProtectedRoute page={<Page />} path={path} isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} />
+            <ProtectedRoute page={<Page />} path={path} isAuthenticated={isAuthenticated} isLoadingAuth={isLoadingAuth || isLoadingPublicSettings} requireAdmin={requiresAdmin} user={user} />
           </LayoutWrapper>
         );
         

@@ -17,7 +17,10 @@ import {
   TrendingUp,
   Users,
   Shield,
-  Sparkles
+  Sparkles,
+  Calculator,
+  PiggyBank,
+  Receipt
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -74,6 +77,33 @@ export default function Home() {
     visible: { opacity: 1, y: 0 }
   };
 
+  const tools = [
+    {
+      icon: Calculator,
+      title: language === 'fr' ? 'Valorisation vendeur' : 'Seller valuation',
+      desc: language === 'fr'
+        ? 'Estimez une fourchette de valorisation avec les approches marché, rentabilité et patrimoniale.'
+        : 'Estimate a valuation range using market, profitability and asset-based approaches.',
+      path: createPageUrl('Valuations')
+    },
+    {
+      icon: PiggyBank,
+      title: language === 'fr' ? 'Financement de reprise' : 'Acquisition financing',
+      desc: language === 'fr'
+        ? 'Évaluez la faisabilité du montage, la dette supportable, le DSCR et le cash post-reprise.'
+        : 'Assess deal feasibility, debt capacity, DSCR and post-acquisition cash flow.',
+      path: createPageUrl('Financing')
+    },
+    {
+      icon: Receipt,
+      title: language === 'fr' ? 'Net vendeur après impôts' : 'Seller net after tax',
+      desc: language === 'fr'
+        ? 'Calculez le montant réellement encaissé après fiscalité, frais et scénarios PFU/barème.'
+        : 'Compute actual proceeds after tax, fees and PFU/progressive scenarios.',
+      path: createPageUrl('Targeting')
+    }
+  ];
+
   return (
     <div className="min-h-screen">
       {/* Navigation Bar */}
@@ -83,6 +113,15 @@ export default function Home() {
             <Link to="/" className="flex items-center gap-2">
               <Logo size="sm" showText={false} />
             </Link>
+            <div className="hidden md:flex items-center gap-6">
+              <Link
+                to={createPageUrl('Outils')}
+                className="text-[#3B4759] hover:text-primary transition-colors"
+                style={{ fontFamily: 'Sora, sans-serif', fontWeight: 500, fontSize: '14px' }}
+              >
+                {language === 'fr' ? 'Outils' : 'Tools'}
+              </Link>
+            </div>
             <div className="flex items-center gap-4">
               <Link
                 to="/Login"
@@ -183,6 +222,61 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Tools Section */}
+      <section id="outils" className="py-20 bg-[#FAF9F7] border-y border-[#F0ECE6]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-14"
+          >
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#3B4759] mb-4">
+              {language === 'fr' ? 'Outils' : 'Tools'}
+            </h2>
+            <p className="text-[#6B7A94] max-w-2xl mx-auto">
+              {language === 'fr'
+                ? 'Accédez à nos 3 simulateurs pour préparer votre cession ou votre acquisition avec une base chiffrée solide.'
+                : 'Access our 3 simulators to prepare your sale or acquisition with a solid data-driven foundation.'}
+            </p>
+          </motion.div>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-3 gap-6"
+          >
+            {tools.map((tool) => (
+              <motion.div key={tool.title} variants={itemVariants}>
+                <Link to={tool.path} className="block h-full">
+                  <div className="h-full bg-white rounded-3xl border border-[#F3E9E4] p-7 shadow-sm hover:shadow-lg transition-all duration-300">
+                    <div className="w-12 h-12 rounded-xl bg-[#FFF0ED] flex items-center justify-center mb-5">
+                      <tool.icon className="w-6 h-6 text-[#FF6B4A]" />
+                    </div>
+                    <h3 className="font-display text-xl font-semibold text-[#3B4759] mb-2">{tool.title}</h3>
+                    <p className="text-[#6B7A94] mb-5">{tool.desc}</p>
+                    <span className="inline-flex items-center gap-2 text-[#FF6B4A] font-medium">
+                      {language === 'fr' ? 'Découvrir' : 'Discover'}
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <div className="mt-8 text-center">
+            <Link to={createPageUrl('Outils')}>
+              <Button className="bg-[#FF6B4A] hover:bg-[#FF5733] text-white">
+                {language === 'fr' ? 'Accéder à la page Outils' : 'Go to Tools page'}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
       <section className="py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -280,7 +374,11 @@ export default function Home() {
             >
               {featuredBusinesses.map((business) => (
                 <motion.div key={business.id} variants={itemVariants}>
-                  <BusinessCard business={business} />
+                  <BusinessCard
+                    business={business}
+                    isFavorite={false}
+                    onToggleFavorite={() => {}}
+                  />
                 </motion.div>
               ))}
             </motion.div>

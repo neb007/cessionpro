@@ -55,16 +55,19 @@ import Abonnement from './pages/Abonnement';
 import Billing from './pages/Billing';
 import Categories from './pages/Categories';
 import Checkout from './pages/Checkout';
+import Contact from './pages/Contact';
 import CreateBusiness from './pages/CreateBusiness';
 import Dataroom from './pages/Dataroom';
 import FAQ from './pages/FAQ';
 import Favorites from './pages/Favorites';
+import Financing from './pages/Financing';
 import Home from './pages/Home';
 import Leads from './pages/Leads';
 import Login from './pages/Login';
 import Messages from './pages/Messages';
 import MyLeads from './pages/MyLeads';
 import MyListings from './pages/MyListings';
+import Outils from './pages/Outils';
 import PasswordReset from './pages/PasswordReset';
 import Pricing from './pages/Pricing';
 import Profile from './pages/Profile';
@@ -72,6 +75,8 @@ import Register from './pages/Register';
 import Settings from './pages/Settings';
 import SmartMatching from './pages/SmartMatching';
 import SmartMatchingNotifications from './pages/SmartMatchingNotifications';
+import Targeting from './pages/Targeting';
+import Valuations from './pages/Valuations';
 import __Layout from './Layout.jsx';
 
 
@@ -84,16 +89,19 @@ export const PAGES = {
     "Billing": Billing,
     "Categories": Categories,
     "Checkout": Checkout,
+    "Contact": Contact,
     "CreateBusiness": CreateBusiness,
     "Dataroom": Dataroom,
     "FAQ": FAQ,
     "Favorites": Favorites,
+    "Financing": Financing,
     "Home": Home,
     "Leads": Leads,
     "Login": Login,
     "Messages": Messages,
     "MyLeads": MyLeads,
     "MyListings": MyListings,
+    "Outils": Outils,
     "PasswordReset": PasswordReset,
     "Pricing": Pricing,
     "Profile": Profile,
@@ -101,6 +109,8 @@ export const PAGES = {
     "Settings": Settings,
     "SmartMatching": SmartMatching,
     "SmartMatchingNotifications": SmartMatchingNotifications,
+    "Targeting": Targeting,
+    "Valuations": Valuations,
 }
 
 export const pagesConfig = {
