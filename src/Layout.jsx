@@ -13,11 +13,10 @@ function LayoutContent({ children, currentPageName }) {
   const { user, logout } = useAuth();
   const { toggleMobile, isMobileOpen } = useSidebar();
   const isAuthenticated = Boolean(user);
+  const hideSidebarPages = ['Home', 'Login', 'Register', 'Valuations', 'Financing', 'Targeting'];
   const shouldRenderSidebar =
     isAuthenticated &&
-    currentPageName !== 'Home' &&
-    currentPageName !== 'Login' &&
-    currentPageName !== 'Register';
+    !hideSidebarPages.includes(currentPageName);
   const isMessagesPage = currentPageName === 'Messages';
 
   const handleLogout = () => {

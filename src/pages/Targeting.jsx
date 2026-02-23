@@ -4,9 +4,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { createPageUrl } from '@/utils';
 import Logo from '@/components/Logo';
-import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Info, Sparkles, Target } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -24,7 +22,6 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { computeNetSeller } from '@/utils/simulatorsEngine';
 import ToolLeadGate from '@/components/ToolLeadGate';
 import { toolAnalyticsService } from '@/services/toolAnalyticsService';
@@ -53,8 +50,6 @@ export default function Targeting() {
 
   const result = useMemo(() => computeNetSeller(formData), [formData]);
 
-  const handleChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
-
   const formatCurrency = (value) =>
     new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
       style: 'currency',
@@ -62,40 +57,35 @@ export default function Targeting() {
       maximumFractionDigits: 0
     }).format(Number(value || 0));
 
-  const alertLabels = {
-    optimisation_fiscale_possible: language === 'fr' ? 'Optimisation fiscale possible' : 'Tax optimization possible',
-    vente_via_holding_a_etudier: language === 'fr' ? 'Vente via holding à étudier' : 'Holding sale should be considered',
-    depart_retraite_a_anticiper: language === 'fr' ? 'Départ retraite à anticiper' : 'Retirement timing to anticipate',
-    risque_sur_imposition: language === 'fr' ? 'Risque de sur-imposition' : 'Over-taxation risk'
-  };
+  const handleChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
 
   const steps = useMemo(
     () => [
       {
         id: 1,
-        title: language === 'fr' ? 'Paramètres de vente' : 'Sale parameters',
+        title: language === 'fr' ? 'Paramètres de cession' : 'Sale parameters',
         description:
           language === 'fr'
-            ? 'Renseignez les bases économiques de la cession.'
-            : 'Enter the core economic assumptions of the sale.',
+            ? 'Renseignez les paramètres économiques de la transaction.'
+            : 'Enter economic transaction parameters.',
         fields: ['salePrice', 'purchasePrice', 'contributions', 'feesValue', 'repaidDebts']
       },
       {
         id: 2,
-        title: language === 'fr' ? 'Fiscalité & régime' : 'Tax & regime',
+        title: language === 'fr' ? 'Fiscalité' : 'Tax assumptions',
         description:
           language === 'fr'
-            ? 'Définissez les hypothèses fiscales de calcul du net.'
-            : 'Define tax assumptions used to compute net proceeds.',
+            ? 'Renseignez les hypothèses de régime fiscal et d’abattement.'
+            : 'Enter tax regime and abatement assumptions.',
         fields: ['taxRegime', 'taxBracket', 'manualAbatementRate', 'feesMode', 'holdingMode']
       },
       {
         id: 3,
-        title: language === 'fr' ? 'Situation personnelle' : 'Personal context',
+        title: language === 'fr' ? 'Contexte cédant' : 'Seller context',
         description:
           language === 'fr'
-            ? 'Précisez la durée de détention et le contexte retraite.'
-            : 'Specify holding period and retirement context.',
+            ? 'Intégrez le contexte de durée de détention et de retraite.'
+            : 'Include holding period and retirement context.',
         fields: ['holdingDurationYears', 'age', 'retirementPlanned']
       }
     ],
@@ -103,7 +93,6 @@ export default function Targeting() {
   );
 
   const allFields = useMemo(() => steps.flatMap((step) => step.fields), [steps]);
-
   const globalCompletion = useMemo(() => {
     const filled = allFields.filter((field) => String(formData[field] || '').trim() !== '').length;
     return Math.round((filled / allFields.length) * 100);
@@ -128,49 +117,7 @@ export default function Targeting() {
   }, [currentStep, globalCompletion]);
 
   const currentStepConfig = steps[currentStep - 1];
-
-  const currentStepCompletion = useMemo(() => {
-    const fields = currentStepConfig.fields;
-    const filled = fields.filter((field) => String(formData[field] || '').trim() !== '').length;
-    return Math.round((filled / fields.length) * 100);
-  }, [currentStepConfig, formData]);
-
   const canGoNext = currentStepConfig.fields.every((field) => String(formData[field] || '').trim() !== '');
-
-  const recommendations = useMemo(() => {
-    const list = [];
-
-    if (result.effectiveTaxRate > 35) {
-      list.push(
-        language === 'fr'
-          ? 'Étudiez une optimisation du mode de détention pour réduire le taux effectif.'
-          : 'Review ownership setup to reduce effective tax rate.'
-      );
-    }
-    if (Number(formData.holdingDurationYears || 0) < 5) {
-      list.push(
-        language === 'fr'
-          ? 'Anticipez le calendrier de cession pour maximiser les abattements potentiels.'
-          : 'Plan the exit timeline to maximize potential abatements.'
-      );
-    }
-    if (Number(formData.repaidDebts || 0) > Number(formData.salePrice || 0) * 0.2) {
-      list.push(
-        language === 'fr'
-          ? 'Négociez le traitement de la dette au closing pour protéger le net vendeur.'
-          : 'Negotiate debt treatment at closing to protect net proceeds.'
-      );
-    }
-    if (list.length === 0) {
-      list.push(
-        language === 'fr'
-          ? 'Votre structure est équilibrée. Formalisez plusieurs scénarios de négociation.'
-          : 'Your structure looks balanced. Formalize multiple negotiation scenarios.'
-      );
-    }
-
-    return list;
-  }, [formData.holdingDurationYears, formData.repaidDebts, formData.salePrice, language, result.effectiveTaxRate]);
 
   const withTooltip = (label, hint) => (
     <span className="inline-flex items-center gap-1.5">
@@ -179,23 +126,47 @@ export default function Targeting() {
         <TooltipTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#F5F2EE] text-[#6B7A94] hover:bg-[#ECE6DF]"
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-light text-muted-foreground hover:bg-primary-light/70"
             aria-label={language === 'fr' ? 'Aide' : 'Help'}
-          >
+        >
             <Info className="w-3.5 h-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent className="max-w-xs bg-[#3B4759] text-white">
-          {hint}
-        </TooltipContent>
+        <TooltipContent className="max-w-xs bg-charcoal text-white">{hint}</TooltipContent>
       </Tooltip>
     </span>
   );
 
+  const recommendations = useMemo(() => {
+    const list = [];
+    if (result.effectiveTaxRate > 35) {
+      list.push(
+        language === 'fr'
+          ? 'Priorité: examiner les leviers de structuration pour réduire le taux effectif global.'
+          : 'Priority: review structuring levers to reduce effective global tax rate.'
+      );
+    }
+    if (Number(formData.holdingDurationYears || 0) < 5) {
+      list.push(
+        language === 'fr'
+          ? 'Priorité: analyser l’impact du calendrier de cession sur les abattements applicables.'
+          : 'Priority: assess timing impact on applicable abatements.'
+      );
+    }
+    if (list.length === 0) {
+      list.push(
+        language === 'fr'
+          ? 'Profil équilibré: préparer plusieurs scénarios de négociation exprimés en net vendeur.'
+          : 'Balanced profile: prepare multiple negotiation scenarios expressed in net proceeds.'
+      );
+    }
+    return list;
+  }, [formData.holdingDurationYears, language, result.effectiveTaxRate]);
+
   return (
     <TooltipProvider delayDuration={120}>
-      <div className="min-h-screen py-10 bg-[#FAF9F7]">
-        <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 mb-8 -mt-10">
+      <div className="min-h-screen bg-background">
+        <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <Link to="/" className="flex items-center gap-2">
@@ -204,25 +175,25 @@ export default function Targeting() {
               <div className="hidden md:flex items-center gap-6">
                 <Link
                   to={createPageUrl('Outils')}
-                  className="text-[#3B4759] hover:text-primary transition-colors"
-                  style={{ fontFamily: 'Sora, sans-serif', fontWeight: 500, fontSize: '14px' }}
-                >
+                  className="font-heading text-foreground hover:text-primary transition-colors"
+                  
+              >
                   {language === 'fr' ? 'Outils' : 'Tools'}
                 </Link>
               </div>
               <div className="flex items-center gap-4">
                 <Link
                   to="/Login"
-                  className="text-gray-900 hover:text-gray-700 font-medium transition-colors px-4 py-2"
-                  style={{ fontFamily: 'Sora, sans-serif', fontWeight: 500, fontSize: '14px' }}
-                >
+                  className="font-heading text-foreground hover:text-primary transition-colors px-4 py-2"
+                  
+              >
                   {language === 'fr' ? 'Se connecter' : 'Login'}
                 </Link>
                 <Link to="/AccountCreation">
                   <Button
-                    className="bg-gradient-to-r from-primary to-orange-500 hover:from-primary-hover hover:to-orange-600 text-white"
-                    style={{ fontFamily: 'Sora, sans-serif', fontWeight: 500, fontSize: '14px' }}
-                  >
+                    className="bg-primary hover:bg-primary-hover text-primary-foreground font-heading"
+                    
+                >
                     {language === 'fr' ? 'Créer un compte' : 'Sign up'}
                   </Button>
                 </Link>
@@ -231,139 +202,148 @@ export default function Targeting() {
           </div>
         </nav>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="font-display text-3xl font-bold text-[#3B4759]">
-              {language === 'fr' ? 'Simulateur net vendeur après impôts' : 'Seller net after tax simulator'}
+        <header className="text-primary-foreground" style={{ background: 'var(--gradient-hero)' }}>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-14">
+            <p className="text-sm text-white/80 mb-4">
+              {language === 'fr' ? 'Outils · Net vendeur' : 'Tools · Net seller proceeds'}
+            </p>
+            <h1 className="font-heading text-4xl sm:text-5xl leading-tight font-semibold max-w-4xl">
+              {language === 'fr'
+                ? 'Net vendeur après impôts : cadre d’analyse de la valeur réellement encaissée'
+                : 'Net seller proceeds after tax: framework to assess real cash-in value'}
             </h1>
-          </div>
-          <p className="text-sm text-[#6B7A94]">
-            {language === 'fr'
-              ? 'Projetez votre net encaissé après fiscalité, frais et dettes remboursées.'
-              : 'Project your net proceeds after taxes, fees and debt repayment.'}
-          </p>
-
-          <Card className="border border-[#F2E8E2] bg-white shadow-sm">
-            <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="inline-flex items-center gap-2 text-[#FF6B4A] text-sm font-medium">
-                <Sparkles className="w-4 h-4" />
-                {language === 'fr' ? 'Accompagnement dédié' : 'Dedicated support'}
-              </div>
-              <p className="text-sm text-[#3B4759] sm:text-right">
-                {language === 'fr'
-                  ? 'De la première analyse à la signature, Riviqo vous accompagne pour votre acquisition ou votre cession.'
-                  : 'From first analysis to signature, Riviqo supports your acquisition or sale.'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <div className="grid xl:grid-cols-12 gap-6">
-            <div className="xl:col-span-4 space-y-4">
-              <Card className="border border-[#F2E8E2] bg-white shadow-sm">
-                <CardContent className="p-5">
-                  <p className="font-display text-lg font-semibold text-[#3B4759] mb-2">
-                    {language === 'fr' ? 'Pourquoi cet outil' : 'Why this tool'}
-                  </p>
-                  <p className="text-sm text-[#6B7A94] leading-relaxed">
-                    {language === 'fr'
-                      ? 'Ce simulateur vous permet d’anticiper le montant réellement encaissé après fiscalité et frais de transaction.'
-                      : 'This simulator helps anticipate actual net proceeds after tax and transaction fees.'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-[#F2E8E2] bg-white shadow-sm">
-                <CardContent className="p-5">
-                  <p className="font-display text-lg font-semibold text-[#3B4759] mb-3">
-                    {language === 'fr' ? 'Ce qui est comparé' : 'What is compared'}
-                  </p>
-                  <ul className="space-y-2 text-sm text-[#3B4759]">
-                    <li className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FF6B4A]" />{language === 'fr' ? 'Scénario PFU (flat tax)' : 'PFU (flat tax) scenario'}</li>
-                    <li className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FF6B4A]" />{language === 'fr' ? 'Scénario barème progressif' : 'Progressive tax scenario'}</li>
-                    <li className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FF6B4A]" />{language === 'fr' ? 'Impact retraite / abattements / dette au closing' : 'Impact of retirement, abatements, and closing debt'}</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-[#F2E8E2] bg-[#FFF8F5] shadow-sm">
-                <CardContent className="p-5">
-                  <p className="font-display text-lg font-semibold text-[#3B4759] mb-2">
-                    {language === 'fr' ? 'Interprétation rapide' : 'Quick interpretation'}
-                  </p>
-                  <p className="text-sm text-[#6B7A94] leading-relaxed">
-                    {language === 'fr'
-                      ? 'Le net vendeur est votre base de négociation réelle. Les alertes montrent les leviers à activer avant la signature.'
-                      : 'Net seller proceeds are your real negotiation baseline. Alerts highlight levers to activate before signing.'}
-                  </p>
-                </CardContent>
-              </Card>
+            <p className="mt-5 text-white/85 text-base sm:text-lg leading-8 max-w-3xl">
+              {language === 'fr'
+                ? 'Objectif: estimer le montant effectivement perçu après impôts, frais de transaction et passifs réglés, afin de piloter la stratégie de cession en valeur nette.'
+                : 'Objective: estimate effectively received proceeds after taxes, transaction fees, and settled liabilities to steer a net-value sale strategy.'}
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/85">
+              <span className="inline-flex items-center border border-white/25 px-3 py-1 rounded-full">
+                {language === 'fr' ? 'Scénarios fiscaux' : 'Tax scenarios'}
+              </span>
+              <span className="inline-flex items-center border border-white/25 px-3 py-1 rounded-full">
+                {language === 'fr' ? 'Comparaison de régimes' : 'Regime comparison'}
+              </span>
+              <span className="inline-flex items-center border border-white/25 px-3 py-1 rounded-full">
+                {language === 'fr' ? 'Pilotage du net encaissé' : 'Net proceeds steering'}
+              </span>
             </div>
+          </div>
+        </header>
 
-            <div className="xl:col-span-8">
-              <div className="grid lg:grid-cols-5 gap-6">
-                <Card className="lg:col-span-3 border border-[#F2E8E2] shadow-sm bg-white">
-              <CardContent className="p-6 space-y-5">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-[#3B4759]">
-                      {language === 'fr' ? 'Parcours guidé' : 'Guided flow'}
-                    </p>
-                    <Badge className="bg-[#FFF0ED] text-[#FF6B4A] hover:bg-[#FFF0ED] border border-[#FFD8CC]">
-                      {globalCompletion}% {language === 'fr' ? 'complété' : 'completed'}
-                    </Badge>
-                  </div>
-                  <Progress value={globalCompletion} className="h-2 bg-[#FFE7DF] [&>div]:bg-[#FF6B4A]" />
-                  <div className="grid sm:grid-cols-3 gap-2">
-                    {steps.map((step) => (
-                      <button
-                        key={step.id}
-                        type="button"
-                        onClick={() => setCurrentStep(step.id)}
-                        className={`rounded-lg border px-3 py-2 text-left transition-all ${
-                          step.id === currentStep
-                            ? 'border-[#FF6B4A] bg-[#FFF3EF] shadow-sm'
-                            : 'border-[#EFE5DF] bg-white hover:border-[#FFD8CC]'
-                        }`}
-                      >
-                        <p className="text-xs text-[#6B7A94]">
-                          {language === 'fr' ? 'Étape' : 'Step'} {step.id}
-                        </p>
-                        <p className="text-sm font-medium text-[#3B4759]">{step.title}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="rounded-xl border border-[#EFE5DF] bg-[#FCFBFA] p-4">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <p className="font-medium text-[#3B4759]">{currentStepConfig.title}</p>
-                      <span className="text-xs text-[#6B7A94]">{currentStepCompletion}%</span>
-                    </div>
-                    <p className="text-xs text-[#6B7A94]">{currentStepConfig.description}</p>
-                  </div>
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+          <article className="max-w-3xl mx-auto text-foreground">
+            <nav className="pb-8 border-b border-border">
+              <h2 className="font-heading text-2xl mb-4">
+                {language === 'fr' ? 'Sommaire de la note' : 'Contents'}
+              </h2>
+              <ol className="list-decimal pl-5 space-y-2 text-muted-foreground">
+                <li><a href="#methode" className="underline underline-offset-2 hover:text-foreground">{language === 'fr' ? 'Méthodologie de calcul du net vendeur' : 'Net proceeds calculation methodology'}</a></li>
+                <li><a href="#data" className="underline underline-offset-2 hover:text-foreground">{language === 'fr' ? 'Données à documenter' : 'Data to document'}</a></li>
+                <li><a href="#lecture" className="underline underline-offset-2 hover:text-foreground">{language === 'fr' ? 'Lecture des résultats fiscaux' : 'Reading tax outcomes'}</a></li>
+                <li><a href="#simulateur" className="underline underline-offset-2 hover:text-foreground">{language === 'fr' ? 'Simulation appliquée' : 'Applied simulation'}</a></li>
+              </ol>
+            </nav>
+
+            <section id="methode" className="pt-10 scroll-mt-24">
+              <h2 className="font-heading text-3xl leading-tight mb-4">
+                {language === 'fr' ? 'Méthodologie de calcul du net vendeur' : 'Net proceeds calculation methodology'}
+              </h2>
+              <p className="text-muted-foreground text-[17px] leading-8 mb-4">
+                {language === 'fr'
+                  ? 'Le raisonnement part de la plus-value brute, applique les hypothèses fiscales pertinentes, puis intègre les coûts de transaction et les dettes réglées au closing.'
+                  : 'The analysis starts from gross capital gain, applies relevant tax assumptions, then integrates transaction costs and liabilities settled at closing.'}
+              </p>
+              <p className="text-muted-foreground text-[17px] leading-8">
+                {language === 'fr'
+                  ? 'La finalité n’est pas un simple calcul d’impôt, mais une projection de trésorerie nette réellement disponible pour le cédant selon plusieurs scénarios.'
+                  : 'The goal is not only tax computation but a projection of truly available net proceeds for the seller across scenarios.'}
+              </p>
+            </section>
+
+            <section id="data" className="pt-10 scroll-mt-24">
+              <h2 className="font-heading text-3xl leading-tight mb-4">
+                {language === 'fr' ? 'Données à documenter' : 'Data to document'}
+              </h2>
+              <ul className="list-disc pl-5 text-muted-foreground text-[17px] leading-8 space-y-1">
+                <li>{language === 'fr' ? 'Prix de cession, prix d’acquisition historique, apports et frais de transaction.' : 'Sale price, historical acquisition price, contributions, and transaction costs.'}</li>
+                <li>{language === 'fr' ? 'Régime fiscal retenu, abattements potentiels et tranche d’imposition.' : 'Chosen tax regime, potential abatements, and tax bracket.'}</li>
+                <li>{language === 'fr' ? 'Contexte personnel: durée de détention, situation retraite, mode de détention (direct/holding).' : 'Personal context: holding period, retirement status, ownership mode (direct/holding).'}</li>
+              </ul>
+            </section>
+
+            <section id="lecture" className="pt-10 scroll-mt-24">
+              <h2 className="font-heading text-3xl leading-tight mb-4">
+                {language === 'fr' ? 'Lecture des résultats fiscaux' : 'Reading tax outcomes'}
+              </h2>
+              <p className="text-muted-foreground text-[17px] leading-8 mb-4">
+                {language === 'fr'
+                  ? 'Le taux effectif d’imposition permet d’arbitrer les options de structuration. Le net vendeur final constitue l’indicateur central pour piloter la négociation en valeur réellement encaissée.'
+                  : 'The effective tax rate helps arbitrate structuring options. Final net proceeds remain the central indicator to drive negotiation on truly received value.'}
+              </p>
+              <p className="text-muted-foreground text-[17px] leading-8">
+                {language === 'fr'
+                  ? 'L’analyse comparative des scénarios permet de décider entre optimisation immédiate, ajustement de calendrier ou revue de structure.'
+                  : 'Scenario comparison supports decisions between immediate optimization, timing adjustment, or structural review.'}
+              </p>
+            </section>
+
+            <section id="simulateur" className="pt-10 scroll-mt-24">
+              <h2 className="font-heading text-3xl leading-tight mb-3">
+                {language === 'fr' ? 'Simulation appliquée à votre dossier' : 'Applied simulation for your case'}
+              </h2>
+              <p className="text-muted-foreground text-[17px] leading-8 mb-6">
+                {language === 'fr'
+                  ? 'Le module ci-dessous transforme vos hypothèses en projection nette après fiscalité et frais.'
+                  : 'The module below converts your assumptions into a net projection after taxes and fees.'}
+              </p>
+
+              <div className="border border-border bg-white/80 px-4 sm:px-6 py-6">
+                <div className="mb-5">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {language === 'fr' ? `Avancement de saisie: ${globalCompletion}%` : `Input progress: ${globalCompletion}%`}
+                  </p>
+                  <Progress value={globalCompletion} className="h-1.5 bg-primary-light [&>div]:bg-primary" />
                 </div>
 
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {steps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      onClick={() => setCurrentStep(step.id)}
+                      className={`px-3 py-1.5 text-sm border ${step.id === currentStep ? 'border-primary text-primary' : 'border-border text-muted-foreground'}`}
+                  >
+                      {language === 'fr' ? 'Étape' : 'Step'} {step.id} — {step.title}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-4">{currentStepConfig.description}</p>
+
                 {currentStep === 1 ? (
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-4 mb-6">
                     {[
-                      ['salePrice', language === 'fr' ? 'Prix de cession (€)' : 'Sale price (€)', language === 'fr' ? 'Prix de vente brut négocié avec l’acquéreur.' : 'Gross sale price negotiated with the buyer.'],
-                      ['purchasePrice', language === 'fr' ? 'Prix d’acquisition initial (€)' : 'Initial acquisition price (€)', language === 'fr' ? 'Prix payé à l’origine pour acquérir les titres/fonds.' : 'Original purchase price of shares/assets.'],
-                      ['contributions', language === 'fr' ? 'Apports réalisés (€)' : 'Contributions made (€)', language === 'fr' ? 'Apports complémentaires injectés dans la société.' : 'Additional capital contributions made over time.'],
-                      ['feesValue', language === 'fr' ? 'Frais de cession' : 'Selling fees', language === 'fr' ? 'Honoraires et coûts liés à la transaction.' : 'Advisory and transaction-related costs.'],
-                      ['repaidDebts', language === 'fr' ? 'Dettes remboursées (€)' : 'Repaid debts (€)', language === 'fr' ? 'Dettes à rembourser au closing.' : 'Debt to repay at closing.']
+                      ['salePrice', language === 'fr' ? 'Prix de cession (€)' : 'Sale price (€)', language === 'fr' ? 'Prix brut de transaction.' : 'Gross transaction price.'],
+                      ['purchasePrice', language === 'fr' ? 'Prix d’acquisition initial (€)' : 'Initial purchase price (€)', language === 'fr' ? 'Valeur historique d’acquisition.' : 'Historical acquisition value.'],
+                      ['contributions', language === 'fr' ? 'Apports réalisés (€)' : 'Contributions made (€)', language === 'fr' ? 'Apports en capital complémentaires.' : 'Additional capital contributions.'],
+                      ['feesValue', language === 'fr' ? 'Frais de cession' : 'Selling fees', language === 'fr' ? 'Honoraires et coûts de transaction.' : 'Advisory and transaction costs.'],
+                      ['repaidDebts', language === 'fr' ? 'Dettes remboursées (€)' : 'Repaid debts (€)', language === 'fr' ? 'Passif réglé au closing.' : 'Liabilities settled at closing.']
                     ].map(([field, label, hint]) => (
                       <div key={field}>
                         <Label>{withTooltip(label, hint)}</Label>
-                        <Input className="mt-2 font-mono border-[#EADFD8]" value={formData[field]} onChange={(e) => handleChange(field, e.target.value)} placeholder="" />
+                        <Input className="mt-2 border-border font-mono" value={formData[field]} onChange={(e) => handleChange(field, e.target.value)} />
                       </div>
                     ))}
                   </div>
                 ) : null}
 
                 {currentStep === 2 ? (
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-4 mb-6">
                     <div>
-                      <Label>{withTooltip(language === 'fr' ? 'Mode frais' : 'Fees mode', language === 'fr' ? 'Choisissez si les frais sont saisis en pourcentage ou montant fixe.' : 'Choose whether fees are entered as a percentage or fixed amount.')}</Label>
+                      <Label>{withTooltip(language === 'fr' ? 'Mode frais' : 'Fees mode', language === 'fr' ? 'Saisie en pourcentage ou en montant.' : 'Input as percent or amount.')}</Label>
                       <Select value={formData.feesMode} onValueChange={(v) => handleChange('feesMode', v)}>
-                        <SelectTrigger className="mt-2 border-[#EADFD8]"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="mt-2 border-border"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="percent">%</SelectItem>
                           <SelectItem value="amount">€</SelectItem>
@@ -371,9 +351,9 @@ export default function Targeting() {
                       </Select>
                     </div>
                     <div>
-                      <Label>{withTooltip(language === 'fr' ? 'Régime fiscal' : 'Tax regime', language === 'fr' ? 'Comparez PFU et barème progressif selon votre profil.' : 'Compare flat tax and progressive tax according to your profile.')}</Label>
+                      <Label>{withTooltip(language === 'fr' ? 'Régime fiscal' : 'Tax regime', language === 'fr' ? 'PFU ou barème progressif.' : 'Flat tax or progressive regime.')}</Label>
                       <Select value={formData.taxRegime} onValueChange={(v) => handleChange('taxRegime', v)}>
-                        <SelectTrigger className="mt-2 border-[#EADFD8]"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="mt-2 border-border"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="pfu">PFU</SelectItem>
                           <SelectItem value="bareme">Barème progressif</SelectItem>
@@ -381,17 +361,17 @@ export default function Targeting() {
                       </Select>
                     </div>
                     <div>
-                      <Label>{withTooltip(language === 'fr' ? 'Tranche imposition (%)' : 'Tax bracket (%)', language === 'fr' ? 'Tranche marginale utilisée pour le scénario barème.' : 'Marginal bracket used for progressive tax scenario.')}</Label>
-                      <Input className="mt-2 font-mono border-[#EADFD8]" value={formData.taxBracket} onChange={(e) => handleChange('taxBracket', e.target.value)} placeholder="" />
+                      <Label>{withTooltip(language === 'fr' ? 'Tranche d’imposition (%)' : 'Tax bracket (%)', language === 'fr' ? 'Tranche marginale pour scénario barème.' : 'Marginal bracket for progressive scenario.')}</Label>
+                      <Input className="mt-2 border-border font-mono" value={formData.taxBracket} onChange={(e) => handleChange('taxBracket', e.target.value)} />
                     </div>
                     <div>
-                      <Label>{withTooltip(language === 'fr' ? 'Abattement manuel (%)' : 'Manual abatement (%)', language === 'fr' ? 'Abattement additionnel si applicable à votre situation.' : 'Additional abatement rate if applicable to your case.')}</Label>
-                      <Input className="mt-2 font-mono border-[#EADFD8]" value={formData.manualAbatementRate} onChange={(e) => handleChange('manualAbatementRate', e.target.value)} placeholder="" />
+                      <Label>{withTooltip(language === 'fr' ? 'Abattement manuel (%)' : 'Manual abatement (%)', language === 'fr' ? 'Abattement complémentaire le cas échéant.' : 'Additional abatement if applicable.')}</Label>
+                      <Input className="mt-2 border-border font-mono" value={formData.manualAbatementRate} onChange={(e) => handleChange('manualAbatementRate', e.target.value)} />
                     </div>
                     <div>
-                      <Label>{withTooltip(language === 'fr' ? 'Mode de détention' : 'Holding mode', language === 'fr' ? 'Détention directe ou via holding, avec impacts fiscaux potentiels.' : 'Direct or holding ownership with potential tax impact.')}</Label>
+                      <Label>{withTooltip(language === 'fr' ? 'Mode de détention' : 'Holding mode', language === 'fr' ? 'Détention directe ou via holding.' : 'Direct ownership or holding structure.')}</Label>
                       <Select value={formData.holdingMode} onValueChange={(v) => handleChange('holdingMode', v)}>
-                        <SelectTrigger className="mt-2 border-[#EADFD8]"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="mt-2 border-border"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="direct">{language === 'fr' ? 'Direct' : 'Direct'}</SelectItem>
                           <SelectItem value="holding">Holding</SelectItem>
@@ -402,19 +382,19 @@ export default function Targeting() {
                 ) : null}
 
                 {currentStep === 3 ? (
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-4 mb-6">
                     <div>
-                      <Label>{withTooltip(language === 'fr' ? 'Durée détention (ans)' : 'Holding duration (years)', language === 'fr' ? 'Durée de détention des titres/fonds cédés.' : 'Holding period of shares/assets sold.')}</Label>
-                      <Input className="mt-2 font-mono border-[#EADFD8]" value={formData.holdingDurationYears} onChange={(e) => handleChange('holdingDurationYears', e.target.value)} placeholder="" />
+                      <Label>{withTooltip(language === 'fr' ? 'Durée de détention (ans)' : 'Holding duration (years)', language === 'fr' ? 'Durée de détention des titres cédés.' : 'Holding period of sold shares/assets.')}</Label>
+                      <Input className="mt-2 border-border font-mono" value={formData.holdingDurationYears} onChange={(e) => handleChange('holdingDurationYears', e.target.value)} />
                     </div>
                     <div>
-                      <Label>{withTooltip(language === 'fr' ? 'Âge' : 'Age', language === 'fr' ? 'Âge du cédant pour les hypothèses retraite.' : 'Seller age for retirement-related assumptions.')}</Label>
-                      <Input className="mt-2 font-mono border-[#EADFD8]" value={formData.age} onChange={(e) => handleChange('age', e.target.value)} placeholder="" />
+                      <Label>{withTooltip(language === 'fr' ? 'Âge du cédant' : 'Seller age', language === 'fr' ? 'Paramètre utilisé pour les hypothèses retraite.' : 'Used for retirement assumptions.')}</Label>
+                      <Input className="mt-2 border-border font-mono" value={formData.age} onChange={(e) => handleChange('age', e.target.value)} />
                     </div>
                     <div>
-                      <Label>{withTooltip(language === 'fr' ? 'Départ retraite prévu' : 'Retirement planned', language === 'fr' ? 'Permet d’activer les hypothèses d’exonération retraite.' : 'Activates retirement exemption assumptions.')}</Label>
+                      <Label>{withTooltip(language === 'fr' ? 'Départ retraite prévu' : 'Retirement planned', language === 'fr' ? 'Active les hypothèses retraite.' : 'Activates retirement assumptions.')}</Label>
                       <Select value={formData.retirementPlanned} onValueChange={(v) => handleChange('retirementPlanned', v)}>
-                        <SelectTrigger className="mt-2 border-[#EADFD8]"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="mt-2 border-border"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="yes">{language === 'fr' ? 'Oui' : 'Yes'}</SelectItem>
                           <SelectItem value="no">{language === 'fr' ? 'Non' : 'No'}</SelectItem>
@@ -424,51 +404,20 @@ export default function Targeting() {
                   </div>
                 ) : null}
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
-                    disabled={currentStep === 1}
-                    className="border-[#EADFD8] text-[#3B4759]"
-                  >
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                  <Button type="button" variant="outline" onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))} disabled={currentStep === 1} className="border-border text-foreground">
                     <ChevronLeft className="w-4 h-4 mr-1" />
                     {language === 'fr' ? 'Précédent' : 'Previous'}
                   </Button>
-
                   <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="text-[#6B7A94]"
-                      onClick={() => {
-                        setFormData(INITIAL_FORM_DATA);
-                        setCurrentStep(1);
-                      }}
-                    >
+                    <Button type="button" variant="ghost" className="text-muted-foreground" onClick={() => { setFormData(INITIAL_FORM_DATA); setCurrentStep(1); }}>
                       {language === 'fr' ? 'Réinitialiser' : 'Reset'}
                     </Button>
-                    <Button
-                      type="button"
-                      onClick={() => setCurrentStep((prev) => Math.min(steps.length, prev + 1))}
-                      disabled={currentStep === steps.length || !canGoNext}
-                      className="bg-[#FF6B4A] hover:bg-[#FF5733] text-white"
-                    >
+                    <Button type="button" onClick={() => setCurrentStep((prev) => Math.min(steps.length, prev + 1))} disabled={currentStep === steps.length || !canGoNext} className="bg-primary hover:bg-primary-hover text-primary-foreground">
                       {language === 'fr' ? 'Suivant' : 'Next'}
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-                <Card className="lg:col-span-2 border border-[#F2E8E2] shadow-sm bg-white">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-[#FF6B4A]" />
-                  <p className="font-display font-semibold text-[#3B4759]">
-                    {language === 'fr' ? 'Résultat net vendeur' : 'Seller net result'}
-                  </p>
                 </div>
 
                 <ToolLeadGate
@@ -477,116 +426,56 @@ export default function Targeting() {
                   simulationInput={formData}
                   simulationResult={result}
                   preview={(
-                    <div className="space-y-3">
-                      <div className="rounded-xl bg-white border-2 border-[#FF6B4A] p-4">
-                        <p className="text-xs text-[#6B7A94] uppercase">{language === 'fr' ? 'Net vendeur estimé' : 'Estimated seller net'}</p>
-                        <p className="font-mono text-2xl font-bold text-[#FF6B4A]">***</p>
-                      </div>
-                      <div className="rounded-xl bg-[#FAF9F7] border border-[#EFEAE6] p-4 text-sm text-[#3B4759] space-y-1">
-                        <p>{language === 'fr' ? 'Impôts totaux' : 'Total taxes'}: <span className="font-mono">***</span></p>
-                        <p>{language === 'fr' ? 'Taux effectif' : 'Effective rate'}: <span className="font-mono">**%</span></p>
-                      </div>
+                    <div className="text-sm text-foreground space-y-1">
+                      <p>{language === 'fr' ? 'Net vendeur estimé' : 'Estimated seller net'} : <span className="font-mono">***</span></p>
+                      <p>{language === 'fr' ? 'Impôts totaux' : 'Total taxes'} : <span className="font-mono">***</span></p>
+                      <p>{language === 'fr' ? 'Taux effectif' : 'Effective rate'} : <span className="font-mono">**%</span></p>
                     </div>
                   )}
                   full={(
-                    <Tabs defaultValue="summary" className="w-full">
-                      <TabsList className="grid grid-cols-3 w-full bg-[#F5F2EE]">
-                        <TabsTrigger value="summary">{language === 'fr' ? 'Synthèse' : 'Summary'}</TabsTrigger>
-                        <TabsTrigger value="scenarios">{language === 'fr' ? 'Scénarios' : 'Scenarios'}</TabsTrigger>
-                        <TabsTrigger value="actions">{language === 'fr' ? 'Actions' : 'Actions'}</TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="summary" className="space-y-4 mt-4">
-                        <div className="rounded-xl bg-white border-2 border-[#FF6B4A] p-4">
-                          <p className="text-xs text-[#6B7A94] uppercase">{language === 'fr' ? 'Net vendeur estimé' : 'Estimated seller net'}</p>
-                          <p className="font-mono text-2xl font-bold text-[#FF6B4A]">{formatCurrency(result.netSeller)}</p>
-                        </div>
-
-                        <div className="rounded-xl bg-[#FAF9F7] border border-[#EFEAE6] p-4 text-sm text-[#3B4759] space-y-1">
-                          <p>{language === 'fr' ? 'Plus-value imposable' : 'Taxable capital gain'}: <span className="font-mono">{formatCurrency(result.taxableCapitalGain)}</span></p>
-                          <p>{language === 'fr' ? 'Impôts totaux' : 'Total taxes'}: <span className="font-mono">{formatCurrency(result.totalTaxes)}</span></p>
-                          <p>{language === 'fr' ? 'Frais' : 'Fees'}: <span className="font-mono">{formatCurrency(result.feesAmount)}</span></p>
-                          <p>{language === 'fr' ? 'Taux effectif' : 'Effective rate'}: <span className="font-mono">{result.effectiveTaxRate.toFixed(1)}%</span></p>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="scenarios" className="mt-4">
-                        <div className="rounded-xl bg-white border border-[#EFEAE6] p-4 text-xs text-[#6B7A94] space-y-1">
-                          <p>PFU: <span className="font-mono">{formatCurrency(result.scenarios.pfu.netSeller)}</span></p>
-                          <p>Barème: <span className="font-mono">{formatCurrency(result.scenarios.bareme.netSeller)}</span></p>
-                          <p>{language === 'fr' ? 'Scénario retraite' : 'Retirement scenario'}: <span className="font-mono">{formatCurrency(result.scenarios.retraite.netSeller)}</span></p>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="actions" className="mt-4 space-y-3">
-                        <div className="rounded-xl border border-[#EFE5DF] bg-white p-4 space-y-3">
-                          <div className="inline-flex items-center gap-2 text-[#FF6B4A] text-sm font-medium">
-                            <Sparkles className="w-4 h-4" />
-                            {language === 'fr' ? 'Recommandations prioritaires' : 'Priority recommendations'}
-                          </div>
-                          <ul className="space-y-2 text-sm text-[#3B4759]">
-                            {recommendations.map((item) => (
-                              <li key={item} className="flex items-start gap-2">
-                                <span className="mt-1 inline-block w-1.5 h-1.5 rounded-full bg-[#FF6B4A]" />
-                                <span>{item}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        <div className="space-y-2">
-                          {result.alerts.length === 0 ? (
-                            <div className="inline-flex items-center gap-2 text-green-700 text-sm">
-                              <CheckCircle2 className="w-4 h-4" />
-                              {language === 'fr' ? 'Aucune alerte majeure' : 'No major alert'}
-                            </div>
-                          ) : (
-                            result.alerts.map((alert) => (
-                              <div key={alert} className="inline-flex items-center gap-2 text-amber-700 text-sm mr-2">
-                                <AlertTriangle className="w-4 h-4" />
-                                {alertLabels[alert] || alert}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                    <div className="text-sm text-foreground space-y-2">
+                      <p>{language === 'fr' ? 'Net vendeur estimé' : 'Estimated seller net'} : <span className="font-mono">{formatCurrency(result.netSeller)}</span></p>
+                      <p>{language === 'fr' ? 'Plus-value imposable' : 'Taxable capital gain'} : <span className="font-mono">{formatCurrency(result.taxableCapitalGain)}</span></p>
+                      <p>{language === 'fr' ? 'Impôts totaux' : 'Total taxes'} : <span className="font-mono">{formatCurrency(result.totalTaxes)}</span></p>
+                      <p>{language === 'fr' ? 'Frais' : 'Fees'} : <span className="font-mono">{formatCurrency(result.feesAmount)}</span></p>
+                      <p>{language === 'fr' ? 'Taux effectif' : 'Effective rate'} : <span className="font-mono">{result.effectiveTaxRate.toFixed(1)}%</span></p>
+                      <div className="pt-2 border-t border-border">
+                        <p className="font-medium mb-1">{language === 'fr' ? 'Priorités d’analyse' : 'Analysis priorities'}</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {recommendations.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
                   )}
                 />
-              </CardContent>
-                </Card>
               </div>
-            </div>
-          </div>
+            </section>
 
-          <Card className="border border-[#F2E8E2] bg-white shadow-sm">
-            <CardContent className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <p className="font-display text-lg font-semibold text-[#3B4759]">
-                  {language === 'fr' ? 'Un accompagnement humain, de A à Z' : 'Human support, end-to-end'}
-                </p>
-                <p className="text-sm text-[#6B7A94] mt-1">
-                  {language === 'fr'
-                    ? 'De la première analyse à la signature, Riviqo vous accompagne avec un expert dédié pour votre acquisition ou votre cession.'
-                    : 'From first analysis to signature, Riviqo supports your acquisition or sale with a dedicated expert.'}
-                </p>
-              </div>
+            <section className="pt-10 border-t border-border mt-10">
+              <h2 className="font-heading text-2xl mb-3">
+                {language === 'fr' ? 'Accompagnement expert' : 'Expert support'}
+              </h2>
+              <p className="text-muted-foreground text-[17px] leading-8 mb-5">
+                {language === 'fr'
+                  ? 'Riviqo accompagne l’optimisation de structure et la préparation de négociation pour maximiser le net encaissé dans un cadre conforme.'
+                  : 'Riviqo supports structure optimization and negotiation preparation to maximize net proceeds within a compliant framework.'}
+              </p>
               <Link to={createPageUrl('Contact')}>
-                <Button className="bg-[#FF6B4A] hover:bg-[#FF5733] text-white whitespace-nowrap">
-                  {language === 'fr' ? 'Contacter un expert' : 'Contact an expert'}
+                <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                  {language === 'fr' ? 'Échanger avec un expert' : 'Discuss with an expert'}
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
+            </section>
 
-          <Card className="border border-[#F2E8E2] shadow-sm bg-white">
-            <CardContent className="p-4 text-xs text-[#6B7A94]">
+            <p className="mt-8 text-xs text-muted-foreground">
               {language === 'fr'
                 ? 'Simulation indicative, non constitutive d’un conseil fiscal, juridique ou patrimonial.'
                 : 'Indicative simulation, not tax, legal or wealth-management advice.'}
-            </CardContent>
-          </Card>
-        </div>
+            </p>
+          </article>
+        </main>
       </div>
     </TooltipProvider>
   );
