@@ -217,7 +217,7 @@ console.log(`[Queue] ✅ Digest sent...`)
 ## 📝 Prochaines Étapes (Optionnelles)
 
 ### Court terme
-- [ ] Backend email endpoint
+- 
 - [ ] CORS middleware configuration
 - [ ] Database migrations (first_name/last_name)
 

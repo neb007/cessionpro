@@ -9,8 +9,8 @@ import Logo from '@/components/Logo';
 import { Menu } from 'lucide-react';
 
 function LayoutContent({ children, currentPageName }) {
-  const { t, language, changeLanguage } = useLanguage();
-  const { user, logout } = useAuth();
+  const { language } = useLanguage();
+  const { user } = useAuth();
   const { toggleMobile, isMobileOpen } = useSidebar();
   const isAuthenticated = Boolean(user);
   const hideSidebarPages = ['Home', 'Login', 'Register', 'Valuations', 'Financing', 'Targeting'];
@@ -18,10 +18,6 @@ function LayoutContent({ children, currentPageName }) {
     isAuthenticated &&
     !hideSidebarPages.includes(currentPageName);
   const isMessagesPage = currentPageName === 'Messages';
-
-  const handleLogout = () => {
-    logout(false);
-  };
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
@@ -85,39 +81,81 @@ function LayoutContent({ children, currentPageName }) {
 
           {/* Footer */}
           {!isMessagesPage && (
-          <footer className="bg-[#3B4759] text-[#8A98AD] py-16 w-full mt-20">
+          <footer className="bg-[#1F2735] text-[#B7C2D4] pt-16 pb-8 w-full mt-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div className="md:col-span-2">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+                <div className="lg:col-span-1">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-white/95 rounded-xl px-3 py-2 inline-flex">
-                      <Logo size="md" showText={false} />
+                    <div className="w-10 h-10 rounded-xl bg-[#FF6B4A] flex items-center justify-center">
+                      <Logo size="sm" showText={false} />
                     </div>
+                    <span className="font-display font-bold text-lg text-white">Riviqo</span>
                   </div>
-                  <p className="text-[#111827] max-w-sm">
-                    {language === 'fr' 
-                      ? "La plateforme de référence pour la cession et reprise d'entreprises."
-                      : "The leading platform for business acquisitions and sales."}
+                  <p className="text-sm text-[#9EABC1] leading-relaxed">
+                    {language === 'fr'
+                      ? "La plateforme européenne de transmission d'entreprise."
+                      : 'The European platform for business transfers.'}
                   </p>
                 </div>
+
                 <div>
-                  <h4 className="font-display font-semibold text-white mb-4">
+                  <h4 className="font-display font-semibold text-sm text-white mb-4">
                     {language === 'fr' ? 'Plateforme' : 'Platform'}
                   </h4>
-                  <ul className="space-y-2">
-                    <li><Link to={createPageUrl('Annonces')} className="hover:text-white transition-colors">{t('businesses')}</Link></li>
-                    <li><Link to={createPageUrl('BuyersDirectory')} className="hover:text-white transition-colors">{t('buyers_directory')}</Link></li>
+                  <ul className="space-y-2.5">
+                    <li><Link to={createPageUrl('AccountCreation')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Céder' : 'Sell'}</Link></li>
+                    <li><Link to={createPageUrl('Annonces')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Reprendre' : 'Buy'}</Link></li>
+                    <li><Link to={createPageUrl('SmartMatching')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Smartmatching</Link></li>
+                    <li><Link to={createPageUrl('Annonces')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Annonces' : 'Listings'}</Link></li>
                   </ul>
                 </div>
+
                 <div>
-                  <h4 className="font-display font-semibold text-white mb-4">
-                    {language === 'fr' ? 'Contact' : 'Contact'}
+                  <h4 className="font-display font-semibold text-sm text-white mb-4">
+                    {language === 'fr' ? 'Outils' : 'Tools'}
                   </h4>
-                  <p className="text-[#111827]">contact@riviqo.com</p>
+                  <ul className="space-y-2.5">
+                    <li><Link to={createPageUrl('Valuations')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Valorisation' : 'Valuation'}</Link></li>
+                    <li><Link to={createPageUrl('Financing')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Simulateur financement' : 'Financing simulator'}</Link></li>
+                    <li><Link to={createPageUrl('Targeting')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Net vendeur' : 'Seller net'}</Link></li>
+                    <li><Link to={createPageUrl('Dataroom')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Data Room</Link></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-display font-semibold text-sm text-white mb-4">
+                    {language === 'fr' ? 'Ressources' : 'Resources'}
+                  </h4>
+                  <ul className="space-y-2.5">
+                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Blog</a></li>
+                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Guide du cédant' : 'Seller guide'}</a></li>
+                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Guide du repreneur' : 'Buyer guide'}</a></li>
+                    <li><Link to={createPageUrl('FAQ')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">FAQ</Link></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-display font-semibold text-sm text-white mb-4">
+                    {language === 'fr' ? 'Légal' : 'Legal'}
+                  </h4>
+                  <ul className="space-y-2.5">
+                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Mentions légales' : 'Legal notice'}</a></li>
+                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">CGU</a></li>
+                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Politique de confidentialité' : 'Privacy policy'}</a></li>
+                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Cookies</a></li>
+                  </ul>
                 </div>
               </div>
-              <div className="border-t border-[#4A5668] mt-12 pt-8 text-center text-sm">
-                © {new Date().getFullYear()} Riviqo. {language === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'}
+
+              <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#8E9BB0]">
+                <div>
+                  © {new Date().getFullYear()} Riviqo. {language === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Made in Europe 🇪🇺</span>
+                  <span>•</span>
+                  <span>{language === 'fr' ? 'Conçu en France 🇫🇷' : 'Designed in France 🇫🇷'}</span>
+                </div>
               </div>
             </div>
           </footer>
