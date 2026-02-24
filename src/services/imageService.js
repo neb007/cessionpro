@@ -1,5 +1,17 @@
 import { supabase } from '@/api/supabaseClient';
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+function validateImageFile(file) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error('Type de fichier non autorisé. Formats acceptés : JPEG, PNG, WebP.');
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('Fichier trop volumineux. Taille maximale : 5 Mo.');
+  }
+}
+
 /**
  * Check if user has photo credits available
  * Returns true if user has photos remaining or if it's the first photo (free)
@@ -43,6 +55,8 @@ export const checkPhotoCreditsAvailable = async (isAdditionalPhoto = false) => {
  */
 export const uploadBusinessImage = async (file, businessId, userEmail, isAdditionalPhoto = false) => {
   try {
+    validateImageFile(file);
+
     // Check in credits if it's an additional photo
     if (isAdditionalPhoto) {
       const hasCredits = await checkPhotoCreditsAvailable(true);
@@ -51,7 +65,8 @@ export const uploadBusinessImage = async (file, businessId, userEmail, isAdditio
       }
     }
 
-    const fileName = `${Date.now()}_${file.name}`;
+    const ext = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${crypto.randomUUID()}.${ext}`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('Cession')
       .upload(fileName, file);

@@ -1,13 +1,35 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { LanguageProvider, useLanguage } from '@/components/i18n/LanguageContext';
+import { useLanguage } from '@/components/i18n/LanguageContext';
 import { SidebarProvider, useSidebar } from '@/lib/SidebarContext';
 import { useAuth } from '@/lib/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import PublicNav from '@/components/layout/PublicNav';
 import Logo from '@/components/Logo';
 import { Menu } from 'lucide-react';
+
+const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap';
+
+function FontLoader() {
+  const injected = useRef(false);
+  useEffect(() => {
+    if (injected.current) return;
+    injected.current = true;
+    const preconnect = document.createElement('link');
+    preconnect.rel = 'preconnect';
+    preconnect.href = 'https://fonts.googleapis.com';
+    const preconnectStatic = document.createElement('link');
+    preconnectStatic.rel = 'preconnect';
+    preconnectStatic.href = 'https://fonts.gstatic.com';
+    preconnectStatic.crossOrigin = 'anonymous';
+    const stylesheet = document.createElement('link');
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = GOOGLE_FONTS_URL;
+    document.head.append(preconnect, preconnectStatic, stylesheet);
+  }, []);
+  return null;
+}
 
 function LayoutContent({ children, currentPageName }) {
   const { language } = useLanguage();
@@ -27,9 +49,8 @@ function LayoutContent({ children, currentPageName }) {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <FontLoader />
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-        
         :root {
           --background: 28 20% 98%;
           --foreground: 220 13% 28%;
@@ -176,9 +197,7 @@ function LayoutContent({ children, currentPageName }) {
 export default function Layout({ children, currentPageName }) {
   return (
     <SidebarProvider>
-      <LanguageProvider>
-        <LayoutContent currentPageName={currentPageName}>{children}</LayoutContent>
-      </LanguageProvider>
+      <LayoutContent currentPageName={currentPageName}>{children}</LayoutContent>
     </SidebarProvider>
   );
 }

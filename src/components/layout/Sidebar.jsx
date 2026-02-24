@@ -46,7 +46,7 @@ export default function Sidebar({ user }) {
   const location = useLocation();
   const { logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  const isAdmin = user?.email?.toLowerCase() === 'nebil007@hotmail.fr';
+  const isAdmin = user?.email?.toLowerCase() === (import.meta.env.VITE_ADMIN_EMAIL || '').toLowerCase();
 
   // Get current page name from path AND query params
   const getCurrentPage = () => {

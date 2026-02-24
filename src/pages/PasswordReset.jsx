@@ -92,8 +92,8 @@ export default function PasswordReset() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setLocalError(language === 'fr' ? 'Le mot de passe doit contenir au moins 6 caractères' : 'Password must be at least 6 characters');
+    if (newPassword.length < 8) {
+      setLocalError(language === 'fr' ? 'Le mot de passe doit contenir au moins 8 caractères' : 'Password must be at least 8 characters');
       return;
     }
 

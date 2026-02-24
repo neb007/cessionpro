@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
 const translations = {
   fr: {
@@ -357,15 +357,17 @@ export function LanguageProvider({ children }) {
     if (saved) setLanguage(saved);
   }, []);
   
-  const changeLanguage = (lang) => {
+  const changeLanguage = useCallback((lang) => {
     setLanguage(lang);
     localStorage.setItem('riviqo_lang', lang);
-  };
-  
-  const t = (key) => translations[language]?.[key] || translations['fr'][key] || key;
-  
+  }, []);
+
+  const t = useCallback((key) => translations[language]?.[key] || translations['fr'][key] || key, [language]);
+
+  const contextValue = useMemo(() => ({ language, changeLanguage, t }), [language, changeLanguage, t]);
+
   return (
-    <LanguageContext.Provider value={{ language, changeLanguage, t }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );

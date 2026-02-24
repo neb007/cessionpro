@@ -15,7 +15,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, isAuthenticated, authError, clearAuthError, user } = useAuth();
   const { language } = useLanguage();
-  const adminEmail = 'nebil007@hotmail.fr';
+  const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL || '').toLowerCase();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);

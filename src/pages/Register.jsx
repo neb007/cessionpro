@@ -99,8 +99,8 @@ export default function Register() {
       return;
     }
 
-    if (password.length < 6) {
-      setLocalError(language === 'fr' ? 'Le mot de passe doit contenir au moins 6 caractères' : 'Password must be at least 6 characters');
+    if (password.length < 8) {
+      setLocalError(language === 'fr' ? 'Le mot de passe doit contenir au moins 8 caractères' : 'Password must be at least 8 characters');
       return;
     }
 

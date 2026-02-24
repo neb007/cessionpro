@@ -12,5 +12,20 @@ export default defineConfig({
   },
   plugins: [
     react(),
-  ]
+  ],
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['framer-motion', 'lucide-react'],
+          charts: ['recharts'],
+          pdf: ['jspdf', 'html2canvas'],
+        },
+      },
+    },
+  },
 });

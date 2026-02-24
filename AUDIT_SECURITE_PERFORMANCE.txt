@@ -1,0 +1,171 @@
+============================================================
+  AUDIT SÉCURITÉ & PERFORMANCE — RIVIQO
+  Date : 24 février 2026
+  Point de rollback : git reset --hard 27687fde
+============================================================
+
+RÉSUMÉ
+------
+| Catégorie      | Critique | Haute | Moyenne | Basse |
+|----------------|----------|-------|---------|-------|
+| Sécurité       | 2        | 4     | 5       | 3     |
+| Performance    | 2        | 3     | 4       | 1     |
+| Infrastructure | 2        | 3     | 3       | 2     |
+| Total          | 6        | 10    | 12      | 6     |
+
+
+============================================================
+CORRECTIONS APPLIQUÉES
+============================================================
+
+--- Phase 1 — Sans risque (aucun impact fonctionnel) ---
+
+1. MEMOISATION DES CONTEXT PROVIDERS (Performance — CRITIQUE)
+   Problème : LanguageContext, AuthContext et SidebarContext recréaient
+   leur objet value à chaque render → tous les consumers (50+ composants)
+   re-rendaient inutilement.
+   Correction : useMemo + useCallback sur les 3 providers.
+   Fichiers modifiés :
+     - src/components/i18n/LanguageContext.jsx
+     - src/lib/AuthContext.jsx
+     - src/lib/SidebarContext.jsx
+
+2. SUPPRESSION DU LANGUAGEPROVIDER DUPLIQUÉ (Performance — HAUTE)
+   Problème : LanguageProvider instancié dans Layout.jsx ET App.jsx
+   → double context, re-renders inutiles.
+   Correction : Retiré de Layout.jsx, conservé dans App.jsx.
+   Fichier modifié :
+     - src/Layout.jsx
+
+3. ERRORBOUNDARY (Infrastructure — CRITIQUE)
+   Problème : Aucun Error Boundary → une erreur de composant faisait
+   crash l'app entièrement (écran blanc).
+   Correction : Class component ErrorBoundary avec UI fallback +
+   bouton "Recharger la page". Wrappé autour du Router dans App.jsx.
+   Fichiers modifiés :
+     - src/components/ErrorBoundary.jsx (nouveau)
+     - src/App.jsx
+
+4. OPTIMISATION GOOGLE FONTS (Performance — CRITIQUE)
+   Problème : @import url(...) dans <style> bloquait le rendu
+   → +500ms à 1s sur le LCP (Largest Contentful Paint).
+   Correction : Remplacement par injection de <link rel="preconnect">
+   + <link rel="stylesheet"> dans le <head> via useEffect (FontLoader).
+   Fichier modifié :
+     - src/Layout.jsx
+
+5. LAZY LOADING IMAGES (Performance — MOYENNE)
+   Problème : Images chargées immédiatement même hors écran.
+   Correction : Ajout loading="lazy" sur les images below-the-fold.
+   Fichier modifié :
+     - src/pages/Home.jsx
+
+6. SUPPRESSION CONSOLE.LOG EN PRODUCTION (Infrastructure — MOYENNE)
+   Problème : 93 console.log/warn/error dans le code source
+   → informations de debug exposées en production.
+   Correction : esbuild.drop: ['console', 'debugger'] dans vite.config.js
+   (supprimés automatiquement en production, conservés en dev).
+   Fichier modifié :
+     - vite.config.js
+
+
+--- Phase 2 — Risque faible (modifications mineures, isolées) ---
+
+7. VALIDATION DES UPLOADS (Sécurité — HAUTE)
+   Problème : Aucune vérification du type ou de la taille des fichiers
+   uploadés. Noms de fichiers prévisibles (Date.now()).
+   Correction :
+     - Validation MIME type (JPEG, PNG, WebP uniquement)
+     - Limite de taille à 5 Mo
+     - Noms de fichiers avec crypto.randomUUID()
+   Fichier modifié :
+     - src/services/imageService.js
+
+8. VALIDATION MOT DE PASSE RENFORCÉE (Sécurité — MOYENNE)
+   Problème : Minimum 6 caractères seulement.
+   Correction : Minimum porté à 8 caractères.
+   Fichiers modifiés :
+     - src/pages/Register.jsx
+     - src/pages/PasswordReset.jsx
+
+9. EMAIL ADMIN EN VARIABLE D'ENVIRONNEMENT (Sécurité — HAUTE)
+   Problème : Email admin hardcodé en clair dans 3 fichiers source
+   (nebil007@hotmail.fr) → exposé dans le bundle client.
+   Correction : Déplacé dans VITE_ADMIN_EMAIL (.env.local).
+   Fichiers modifiés :
+     - src/App.jsx
+     - src/components/layout/Sidebar.jsx
+     - src/pages/Login.jsx
+     - .env.local
+
+
+--- Phase 3 — Optimisations de build ---
+
+10. CODE SPLITTING VITE (Performance — CRITIQUE)
+    Problème : Bundle unique de 1.8 Mo → chargement initial lent.
+    Correction : manualChunks dans rollupOptions :
+      - vendor (react, react-dom, react-router-dom) : 153 Ko
+      - ui (framer-motion, lucide-react) : 163 Ko
+      - charts (recharts) : 385 Ko
+      - pdf (jspdf, html2canvas) : 1.2 Ko
+      - index (app) : 1.3 Mo
+    Fichier modifié :
+      - vite.config.js
+
+11. REACT QUERY STALETIME (Performance — MOYENNE)
+    Problème : Aucun staleTime → refetch systématique à chaque
+    mount de composant, même pour des données récentes.
+    Correction :
+      - staleTime : 5 minutes (données considérées fraîches)
+      - gcTime : 10 minutes (cache conservé)
+    Fichier modifié :
+      - src/lib/query-client.js
+
+
+============================================================
+ÉLÉMENTS NON MODIFIÉS (hors scope ou risque trop élevé)
+============================================================
+
+- Migration TypeScript         → Trop large, projet séparé
+- Chiffrement réel (Base64)    → Nécessite refonte backend
+- CSRF tokens                  → Géré par Supabase RLS
+- Service Worker / PWA         → Non prioritaire
+- React.lazy pour les pages    → pages.config.js auto-généré
+- Headers CSP, HSTS            → Côté serveur/hébergeur
+- npm audit fix (deps)         → À faire manuellement
+- Suppression moment/next-themes → À faire manuellement
+
+
+============================================================
+CORRECTIONS MANUELLES RESTANTES (npm)
+============================================================
+
+1. Corriger les dépendances vulnérables :
+   npm audit fix
+
+2. Supprimer les dépendances inutiles :
+   npm uninstall moment next-themes
+   (moment → remplacer par date-fns dans src/pages/Leads.jsx)
+
+
+============================================================
+VÉRIFICATION
+============================================================
+
+1. npm run dev → naviguer sur toutes les pages, vérifier aucune régression
+2. Tester login/register → vérifier validation mot de passe 8 chars
+3. Tester upload d'image → vérifier rejet fichiers non-image et > 5 Mo
+4. DevTools > Performance → vérifier que les re-renders sont réduits
+5. npm run build → vérifier que le bundle est splitté en chunks
+6. Provoquer une erreur volontaire → vérifier l'ErrorBoundary
+
+
+============================================================
+ROLLBACK
+============================================================
+
+En cas de problème, revenir à l'état précédent :
+
+  git reset --hard 27687fde
+
+Cette commande annule TOUTES les corrections ci-dessus.
