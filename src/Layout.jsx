@@ -5,6 +5,7 @@ import { LanguageProvider, useLanguage } from '@/components/i18n/LanguageContext
 import { SidebarProvider, useSidebar } from '@/lib/SidebarContext';
 import { useAuth } from '@/lib/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
+import PublicNav from '@/components/layout/PublicNav';
 import Logo from '@/components/Logo';
 import { Menu } from 'lucide-react';
 
@@ -18,6 +19,11 @@ function LayoutContent({ children, currentPageName }) {
     isAuthenticated &&
     !hideSidebarPages.includes(currentPageName);
   const isMessagesPage = currentPageName === 'Messages';
+  // Pages that manage their own nav or don't need a public nav
+  const noPublicNavPages = ['Home', 'Login', 'Register', 'AccountCreation',
+    'AuthCallback', 'PasswordReset'];
+  const showPublicNav = !isAuthenticated && !shouldRenderSidebar
+    && !noPublicNavPages.includes(currentPageName);
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
@@ -75,6 +81,7 @@ function LayoutContent({ children, currentPageName }) {
         ) : null}
 
         <div className={`${shouldRenderSidebar ? 'md:ml-56 md:w-[calc(100%-14rem)]' : 'w-full'} ${isMessagesPage ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
+          {showPublicNav && <PublicNav />}
           <main className={`min-w-0 w-full flex-1 px-0 sm:px-0 md:px-0 lg:px-0 ml-0 ${shouldRenderSidebar ? 'pt-12 md:pt-0' : ''} ${isMessagesPage ? 'h-full overflow-hidden' : ''}`}>
             {children}
           </main>
@@ -93,20 +100,20 @@ function LayoutContent({ children, currentPageName }) {
                   </div>
                   <p className="text-sm text-[#9EABC1] leading-relaxed">
                     {language === 'fr'
-                      ? "La plateforme européenne de transmission d'entreprise."
-                      : 'The European platform for business transfers.'}
+                      ? "Plateforme et service d'accompagnement M&A dédié à la transmission d'entreprise."
+                      : 'Platform and M&A advisory service dedicated to business transfer.'}
                   </p>
                 </div>
 
                 <div>
                   <h4 className="font-display font-semibold text-sm text-white mb-4">
-                    {language === 'fr' ? 'Plateforme' : 'Platform'}
+                    {language === 'fr' ? 'Solutions' : 'Solutions'}
                   </h4>
                   <ul className="space-y-2.5">
-                    <li><Link to={createPageUrl('AccountCreation')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Céder' : 'Sell'}</Link></li>
-                    <li><Link to={createPageUrl('Annonces')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Reprendre' : 'Buy'}</Link></li>
-                    <li><Link to={createPageUrl('SmartMatching')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Smartmatching</Link></li>
-                    <li><Link to={createPageUrl('Annonces')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Annonces' : 'Listings'}</Link></li>
+                    <li><Link to={createPageUrl('Ceder')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Céder' : 'Sell'}</Link></li>
+                    <li><Link to={createPageUrl('Reprendre')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Reprendre' : 'Buy'}</Link></li>
+                    <li><Link to={createPageUrl('SmartMatchingVitrine')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">SmartMatching</Link></li>
+                    <li><Link to={createPageUrl('Pricing')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Prix' : 'Pricing'}</Link></li>
                   </ul>
                 </div>
 
@@ -115,9 +122,9 @@ function LayoutContent({ children, currentPageName }) {
                     {language === 'fr' ? 'Outils' : 'Tools'}
                   </h4>
                   <ul className="space-y-2.5">
-                    <li><Link to={createPageUrl('Valuations')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Valorisation' : 'Valuation'}</Link></li>
+                    <li><Link to={createPageUrl('Valuations')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Simulateur valorisation' : 'Valuation simulator'}</Link></li>
                     <li><Link to={createPageUrl('Financing')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Simulateur financement' : 'Financing simulator'}</Link></li>
-                    <li><Link to={createPageUrl('Targeting')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Net vendeur' : 'Seller net'}</Link></li>
+                    <li><Link to={createPageUrl('Targeting')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Simulateur de cession' : 'Sale simulator'}</Link></li>
                     <li><Link to={createPageUrl('Dataroom')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Data Room</Link></li>
                   </ul>
                 </div>
@@ -128,8 +135,8 @@ function LayoutContent({ children, currentPageName }) {
                   </h4>
                   <ul className="space-y-2.5">
                     <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Blog</a></li>
-                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Guide du cédant' : 'Seller guide'}</a></li>
-                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Guide du repreneur' : 'Buyer guide'}</a></li>
+                    <li><Link to={createPageUrl('GuideCession')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Guide de cession' : 'Sale guide'}</Link></li>
+                    <li><Link to={createPageUrl('GuideRepreneur')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Guide du repreneur' : 'Buyer guide'}</Link></li>
                     <li><Link to={createPageUrl('FAQ')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">FAQ</Link></li>
                   </ul>
                 </div>
@@ -139,10 +146,10 @@ function LayoutContent({ children, currentPageName }) {
                     {language === 'fr' ? 'Légal' : 'Legal'}
                   </h4>
                   <ul className="space-y-2.5">
-                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Mentions légales' : 'Legal notice'}</a></li>
-                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">CGU</a></li>
-                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Politique de confidentialité' : 'Privacy policy'}</a></li>
-                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Cookies</a></li>
+                    <li><Link to={createPageUrl('MentionsLegales')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Mentions légales' : 'Legal notice'}</Link></li>
+                    <li><Link to={createPageUrl('CGU')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? "Conditions d'utilisation" : 'Terms of use'}</Link></li>
+                    <li><Link to={createPageUrl('PolitiqueConfidentialite')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Politique de confidentialité' : 'Privacy policy'}</Link></li>
+                    <li><Link to={createPageUrl('PolitiqueConfidentialite')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Cookies</Link></li>
                   </ul>
                 </div>
               </div>

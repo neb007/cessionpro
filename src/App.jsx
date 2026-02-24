@@ -30,7 +30,21 @@ const PUBLIC_PAGES = [
   'Annonces',
   'Valuations',
   'Financing',
-  'Targeting'
+  'Targeting',
+  'Ceder',
+  'Reprendre',
+  'Expert',
+  'GuideCession',
+  'GuideRepreneur',
+  'FAQ',
+  'Dataroom',
+  'SmartMatching',
+  'SmartMatchingVitrine',
+  'Pricing',
+  'Outils',
+  'MentionsLegales',
+  'CGU',
+  'PolitiqueConfidentialite',
 ];
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
@@ -111,7 +125,7 @@ const AuthenticatedApp = () => {
       />
       {Object.entries(Pages).map(([path, Page]) => {
         const isPublic = PUBLIC_PAGES.includes(path);
-        const requiresAdmin = path === 'Outils';
+        const requiresAdmin = false;
         const lowerPath = path.toLowerCase();
         const needsLowerAlias = lowerPath !== path;
         const element = isPublic ? (

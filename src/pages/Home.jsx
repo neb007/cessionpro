@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -10,7 +10,7 @@ import {
   FolderLock, Users, Calculator, Landmark, Banknote,
   BadgeCheck, MapPin, Eye, TrendingUp, CheckCircle2,
   Phone, FileText, UserCheck, Handshake, ClipboardList,
-  AlertTriangle, Clock, BarChart3, Building2
+  AlertTriangle, Clock, BarChart3, Building2, ChevronDown
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -69,11 +69,18 @@ export default function Home() {
     []
   );
 
+  const [toolsOpen, setToolsOpen] = useState(false);
+
   const topNavLinks = [
-    { label: isFr ? 'Céder' : 'Sell', to: createPageUrl('AccountCreation') },
-    { label: isFr ? 'Reprendre' : 'Buy', to: createPageUrl('Annonces') },
-    { label: isFr ? 'Outils' : 'Tools', to: createPageUrl('Outils') },
-    { label: isFr ? 'Experts' : 'Experts', to: createPageUrl('Contact') }
+    { label: isFr ? 'Céder' : 'Sell', to: createPageUrl('Ceder') },
+    { label: isFr ? 'Reprendre' : 'Buy', to: createPageUrl('Reprendre') },
+    { label: isFr ? 'Experts' : 'Experts', to: createPageUrl('Expert') }
+  ];
+
+  const toolItems = [
+    { icon: Calculator, labelFr: 'Simulateur valorisation', labelEn: 'Valuation simulator', page: 'Valuations' },
+    { icon: Landmark, labelFr: 'Simulateur financement', labelEn: 'Financing simulator', page: 'Financing' },
+    { icon: Banknote, labelFr: 'Simulateur de cession', labelEn: 'Sale simulator', page: 'Targeting' },
   ];
 
   const platformFeatures = [
@@ -271,6 +278,38 @@ export default function Home() {
                   {link.label}
                 </Link>
               ))}
+              {/* Dropdown Outils */}
+              <div
+                className="relative"
+                onMouseEnter={() => setToolsOpen(true)}
+                onMouseLeave={() => setToolsOpen(false)}
+              >
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-[#3B4759] hover:text-[#FF6B4A] transition-colors font-display font-medium text-sm"
+                >
+                  {isFr ? 'Outils' : 'Tools'}
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${toolsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {toolsOpen && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-[#EDE6E0] rounded-xl shadow-lg p-2 w-60 z-50">
+                    {toolItems.map((tool) => (
+                      <Link
+                        key={tool.page}
+                        to={createPageUrl(tool.page)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#FFF0ED] transition-colors group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-[#FFF0ED] flex items-center justify-center group-hover:bg-[#FFD5C7] transition-colors flex-shrink-0">
+                          <tool.icon className="w-4 h-4 text-[#FF6B4A]" />
+                        </div>
+                        <span className="text-sm font-medium text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors font-display">
+                          {isFr ? tool.labelFr : tool.labelEn}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Link to={createPageUrl('Login')}
@@ -324,7 +363,7 @@ export default function Home() {
           >
             <BadgeCheck className="w-4 h-4 text-[#FF6B4A] shrink-0" />
             <span className="text-sm font-semibold text-[#3B4759]" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              {isFr ? "La plateforme M&A dédiée à la transmission d'entreprise" : 'The M&A platform dedicated to business transfer'}
+              {isFr ? "Plateforme et service d'accompagnement M&A dédié à la transmission d'entreprise" : 'Platform and M&A advisory service dedicated to business transfer'}
             </span>
           </motion.div>
 
@@ -454,7 +493,7 @@ export default function Home() {
               {
                 stat: '18 mois',
                 label: isFr ? 'délai moyen pour céder' : 'average time to sell',
-                sub: isFr ? 'sans accompagnement structuré' : 'without structured support',
+                sub: isFr ? 'Riviqo Advisory réduit ce délai de moitié' : 'Riviqo Advisory cuts this timeline in half',
                 icon: Clock
               },
               {
@@ -923,7 +962,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-14 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF0ED] text-[#FF6B4A] text-xs font-bold uppercase tracking-wider mb-4 font-display">
-              <Sparkles className="w-3.5 h-3.5" />{isFr ? 'Plateforme' : 'Platform'}
+              <Sparkles className="w-3.5 h-3.5" />{isFr ? 'Solutions' : 'Solutions'}
             </span>
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#3B4759] mb-3">
               {isFr ? 'La plateforme M&A pour les professionnels de la transmission.' : 'The M&A platform for business transfer professionals.'}
@@ -1035,11 +1074,17 @@ export default function Home() {
                 )}
               </h2>
 
+              <p className="text-sm font-semibold text-[#FF6B4A] mb-4 font-display">
+                {isFr
+                  ? "Sans accompagnement, un dirigeant perd en moyenne 12 à 24 mois sur sa transmission."
+                  : "Without support, a business owner loses on average 12 to 24 months on their transfer."}
+              </p>
+
               <p className="leading-relaxed mb-8 text-[#6B7A94]"
                 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                 {isFr
-                  ? "Pour les opérations complexes ou les dirigeants qui souhaitent un pilotage complet de leur dossier, nos équipes prennent en charge l'intégralité du processus : évaluation, constitution du dossier, sourcing des contreparties, négociation et finalisation juridique."
-                  : "For complex transactions or owners who want full management of their deal, our teams handle the entire process: valuation, dossier preparation, counterpart sourcing, negotiation and legal finalization."}
+                  ? "Riviqo Advisory accélère chaque étape de votre transmission. Pour les opérations complexes ou les dirigeants qui souhaitent un pilotage complet de leur dossier, nos équipes prennent en charge l'intégralité du processus : évaluation, constitution du dossier, sourcing des contreparties, négociation et finalisation juridique."
+                  : "Riviqo Advisory accelerates every stage of your transfer. For complex transactions or owners who want full management of their deal, our teams handle the entire process: valuation, dossier preparation, counterpart sourcing, negotiation and legal finalization."}
               </p>
 
               <Link to={createPageUrl('Contact')}>

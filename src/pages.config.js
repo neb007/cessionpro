@@ -48,6 +48,11 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AccountCreation from './pages/AccountCreation';
+import Ceder from './pages/Ceder';
+import Reprendre from './pages/Reprendre';
+import Expert from './pages/Expert';
+import GuideCession from './pages/GuideCession';
+import GuideRepreneur from './pages/GuideRepreneur';
 import AuthCallback from './pages/AuthCallback';
 import BusinessDetails from './pages/BusinessDetails';
 import Annonces from './pages/Annonces';
@@ -74,14 +79,23 @@ import Profile from './pages/Profile';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import SmartMatching from './pages/SmartMatching';
+import SmartMatchingVitrine from './pages/SmartMatchingVitrine';
 import SmartMatchingNotifications from './pages/SmartMatchingNotifications';
 import Targeting from './pages/Targeting';
 import Valuations from './pages/Valuations';
+import MentionsLegales from './pages/MentionsLegales';
+import CGU from './pages/CGU';
+import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AccountCreation": AccountCreation,
+    "Ceder": Ceder,
+    "Reprendre": Reprendre,
+    "Expert": Expert,
+    "GuideCession": GuideCession,
+    "GuideRepreneur": GuideRepreneur,
     "AuthCallback": AuthCallback,
     "BusinessDetails": BusinessDetails,
     "Annonces": Annonces,
@@ -108,9 +122,13 @@ export const PAGES = {
     "Register": Register,
     "Settings": Settings,
     "SmartMatching": SmartMatching,
+    "SmartMatchingVitrine": SmartMatchingVitrine,
     "SmartMatchingNotifications": SmartMatchingNotifications,
     "Targeting": Targeting,
     "Valuations": Valuations,
+    "MentionsLegales": MentionsLegales,
+    "CGU": CGU,
+    "PolitiqueConfidentialite": PolitiqueConfidentialite,
 }
 
 export const pagesConfig = {

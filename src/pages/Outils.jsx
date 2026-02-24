@@ -6,7 +6,7 @@ import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
-import { ArrowRight, Calculator, PiggyBank, Receipt, Sparkles } from 'lucide-react';
+import { ArrowRight, Banknote, Calculator, Landmark, Sparkles } from 'lucide-react';
 
 export default function Outils() {
   const { language } = useLanguage();
@@ -22,7 +22,7 @@ export default function Outils() {
       path: createPageUrl('Valuations')
     },
     {
-      icon: PiggyBank,
+      icon: Landmark,
       title: language === 'fr' ? 'Financement de reprise' : 'Acquisition financing',
       desc:
         language === 'fr'
@@ -31,12 +31,12 @@ export default function Outils() {
       path: createPageUrl('Financing')
     },
     {
-      icon: Receipt,
-      title: language === 'fr' ? 'Net vendeur après impôts' : 'Seller net after tax',
+      icon: Banknote,
+      title: language === 'fr' ? 'Produit net de cession' : 'Net sale proceeds',
       desc:
         language === 'fr'
-          ? 'Calculez le montant réellement encaissé après fiscalité, frais et scénarios PFU/barème.'
-          : 'Compute actual proceeds after tax, fees and PFU/progressive scenarios.',
+          ? 'Estimez le montant réellement encaissé après fiscalité, frais et scénarios PFU/barème.'
+          : 'Estimate actual proceeds after taxes, fees and PFU/progressive bracket scenarios.',
       path: createPageUrl('Targeting')
     }
   ];
@@ -90,8 +90,8 @@ export default function Outils() {
           </h1>
           <p className="text-[#6B7A94] mt-3 max-w-3xl mx-auto">
             {language === 'fr'
-              ? 'Accédez à des simulateurs concrets pour piloter votre valorisation, votre montage de financement et votre net vendeur.'
-              : 'Use practical simulators to manage valuation, financing structure and net seller proceeds.'}
+              ? 'Accédez à des simulateurs concrets pour piloter votre valorisation, votre montage de financement et votre produit net de cession.'
+              : 'Use practical simulators to manage valuation, financing structure and net sale proceeds.'}
           </p>
         </div>
 
