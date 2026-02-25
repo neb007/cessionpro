@@ -18,7 +18,7 @@ export default function FinancialChart({ financialYears, language }) {
     }).format(value);
   };
 
-  const chartData = financialYears.map(year => ({
+  const chartData = financialYears.filter(year => year.year != null).map(year => ({
     year: year.year.toString(),
     [language === 'fr' ? 'CA' : 'Revenue']: year.revenue,
     'EBITDA': year.ebitda,
