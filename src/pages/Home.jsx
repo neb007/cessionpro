@@ -13,6 +13,7 @@ import {
   AlertTriangle, Clock, BarChart3, Building2, ChevronDown
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import SEO from '@/components/SEO';
 
 /* ─────────────────────────────────────────
    Mock listings
@@ -210,6 +211,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <SEO pageName="Home" />
       <style>{`
         @keyframes marquee {
           from { transform: translateX(0); }

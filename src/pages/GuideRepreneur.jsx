@@ -5,6 +5,7 @@ import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookOpen, Calculator, ChevronRight, Landmark } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const CHAPTERS = [
   {
@@ -285,6 +286,7 @@ export default function GuideRepreneur() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <SEO pageName="GuideRepreneur" />
       {/* Hero */}
       <section className="bg-[#FAF9F7] pt-20 pb-16 px-4">
         <div className="max-w-4xl mx-auto text-center">

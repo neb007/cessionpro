@@ -155,6 +155,10 @@ export default function BusinessCard({
             <button
               onClick={async (e) => {
                 e.preventDefault();
+                if (business?.external_url) {
+                  window.open(business.external_url, '_blank', 'noopener,noreferrer');
+                  return;
+                }
                 try {
                   const { data: authData } = await supabase.auth.getUser();
                   const currentUser = authUser || user || authData?.user;

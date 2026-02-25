@@ -79,13 +79,14 @@ import Profile from './pages/Profile';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import SmartMatching from './pages/SmartMatching';
-import SmartMatchingVitrine from './pages/SmartMatchingVitrine';
+import SmartMatchingFeatures from './pages/SmartMatchingFeatures';
 import SmartMatchingNotifications from './pages/SmartMatchingNotifications';
 import Targeting from './pages/Targeting';
 import Valuations from './pages/Valuations';
 import MentionsLegales from './pages/MentionsLegales';
 import CGU from './pages/CGU';
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
+import Blog from './pages/Blog';
 import __Layout from './Layout.jsx';
 
 
@@ -122,13 +123,14 @@ export const PAGES = {
     "Register": Register,
     "Settings": Settings,
     "SmartMatching": SmartMatching,
-    "SmartMatchingVitrine": SmartMatchingVitrine,
+    "SmartMatchingFeatures": SmartMatchingFeatures,
     "SmartMatchingNotifications": SmartMatchingNotifications,
     "Targeting": Targeting,
     "Valuations": Valuations,
     "MentionsLegales": MentionsLegales,
     "CGU": CGU,
     "PolitiqueConfidentialite": PolitiqueConfidentialite,
+    "Blog": Blog,
 }
 
 export const pagesConfig = {

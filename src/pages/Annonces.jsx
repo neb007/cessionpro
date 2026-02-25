@@ -217,7 +217,7 @@ export default function Businesses() {
         { status: 'active' },
         'created_at',
         {
-          columns: 'id,title,description,location,country,department,region,sector,type,asking_price,annual_revenue,buyer_budget_min,buyer_budget_max,buyer_investment_available,buyer_sectors_interested,buyer_locations,buyer_profile_type,business_type_sought,seller_business_type,financial_years,views_count,reference_number,hide_location,is_certified,seller_id,created_at,images',
+          columns: 'id,title,description,location,country,department,region,sector,type,asking_price,annual_revenue,buyer_budget_min,buyer_budget_max,buyer_investment_available,buyer_sectors_interested,buyer_locations,buyer_profile_type,business_type_sought,seller_business_type,financial_years,views_count,reference_number,hide_location,is_certified,seller_id,created_at,images,external_url',
           limit: PAGE_SIZE,
           offset: pageToLoad * PAGE_SIZE
         }

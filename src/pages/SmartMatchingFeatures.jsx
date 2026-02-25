@@ -8,6 +8,7 @@ import {
   ArrowRight, Sparkles, SlidersHorizontal, BarChart3, Bell,
   Users, CheckCircle2, Star, Target, Brain, Zap
 } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const HOW_STEPS = [
   {
@@ -67,12 +68,13 @@ const FEATURES = [
   },
 ];
 
-export default function SmartMatchingVitrine() {
+export default function SmartMatchingFeatures() {
   const { language } = useLanguage();
   const isFr = language === 'fr';
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <SEO pageName="SmartMatchingFeatures" />
       {/* Hero */}
       <section className="bg-[#FAF9F7] pt-20 pb-24 px-4">
         <div className="max-w-4xl mx-auto text-center">

@@ -5,7 +5,7 @@ import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
-import { Banknote, Calculator, ChevronDown, Landmark } from 'lucide-react';
+import { Banknote, Calculator, ChevronDown, Globe, Landmark } from 'lucide-react';
 
 const toolItems = [
   { icon: Calculator, labelFr: 'Simulateur valorisation', labelEn: 'Valuation simulator', page: 'Valuations' },
@@ -14,7 +14,7 @@ const toolItems = [
 ];
 
 export default function PublicNav() {
-  const { language } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
   const isFr = language === 'fr';
   const [toolsOpen, setToolsOpen] = useState(false);
 
@@ -25,7 +25,6 @@ export default function PublicNav() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <Logo size="sm" showText={false} />
-            <span className="font-display font-bold text-[#3B4759] text-base hidden sm:block">Riviqo</span>
           </Link>
 
           {/* Nav links desktop */}
@@ -80,6 +79,15 @@ export default function PublicNav() {
 
           {/* Auth buttons */}
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => changeLanguage(language === 'fr' ? 'en' : 'fr')}
+              className="flex items-center gap-1.5 text-[#3B4759] hover:text-[#FF6B4A] transition-colors font-display font-medium text-sm px-2 py-2"
+              aria-label={isFr ? 'Switch to English' : 'Passer en français'}
+            >
+              <Globe className="w-4 h-4" />
+              <span className="font-mono text-xs uppercase">{language}</span>
+            </button>
             <Link to={createPageUrl('Login')}
               className="hidden sm:block text-[#3B4759] hover:text-[#FF6B4A] transition-colors font-display font-medium text-sm px-3 py-2">
               {isFr ? 'Se connecter' : 'Login'}

@@ -84,6 +84,22 @@ function LayoutContent({ children, currentPageName }) {
         h1, h2, h3, h4 {
           font-family: 'Sora', sans-serif;
         }
+
+        @keyframes flag-flutter {
+          0%   { transform: scaleX(1)   skewY(0deg); }
+          15%  { transform: scaleX(0.92) skewY(1.5deg); }
+          30%  { transform: scaleX(1.04) skewY(-1deg); }
+          50%  { transform: scaleX(0.95) skewY(1.8deg); }
+          65%  { transform: scaleX(1.02) skewY(-0.8deg); }
+          80%  { transform: scaleX(0.97) skewY(1.2deg); }
+          100% { transform: scaleX(1)   skewY(0deg); }
+        }
+
+        .flag-animated {
+          display: inline-block;
+          animation: flag-flutter 3s ease-in-out infinite;
+          transform-origin: left center;
+        }
       `}</style>
 
       {/* Main Content */}
@@ -133,7 +149,7 @@ function LayoutContent({ children, currentPageName }) {
                   <ul className="space-y-2.5">
                     <li><Link to={createPageUrl('Ceder')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Céder' : 'Sell'}</Link></li>
                     <li><Link to={createPageUrl('Reprendre')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Reprendre' : 'Buy'}</Link></li>
-                    <li><Link to={createPageUrl('SmartMatchingVitrine')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">SmartMatching</Link></li>
+                    <li><Link to={createPageUrl('SmartMatchingFeatures')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">SmartMatching</Link></li>
                     <li><Link to={createPageUrl('Pricing')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Prix' : 'Pricing'}</Link></li>
                   </ul>
                 </div>
@@ -155,7 +171,7 @@ function LayoutContent({ children, currentPageName }) {
                     {language === 'fr' ? 'Ressources' : 'Resources'}
                   </h4>
                   <ul className="space-y-2.5">
-                    <li><a href="#" className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Blog</a></li>
+                    <li><Link to={createPageUrl('Blog')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">Blog</Link></li>
                     <li><Link to={createPageUrl('GuideCession')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Guide de cession' : 'Sale guide'}</Link></li>
                     <li><Link to={createPageUrl('GuideRepreneur')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Guide du repreneur' : 'Buyer guide'}</Link></li>
                     <li><Link to={createPageUrl('FAQ')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">FAQ</Link></li>
@@ -180,9 +196,9 @@ function LayoutContent({ children, currentPageName }) {
                   © {new Date().getFullYear()} Riviqo. {language === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span>Made in Europe 🇪🇺</span>
+                  <span>Made in Europe <span className="flag-animated text-base">🇪🇺</span></span>
                   <span>•</span>
-                  <span>{language === 'fr' ? 'Conçu en France 🇫🇷' : 'Designed in France 🇫🇷'}</span>
+                  <span>{language === 'fr' ? 'Conçu en France' : 'Designed in France'} <span className="flag-animated text-base" style={{ animationDelay: '0.3s' }}>🇫🇷</span></span>
                 </div>
               </div>
             </div>

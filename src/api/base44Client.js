@@ -212,6 +212,9 @@ const base44 = {
           if (filters.id) {
             query = query.eq('id', filters.id);
           }
+          if (filters.reference_number) {
+            query = query.eq('reference_number', filters.reference_number);
+          }
           if (filters.seller_id) {
             query = query.eq('seller_id', filters.seller_id);
           }

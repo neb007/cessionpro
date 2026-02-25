@@ -28,7 +28,7 @@ export function buildListingSlug({
 
 export function extractReferenceFromListingSlug(listingSlug?: string | null) {
     const lastSegment = String(listingSlug || '').split('/').filter(Boolean).pop() || '';
-    const match = lastSegment.match(/(riv-\d+|ref-\d+)$/i);
+    const match = lastSegment.match(/(riv-\d+|ref-\d+|rvq-\d+)$/i);
     return match ? match[1].toUpperCase() : null;
 }
 

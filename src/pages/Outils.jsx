@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import { ArrowRight, Banknote, Calculator, Landmark, Sparkles } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 export default function Outils() {
   const { language } = useLanguage();
@@ -43,6 +44,7 @@ export default function Outils() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <SEO pageName="Outils" />
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">

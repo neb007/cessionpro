@@ -8,6 +8,7 @@ import {
   ArrowRight, CheckCircle2, TrendingUp, Search, Calculator,
   Landmark, Handshake, ChevronDown, BarChart2, ShieldCheck, Lightbulb
 } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const STEPS = [
   {
@@ -107,6 +108,7 @@ export default function Reprendre() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <SEO pageName="Reprendre" />
       {/* Hero */}
       <section className="bg-[#FAF9F7] pt-20 pb-24 px-4">
         <div className="max-w-4xl mx-auto text-center">

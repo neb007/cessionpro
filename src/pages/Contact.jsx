@@ -11,6 +11,7 @@ import {
   ArrowRight, CheckCircle2, Clock, Mail, Phone, Star,
   TrendingDown, TrendingUp, UserRound, Users
 } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const REASONS = [
   {
@@ -52,6 +53,7 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <SEO pageName="Contact" />
       {/* Hero */}
       <section className="pt-20 pb-14 px-4 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD8CC] bg-[#FFF4F1] px-4 py-1.5 text-[#FF6B4A] text-sm font-medium mb-6">

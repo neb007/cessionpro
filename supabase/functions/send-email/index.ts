@@ -473,7 +473,7 @@ const buildSubjectAndHtml = (
     : 'Your listing is published';
   const title = isFr ? 'Annonce publiee avec succes' : 'Listing published successfully';
   const intro = isFr
-    ? 'Bonne nouvelle, votre annonce est maintenant visible par la communaute.'
+    ? 'Bonne nouvelle, votre annonce est maintenant visible.'
     : 'Good news, your listing is now visible to the community.';
   const listingLabel = isFr ? 'Titre de l’annonce' : 'Listing title';
   const ctaLabel = isFr ? 'Voir mes annonces' : 'View my listings';

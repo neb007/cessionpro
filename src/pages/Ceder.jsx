@@ -8,6 +8,7 @@ import {
   ArrowRight, CheckCircle2, TrendingUp, Shield, Users, FileText,
   Handshake, ChevronDown, BarChart2, Clock, Star
 } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const STEPS = [
   {
@@ -103,6 +104,7 @@ export default function Ceder() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <SEO pageName="Ceder" />
       {/* Hero */}
       <section className="bg-[#FAF9F7] pt-20 pb-24 px-4">
         <div className="max-w-4xl mx-auto text-center">

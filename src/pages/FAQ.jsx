@@ -5,6 +5,7 @@ import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ChevronDown, HelpCircle, MessageSquare } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const CATEGORIES = [
   {
@@ -183,6 +184,7 @@ export default function FAQ() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
+      <SEO pageName="FAQ" />
       {/* Hero */}
       <section className="pt-20 pb-14 px-4 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD8CC] bg-[#FFF4F1] px-4 py-1.5 text-[#FF6B4A] text-sm font-medium mb-6">

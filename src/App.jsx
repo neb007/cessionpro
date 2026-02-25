@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
+import { HelmetProvider } from 'react-helmet-async'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import AdminAnnonces from './pages/AdminAnnonces';
@@ -29,6 +30,7 @@ const PUBLIC_PAGES = [
   'AuthCallback',
   'Checkout',
   'Annonces',
+  'BusinessDetails',
   'Valuations',
   'Financing',
   'Targeting',
@@ -40,9 +42,10 @@ const PUBLIC_PAGES = [
   'FAQ',
   'Dataroom',
   'SmartMatching',
-  'SmartMatchingVitrine',
+  'SmartMatchingFeatures',
   'Pricing',
   'Outils',
+  'Blog',
   'MentionsLegales',
   'CGU',
   'PolitiqueConfidentialite',
@@ -180,6 +183,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <HelmetProvider>
       <AuthProvider>
         <LanguageProvider>
           <QueryClientProvider client={queryClientInstance}>
@@ -196,6 +200,7 @@ function App() {
           </QueryClientProvider>
         </LanguageProvider>
       </AuthProvider>
+      </HelmetProvider>
     </ErrorBoundary>
   )
 }

@@ -24,6 +24,7 @@ import { Progress } from '@/components/ui/progress';
 import { computeFinancing } from '@/utils/simulatorsEngine';
 import ToolLeadGate from '@/components/ToolLeadGate';
 import { toolAnalyticsService } from '@/services/toolAnalyticsService';
+import SEO from '@/components/SEO';
 
 const INITIAL_FORM_DATA = {
   acquisitionPrice: '',
@@ -211,6 +212,7 @@ export default function Financing() {
   return (
     <TooltipProvider delayDuration={120}>
       <div className="min-h-screen bg-white">
+        <SEO pageName="Financing" />
         {/* HERO */}
         <section className="bg-[#FAF9F7] py-16 sm:py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

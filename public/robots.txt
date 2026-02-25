@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Disallow: /Login
+Disallow: /Register
+Disallow: /AccountCreation
+Disallow: /PasswordReset
+Disallow: /AuthCallback
+Disallow: /Checkout
+Disallow: /Messages
+Disallow: /Settings
+Disallow: /Profile
+Disallow: /CreateBusiness
+Disallow: /MyListings
+Disallow: /MyLeads
+Disallow: /Leads
+Disallow: /Favorites
+Disallow: /Billing
+Disallow: /Abonnement
+Disallow: /SmartMatchingNotifications
+Disallow: /SmartMatching
+Disallow: /Annonces
+Disallow: /BusinessDetails
+Disallow: /Categories
+
+Sitemap: https://riviqo.com/sitemap.xml

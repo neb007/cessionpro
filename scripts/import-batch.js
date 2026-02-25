@@ -1,0 +1,190 @@
+/**
+ * Import batch d'annonces partenaires depuis un fichier JSON
+ *
+ * Usage:
+ *   node scripts/import-batch.js [chemin_json]
+ *
+ * Par défaut lit docs/riviqo_batch.json
+ *
+ * Prérequis:
+ *   1. Exécuter la migration migrations/20260225_add_partner_import_columns.sql
+ *   2. Ajouter SUPABASE_SERVICE_ROLE_KEY dans .env.local
+ */
+
+import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '..');
+
+// Load .env.local manually (no dotenv dependency)
+const envContent = readFileSync(resolve(ROOT, '.env.local'), 'utf-8');
+for (const line of envContent.split('\n')) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith('#')) continue;
+  const idx = trimmed.indexOf('=');
+  if (idx === -1) continue;
+  const key = trimmed.slice(0, idx).trim();
+  const value = trimmed.slice(idx + 1).trim();
+  process.env[key] = value;
+}
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ADMIN_EMAIL = process.env.VITE_ADMIN_EMAIL || 'nebil007@hotmail.fr';
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('❌ Variables manquantes dans .env.local:');
+  if (!SUPABASE_URL) console.error('   - VITE_SUPABASE_URL');
+  if (!SERVICE_ROLE_KEY) console.error('   - SUPABASE_SERVICE_ROLE_KEY');
+  console.error('\nAjoutez SUPABASE_SERVICE_ROLE_KEY dans .env.local');
+  console.error('(Supabase Dashboard → Settings → API → service_role key)');
+  process.exit(1);
+}
+
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false }
+});
+
+// Colonnes valides dans la table businesses
+const VALID_COLUMNS = new Set([
+  'title', 'description', 'sector', 'business_type', 'reason_for_sale',
+  'location', 'department', 'region', 'country', 'hide_location',
+  'type', 'asking_price', 'annual_revenue', 'ebitda', 'employees',
+  'year_founded', 'legal_structure', 'registration_number',
+  'lease_info', 'licenses', 'financial_years',
+  'market_position', 'competitive_advantages', 'growth_opportunities',
+  'customer_base', 'concurrence', 'external_url',
+  'images', 'surface_area', 'cession_details',
+  'show_cession_details', 'show_surface_area',
+  'seller_id', 'status', 'reference_number'
+]);
+
+// Champs à supprimer (pas dans le schéma DB)
+const FIELDS_TO_REMOVE = new Set([
+  'gross_margin', 'operating_income', 'net_income',
+  'contract_type'
+]);
+
+function generateReference() {
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `RVQ-${num}`;
+}
+
+function transformListing(raw, sellerId) {
+  const listing = {};
+
+  // Copier les champs valides
+  for (const [key, value] of Object.entries(raw)) {
+    if (VALID_COLUMNS.has(key) && !FIELDS_TO_REMOVE.has(key)) {
+      listing[key] = value;
+    }
+  }
+
+  // brand_name → injecter dans description
+  if (raw.brand_name && raw.brand_name.trim()) {
+    const prefix = `[Enseigne : ${raw.brand_name.trim()}]\n`;
+    listing.description = prefix + (listing.description || '');
+  }
+
+  // entry_fee → injecter dans cession_details
+  if (raw.entry_fee != null && raw.entry_fee > 0) {
+    const formatted = new Intl.NumberFormat('fr-FR').format(raw.entry_fee);
+    const detail = `Droits d'entrée : ${formatted} €`;
+    listing.cession_details = listing.cession_details
+      ? `${listing.cession_details}\n${detail}`
+      : detail;
+  }
+
+  // concurrence → colonne dédiée
+  if (raw.concurrence) {
+    listing.concurrence = raw.concurrence;
+  }
+
+  // Champs système
+  listing.seller_id = sellerId;
+  listing.status = 'active';
+  listing.reference_number = generateReference();
+
+  // images : s'assurer que c'est un array
+  if (!listing.images || !Array.isArray(listing.images)) {
+    listing.images = [];
+  }
+
+  return listing;
+}
+
+async function getAdminUserId() {
+  // Chercher via profiles d'abord
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', ADMIN_EMAIL)
+    .single();
+
+  if (profile?.id) return profile.id;
+
+  // Fallback : chercher via auth.users (nécessite service_role)
+  const { data: { users } } = await supabase.auth.admin.listUsers();
+  const admin = users?.find(u => u.email === ADMIN_EMAIL);
+  if (admin?.id) return admin.id;
+
+  throw new Error(`Utilisateur admin introuvable: ${ADMIN_EMAIL}`);
+}
+
+async function main() {
+  const jsonPath = process.argv[2] || resolve(ROOT, 'docs/riviqo_batch.json');
+
+  console.log('📂 Lecture du fichier:', jsonPath);
+  const raw = JSON.parse(readFileSync(jsonPath, 'utf-8'));
+  console.log(`   ${raw.length} annonces trouvées\n`);
+
+  console.log('🔑 Récupération du seller_id admin...');
+  const sellerId = await getAdminUserId();
+  console.log(`   Admin ID: ${sellerId}\n`);
+
+  // Vérifier les reference_number existants pour éviter les doublons
+  const { data: existing } = await supabase
+    .from('businesses')
+    .select('reference_number')
+    .like('reference_number', 'RVQ-%');
+  const existingRefs = new Set((existing || []).map(b => b.reference_number));
+
+  const listings = raw.map((item, i) => {
+    const listing = transformListing(item, sellerId);
+
+    // S'assurer que le reference_number est unique
+    while (existingRefs.has(listing.reference_number)) {
+      listing.reference_number = generateReference();
+    }
+    existingRefs.add(listing.reference_number);
+
+    console.log(`  [${i + 1}] ${listing.reference_number} — ${listing.title?.substring(0, 50)}...`);
+    return listing;
+  });
+
+  console.log(`\n📤 Insertion de ${listings.length} annonces...`);
+  const { data, error } = await supabase
+    .from('businesses')
+    .insert(listings)
+    .select('id, reference_number, title');
+
+  if (error) {
+    console.error('❌ Erreur insertion:', error.message);
+    if (error.details) console.error('   Détails:', error.details);
+    if (error.hint) console.error('   Hint:', error.hint);
+    process.exit(1);
+  }
+
+  console.log(`\n✅ ${data.length} annonces importées avec succès :\n`);
+  data.forEach((item) => {
+    console.log(`   ${item.reference_number} — ${item.title?.substring(0, 60)}`);
+  });
+}
+
+main().catch((err) => {
+  console.error('❌ Erreur fatale:', err.message);
+  process.exit(1);
+});

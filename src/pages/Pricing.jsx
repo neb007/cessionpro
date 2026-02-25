@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Check, Zap, Image, Images, User, Users, Database, Shield, AlertCircle, CheckCircle2, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PRICING, formatPrice } from '@/constants/pricing';
+import SEO from '@/components/SEO';
 
 const ADVISORY_PLANS = [
   {
@@ -284,6 +285,7 @@ export default function Pricing() {
 
   return (
     <div className="py-4 px-0">
+      <SEO pageName="Pricing" />
       <div className="max-w-5xl mx-auto">
 
         {/* ADVISORY SECTION */}

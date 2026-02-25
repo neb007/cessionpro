@@ -256,6 +256,10 @@ export default function BusinessDetails() {
   };
 
   const handleContact = async () => {
+    if (business?.external_url) {
+      window.open(business.external_url, '_blank', 'noopener,noreferrer');
+      return;
+    }
     const currentUser = authUser || user;
     if (!currentUser) {
       window.location.href = '/login';
