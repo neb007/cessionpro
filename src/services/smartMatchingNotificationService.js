@@ -1,115 +1,25 @@
-import { EUROPEAN_COUNTRIES } from '@/utils/europeanCountries';
-import { FRENCH_DEPARTMENTS } from '@/utils/frenchDepartmentsData';
+import {
+  DEFAULT_SMART_MATCHING_ALERTS,
+  DEFAULT_SMART_MATCHING_CRITERIA,
+  SMART_MATCHING_BUSINESS_TYPES,
+  SMART_MATCHING_BUYER_PROFILE_TYPES,
+  SMART_MATCHING_LOCATIONS,
+  SMART_MATCHING_SECTORS,
+} from '@/constants/smartMatchingConfig';
+import { supabase } from '@/api/supabaseClient';
+
+// Re-export constants for backward-compatible imports
+export {
+  DEFAULT_SMART_MATCHING_ALERTS,
+  DEFAULT_SMART_MATCHING_CRITERIA,
+  SMART_MATCHING_BUSINESS_TYPES,
+  SMART_MATCHING_BUYER_PROFILE_TYPES,
+  SMART_MATCHING_LOCATIONS,
+  SMART_MATCHING_SECTORS,
+};
 
 const SMART_MATCHING_CRITERIA_STORAGE_PREFIX = 'smartMatchingCriteria';
 const SMART_MATCHING_ALERTS_STORAGE_PREFIX = 'smartMatchingAlerts';
-
-export const SMART_MATCHING_SECTORS = [
-  { value: 'technology', label: 'Technologie' },
-  { value: 'retail', label: 'Commerce' },
-  { value: 'hospitality', label: 'Hôtellerie' },
-  { value: 'manufacturing', label: 'Industrie' },
-  { value: 'services', label: 'Services' },
-  { value: 'healthcare', label: 'Santé' },
-  { value: 'construction', label: 'Construction' },
-  { value: 'transport', label: 'Transport' },
-  { value: 'agriculture', label: 'Agriculture' },
-  { value: 'real_estate', label: 'Immobilier' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'ecommerce', label: 'E-commerce' },
-  { value: 'beauty', label: 'Beauté' },
-  { value: 'education', label: 'Éducation' },
-  { value: 'events', label: 'Événementiel' },
-  { value: 'logistics', label: 'Logistique' },
-  { value: 'food_beverage', label: 'Alimentaire & Boissons' },
-  { value: 'other', label: 'Autre' },
-];
-
-const SMART_MATCHING_CITY_LOCATIONS = [
-  { value: 'paris', label: 'Paris' },
-  { value: 'lyon', label: 'Lyon' },
-  { value: 'marseille', label: 'Marseille' },
-  { value: 'toulouse', label: 'Toulouse' },
-  { value: 'nantes', label: 'Nantes' },
-  { value: 'bordeaux', label: 'Bordeaux' },
-  { value: 'lille', label: 'Lille' },
-  { value: 'strasbourg', label: 'Strasbourg' },
-];
-
-const SMART_MATCHING_COUNTRY_LOCATIONS = EUROPEAN_COUNTRIES.map((country) => ({
-  value: String(country.value || '').toLowerCase(),
-  label: country.label,
-}));
-
-const SMART_MATCHING_DEPARTMENT_LOCATIONS = FRENCH_DEPARTMENTS.map((department) => ({
-  value: String(department.value || '').toLowerCase(),
-  label: `${String(department.value || '').toUpperCase()} - ${department.label}`,
-}));
-
-const uniqueLocations = (locations) => {
-  const map = new Map();
-  locations.forEach((location) => {
-    const key = String(location.value || '').toLowerCase();
-    if (!map.has(key)) {
-      map.set(key, { ...location, value: key });
-    }
-  });
-  return Array.from(map.values());
-};
-
-export const SMART_MATCHING_LOCATIONS = uniqueLocations([
-  ...SMART_MATCHING_COUNTRY_LOCATIONS,
-  ...SMART_MATCHING_DEPARTMENT_LOCATIONS,
-  ...SMART_MATCHING_CITY_LOCATIONS,
-]);
-
-export const SMART_MATCHING_BUYER_PROFILE_TYPES = [
-  { value: 'individual', label: 'Reprise personnelle' },
-  { value: 'investor', label: 'Investisseur' },
-  { value: 'pe_fund', label: 'Fonds de capital-investissement' },
-  { value: 'company', label: 'Entreprise' },
-  { value: 'other', label: 'Autre' },
-];
-
-export const SMART_MATCHING_BUSINESS_TYPES = [
-  { value: 'entreprise', label: 'Entreprise' },
-  { value: 'fond_de_commerce', label: 'Fond de commerce' },
-  { value: 'franchise', label: 'Franchise' },
-];
-
-export const DEFAULT_SMART_MATCHING_CRITERIA = {
-  sectors: [],
-  locations: [],
-  minPrice: '',
-  maxPrice: '',
-  minEmployees: '',
-  maxEmployees: '',
-  minYear: '',
-  maxYear: '',
-  minCA: '',
-  maxCA: '',
-  minEBITDA: '',
-  maxEBITDA: '',
-  buyerBudgetMin: '',
-  buyerBudgetMax: '',
-  buyerInvestmentAvailable: '',
-  buyerSectorsInterested: [],
-  buyerLocations: [],
-  buyerEmployeesMin: '',
-  buyerEmployeesMax: '',
-  buyerRevenueMin: '',
-  buyerRevenueMax: '',
-  buyerProfileType: '',
-  businessTypeSought: '',
-  sellerBusinessType: '',
-};
-
-export const DEFAULT_SMART_MATCHING_ALERTS = {
-  enabled: false,
-  frequency: 'disabled', // daily | weekly | disabled
-  noEmailWithoutMatches: true,
-  updatedAt: null,
-};
 
 const parseJSON = (raw, fallback) => {
   if (!raw) return fallback;
@@ -179,4 +89,32 @@ export function getSmartMatchingAlertFrequencyLabel(frequency, language = 'fr') 
   };
 
   return map[frequency] || map.disabled;
+}
+
+// ── DB sync (for cron digest) ──────────────────────────────────────────────
+
+const ALERT_PREFS_TABLE = 'smart_matching_alert_preferences';
+
+/**
+ * Sync alert preferences + criteria to DB so the smartmatch-digest cron can read them.
+ * Upserts one row per (user_id, mode).
+ */
+export async function syncAlertPreferencesToDB(userId, { mode, criteria, alerts }) {
+  if (!userId) return;
+
+  try {
+    await supabase.from(ALERT_PREFS_TABLE).upsert(
+      {
+        user_id: userId,
+        mode: mode || 'buyer',
+        criteria: criteria || {},
+        enabled: alerts?.enabled ?? false,
+        frequency: alerts?.frequency || 'disabled',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,mode' }
+    );
+  } catch {
+    // Best-effort sync; localStorage remains the primary source
+  }
 }

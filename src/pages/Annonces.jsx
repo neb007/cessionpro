@@ -27,6 +27,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SECTORS } from '@/constants/sectors';
+import { useSmartMatchingAccess } from '@/hooks/useSmartMatchingAccess';
+import { getSmartMatchingCriteria } from '@/services/smartMatchingNotificationService';
+import { scoreCriteriaVsListing } from '@/services/smartMatchingScorer';
+import { isRangeActive } from '@/services/smartMatchingScorer';
 
 const COUNTRIES = [
   { value: 'france', label: 'France' },
@@ -181,7 +185,7 @@ const normalize = (value) => (value || '').trim().toLowerCase();
 export default function Businesses() {
   const { t, language } = useLanguage();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -200,6 +204,19 @@ export default function Businesses() {
   const debouncedQuery = useDebouncedValue(filtersState.query, 250);
   const debouncedBudgetMin = useDebouncedValue(filtersState.budgetMin, 300);
   const debouncedBudgetMax = useDebouncedValue(filtersState.budgetMax, 300);
+
+  // SmartMatching score badge (subscribers only)
+  const { hasAccess: hasSmartMatching } = useSmartMatchingAccess();
+
+  const smartMatchingCriteria = useMemo(() => {
+    if (!hasSmartMatching || !user?.id) return null;
+    const buyerCriteria = getSmartMatchingCriteria(user.id, 'buyer');
+    const hasBuyerCriteria =
+      (buyerCriteria.sectors && buyerCriteria.sectors.length > 0) ||
+      isRangeActive(buyerCriteria.budgetMin, buyerCriteria.budgetMax) ||
+      (buyerCriteria.locations && buyerCriteria.locations.length > 0);
+    return hasBuyerCriteria ? buyerCriteria : null;
+  }, [hasSmartMatching, user?.id]);
 
   const fetchBusinessesPage = async (pageToLoad, replace = false) => {
     if (isFetchingRef.current) return;
@@ -485,6 +502,33 @@ export default function Businesses() {
     return enriched.map(({ _originalIndex, ...business }) => business);
   }, [sortedBusinesses, sponsorshipByBusinessId, language]);
 
+  // Compute SmartMatching scores for each listing (subscribers only)
+  const smartMatchScores = useMemo(() => {
+    if (!smartMatchingCriteria || !hasSmartMatching) return {};
+    const scores = {};
+    const activeCriteriaCount = [
+      smartMatchingCriteria.sectors?.length > 0,
+      isRangeActive(smartMatchingCriteria.budgetMin, smartMatchingCriteria.budgetMax),
+      smartMatchingCriteria.locations?.length > 0,
+      isRangeActive(smartMatchingCriteria.revenueMin, smartMatchingCriteria.revenueMax),
+      isRangeActive(smartMatchingCriteria.employeesMin, smartMatchingCriteria.employeesMax),
+    ].filter(Boolean).length;
+
+    for (const business of prioritizedBusinesses) {
+      const result = scoreCriteriaVsListing({
+        criteria: smartMatchingCriteria,
+        listing: business,
+        mode: 'buyer',
+        language,
+        activeCriteriaCount,
+      });
+      if (result.score >= 50) {
+        scores[business.id] = Math.round(result.score);
+      }
+    }
+    return scores;
+  }, [smartMatchingCriteria, hasSmartMatching, prioritizedBusinesses, language]);
+
   return (
     <div className="min-h-screen py-6 lg:py-8 bg-[#FAF9F7]">
       <div className="w-full px-5">
@@ -631,6 +675,8 @@ export default function Businesses() {
                     fetchSellerLogo={false}
                     isFeatured={business.isFeatured}
                     featuredLabel={business.featuredLabel}
+                    smartMatchScore={smartMatchScores[business.id] ?? null}
+                    showSmartMatchBadge={hasSmartMatching === true}
                   />
                 </motion.div>
               ))}

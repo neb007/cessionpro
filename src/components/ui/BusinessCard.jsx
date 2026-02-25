@@ -15,7 +15,7 @@ import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 import { calculateGrowthPercentage } from '@/utils/growthCalculator';
 import LogoCard from '@/components/ui/LogoCard';
-import { getPartnerLogoUrl } from '@/constants/partners';
+
 
 const sectorColors = {
   technology: 'bg-primary-light text-primary',
@@ -39,7 +39,9 @@ export default function BusinessCard({
   hideMessageButton = false,
   hideFavoriteButton = false,
   isFeatured = false,
-  featuredLabel = 'À la une'
+  featuredLabel = 'À la une',
+  smartMatchScore = null,
+  showSmartMatchBadge = false,
 }) {
   const { t, language } = useLanguage();
   const { user: authUser } = useAuth();
@@ -52,8 +54,9 @@ export default function BusinessCard({
   const [sellerFallbackLogo, setSellerFallbackLogo] = useState(null);
 
   useEffect(() => {
-    if (!fetchSellerLogo) return;
-    loadBusinessLogo();
+    if (fetchSellerLogo) {
+      loadBusinessLogo();
+    }
   }, [business?.id, business?.seller_id, fetchSellerLogo]);
 
   useEffect(() => {
@@ -87,11 +90,6 @@ export default function BusinessCard({
           setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url);
           return;
         }
-      }
-      // Fallback: partner logo from external_url
-      const partnerLogo = getPartnerLogoUrl(business?.external_url);
-      if (partnerLogo) {
-        setSellerFallbackLogo(partnerLogo);
       }
     } catch (error) {
       console.error('Error loading business logo:', error);
@@ -156,6 +154,20 @@ export default function BusinessCard({
             <Eye className="w-4 h-4" />
             <span className="font-mono">{business.views_count || 0}</span>
           </div>
+
+          {/* SmartMatch Score Badge */}
+          {showSmartMatchBadge && smartMatchScore !== null && smartMatchScore >= 50 && (
+            <div className={`absolute ${isFeatured ? 'top-12' : 'top-3'} left-3 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold backdrop-blur-sm border ${
+              smartMatchScore >= 80
+                ? 'bg-emerald-50/90 text-emerald-700 border-emerald-200'
+                : smartMatchScore >= 60
+                  ? 'bg-blue-50/90 text-blue-700 border-blue-200'
+                  : 'bg-amber-50/90 text-amber-700 border-amber-200'
+            }`}>
+              <span>{smartMatchScore}%</span>
+              <span className="font-medium">match</span>
+            </div>
+          )}
 
           {/* Message Button - Bottom Left */}
           {!hideMessageButton && (

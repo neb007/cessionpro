@@ -116,22 +116,57 @@ function transformListing(raw, sellerId) {
   return listing;
 }
 
-async function getAdminUserId() {
-  // Chercher via profiles d'abord
+// Mapping partenaire → email du profil
+const PARTNER_EMAILS = {
+  'fusacq.com': 'fusacq@partners.riviqo.com',
+  'cessionpme.com': 'cessionpme@partners.riviqo.com',
+};
+
+// Cache des seller_id par email
+const sellerIdCache = {};
+
+async function getSellerIdByEmail(email) {
+  if (sellerIdCache[email]) return sellerIdCache[email];
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('id')
-    .eq('email', ADMIN_EMAIL)
+    .eq('email', email)
     .single();
 
-  if (profile?.id) return profile.id;
+  if (profile?.id) {
+    sellerIdCache[email] = profile.id;
+    return profile.id;
+  }
+  return null;
+}
+
+async function getAdminUserId() {
+  const id = await getSellerIdByEmail(ADMIN_EMAIL);
+  if (id) return id;
 
   // Fallback : chercher via auth.users (nécessite service_role)
   const { data: { users } } = await supabase.auth.admin.listUsers();
   const admin = users?.find(u => u.email === ADMIN_EMAIL);
-  if (admin?.id) return admin.id;
+  if (admin?.id) {
+    sellerIdCache[ADMIN_EMAIL] = admin.id;
+    return admin.id;
+  }
 
   throw new Error(`Utilisateur admin introuvable: ${ADMIN_EMAIL}`);
+}
+
+async function getSellerIdForListing(externalUrl) {
+  if (externalUrl) {
+    for (const [domain, email] of Object.entries(PARTNER_EMAILS)) {
+      if (externalUrl.includes(domain)) {
+        const partnerId = await getSellerIdByEmail(email);
+        if (partnerId) return partnerId;
+        console.warn(`   ⚠ Profil partenaire introuvable: ${email} — fallback admin`);
+      }
+    }
+  }
+  return getAdminUserId();
 }
 
 async function main() {
@@ -141,10 +176,6 @@ async function main() {
   const raw = JSON.parse(readFileSync(jsonPath, 'utf-8'));
   console.log(`   ${raw.length} annonces trouvées\n`);
 
-  console.log('🔑 Récupération du seller_id admin...');
-  const sellerId = await getAdminUserId();
-  console.log(`   Admin ID: ${sellerId}\n`);
-
   // Vérifier les reference_number existants pour éviter les doublons
   const { data: existing } = await supabase
     .from('businesses')
@@ -152,7 +183,10 @@ async function main() {
     .like('reference_number', 'RVQ-%');
   const existingRefs = new Set((existing || []).map(b => b.reference_number));
 
-  const listings = raw.map((item, i) => {
+  const listings = [];
+  for (let i = 0; i < raw.length; i++) {
+    const item = raw[i];
+    const sellerId = await getSellerIdForListing(item.external_url);
     const listing = transformListing(item, sellerId);
 
     // S'assurer que le reference_number est unique
@@ -162,8 +196,8 @@ async function main() {
     existingRefs.add(listing.reference_number);
 
     console.log(`  [${i + 1}] ${listing.reference_number} — ${listing.title?.substring(0, 50)}...`);
-    return listing;
-  });
+    listings.push(listing);
+  }
 
   console.log(`\n📤 Insertion de ${listings.length} annonces...`);
   const { data, error } = await supabase

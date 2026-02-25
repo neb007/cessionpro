@@ -33,6 +33,7 @@ import {
   getSmartMatchingCriteria,
   saveSmartMatchingAlertPreferences,
   saveSmartMatchingCriteria,
+  syncAlertPreferencesToDB,
 } from '@/services/smartMatchingNotificationService';
 
 const NUDGE_KEY_PREFIX = 'smartmatching:alerts:nudge';
@@ -207,6 +208,7 @@ export default function SmartMatchingNotifications() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Save to localStorage (primary, instant)
       if (criteriaProfile === 'cabinet') {
         saveSmartMatchingCriteria(user?.id, 'buyer', cessionCriteria);
         saveSmartMatchingCriteria(user?.id, 'seller', acquisitionCriteria);
@@ -217,6 +219,21 @@ export default function SmartMatchingNotifications() {
       }
 
       saveSmartMatchingAlertPreferences(user?.id, alerts);
+
+      // Sync to DB (for cron digest - best-effort)
+      if (user?.id) {
+        if (criteriaProfile === 'cabinet') {
+          await Promise.all([
+            syncAlertPreferencesToDB(user.id, { mode: 'buyer', criteria: cessionCriteria, alerts }),
+            syncAlertPreferencesToDB(user.id, { mode: 'seller', criteria: acquisitionCriteria, alerts }),
+          ]);
+        } else if (criteriaProfile === 'buyer') {
+          await syncAlertPreferencesToDB(user.id, { mode: 'buyer', criteria: cessionCriteria, alerts });
+        } else {
+          await syncAlertPreferencesToDB(user.id, { mode: 'seller', criteria: acquisitionCriteria, alerts });
+        }
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } finally {

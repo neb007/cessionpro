@@ -35,9 +35,10 @@ import { motion } from 'framer-motion';
 import FinancialChart from '@/components/Financial/FinancialChart';
 import BentoPhotoGallery from '@/components/BentoPhotoGallery';
 import LogoCard from '@/components/ui/LogoCard';
-import { getPartnerLogoUrl } from '@/constants/partners';
 import { FRENCH_DEPARTMENTS } from '@/utils/frenchDepartmentsData';
 import { EUROPEAN_COUNTRIES } from '@/utils/europeanCountries';
+import BusinessCard from '@/components/ui/BusinessCard';
+import { findListingMatches } from '@/services/smartMatchingScorer';
 
 const sectorColors = {
   technology: 'bg-violet-100 text-violet-700',
@@ -81,6 +82,7 @@ export default function BusinessDetails() {
   const [isFeatured, setIsFeatured] = useState(false);
   const shouldShowLogo = Boolean(businessLogo?.logo_url || sellerFallbackLogo);
   const displayLogoUrl = businessLogo?.logo_url || sellerFallbackLogo;
+  const [similarListings, setSimilarListings] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -125,6 +127,34 @@ export default function BusinessDetails() {
     };
   }, [business?.id, language]);
 
+  // Load similar listings
+  useEffect(() => {
+    if (!business?.id) return;
+    let cancelled = false;
+
+    const loadSimilar = async () => {
+      try {
+        const { data } = await supabase
+          .from('businesses')
+          .select('id, title, type, sector, location, country, department, region, asking_price, annual_revenue, buyer_budget_min, buyer_budget_max, buyer_investment_available, buyer_sectors_interested, buyer_locations, employees, views_count, reference_number, hide_location, is_certified, seller_id, created_at, images, financial_years, external_url')
+          .eq('status', 'active')
+          .eq('type', business.type)
+          .neq('id', business.id)
+          .limit(50);
+
+        if (cancelled || !data) return;
+
+        const ranked = findListingMatches(business, data);
+        setSimilarListings(ranked.slice(0, 6));
+      } catch {
+        // Silently fail
+      }
+    };
+
+    loadSimilar();
+    return () => { cancelled = true; };
+  }, [business?.id, business?.type]);
+
   useEffect(() => {
     if (authUser) {
       setUser(authUser);
@@ -161,11 +191,6 @@ export default function BusinessDetails() {
           setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url);
           return;
         }
-      }
-      // Fallback: partner logo from external_url
-      const partnerLogo = getPartnerLogoUrl(business?.external_url);
-      if (partnerLogo) {
-        setSellerFallbackLogo(partnerLogo);
       }
     } catch (error) {
       console.error('Error loading business logo:', error);
@@ -894,6 +919,27 @@ export default function BusinessDetails() {
           </div>
         </div>
       </div>
+
+      {/* Similar Listings - horizontal scroll */}
+      {similarListings.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+          <h2 className="text-2xl font-bold text-[#3B4759] mb-6">
+            {language === 'fr' ? 'Annonces similaires' : 'Similar listings'}
+          </h2>
+          <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+            {similarListings.map((listing) => (
+              <div key={listing.id} className="min-w-[280px] max-w-[300px] flex-shrink-0 snap-start">
+                <BusinessCard
+                  business={listing}
+                  fetchSellerLogo={false}
+                  hideFavoriteButton
+                  hideMessageButton
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Contact Modal */}
       <Dialog open={showContactModal} onOpenChange={setShowContactModal}>

@@ -8,14 +8,24 @@ import {
   MapPin,
   Search,
   Send,
-  ShieldCheck,
+  ShoppingCart,
   SlidersHorizontal,
   Sparkles,
+  Store,
   TrendingUp,
   Users,
   X,
   Zap,
+  CheckCircle2,
+  ExternalLink,
+  ArrowUpDown,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Progress } from '@/components/ui/progress';
+import ScoreRing from '@/components/smartmatching/ScoreRing';
+import SmartMatchingFilterBar from '@/components/smartmatching/SmartMatchingFilterBar';
+import SmartMatchingFilterChips from '@/components/smartmatching/SmartMatchingFilterChips';
+import SmartMatchingFiltersMobile from '@/components/smartmatching/SmartMatchingFiltersMobile';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
@@ -24,65 +34,22 @@ import { favoriteService } from '@/services/favoriteService';
 import BusinessCard from '@/components/ui/BusinessCard';
 import { toast } from '@/components/ui/use-toast';
 import { createBusinessDetailsUrl, createPageUrl } from '@/utils';
+import {
+  SMART_MATCHING_SECTORS as SECTORS,
+  SMART_MATCHING_LOCATIONS as LOCATIONS,
+  DEFAULT_SMART_MATCHING_CRITERIA as DEFAULT_CRITERIA,
+  SMART_MATCHING_MIN_SCORE,
+  getScoreTone,
+} from '@/constants/smartMatchingConfig';
+import {
+  scoreCriteriaVsListing,
+  getListingBudget,
+  normalize,
+  toNumber,
+  isRangeActive,
+} from '@/services/smartMatchingScorer';
 
-const SECTORS = [
-  { value: 'technology', label: 'Technologie' },
-  { value: 'retail', label: 'Vente au détail' },
-  { value: 'hospitality', label: 'Hôtellerie' },
-  { value: 'manufacturing', label: 'Fabrication' },
-  { value: 'services', label: 'Services' },
-  { value: 'healthcare', label: 'Santé' },
-  { value: 'construction', label: 'Construction' },
-  { value: 'transport', label: 'Transport' },
-  { value: 'agriculture', label: 'Agriculture' },
-  { value: 'real_estate', label: 'Immobilier' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'ecommerce', label: 'E-commerce' },
-  { value: 'beauty', label: 'Beauté' },
-  { value: 'education', label: 'Éducation' },
-  { value: 'events', label: 'Événementiel' },
-  { value: 'logistics', label: 'Logistique' },
-  { value: 'food_beverage', label: 'Alimentaire & Boissons' },
-  { value: 'other', label: 'Autre' },
-];
-
-const LOCATIONS = [
-  { value: 'france', label: 'France' },
-  { value: 'paris', label: 'Paris' },
-  { value: 'lyon', label: 'Lyon' },
-  { value: 'marseille', label: 'Marseille' },
-  { value: 'toulouse', label: 'Toulouse' },
-  { value: 'nice', label: 'Nice' },
-  { value: 'nantes', label: 'Nantes' },
-  { value: 'strasbourg', label: 'Strasbourg' },
-  { value: 'bordeaux', label: 'Bordeaux' },
-  { value: 'lille', label: 'Lille' },
-  { value: 'uk', label: 'Royaume-Uni' },
-  { value: 'canada', label: 'Canada' },
-  { value: 'belgium', label: 'Belgique' },
-];
-
-const DEFAULT_CRITERIA = {
-  sectors: [],
-  locations: [],
-  minPrice: '',
-  maxPrice: '',
-  minEmployees: '',
-  maxEmployees: '',
-  minYear: '',
-  maxYear: '',
-  minCA: '',
-  maxCA: '',
-  minEBITDA: '',
-  maxEBITDA: '',
-  buyerSectorsInterested: [],
-  buyerLocations: [],
-  buyerProfileType: '',
-  businessTypeSought: '',
-  sellerBusinessType: '',
-};
-
-const SMART_MATCHING_MIN_SCORE = 60;
+/* ── Preview data ──────────────────────────────────────────────── */
 
 const SMART_MATCHING_PREVIEW_DATA = {
   buyer: [
@@ -211,68 +178,11 @@ const SMART_MATCHING_PREVIEW_DATA = {
   ],
 };
 
-const normalize = (value) => String(value || '').trim().toLowerCase();
-
-const toNumber = (value) => {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : null;
-};
-
-const isRangeActive = (minValue, maxValue) => minValue !== '' || maxValue !== '';
-
-const getListingBudget = (listing, mode) => {
-  const askingPrice = toNumber(listing.asking_price);
-  const buyerBudgetMin = toNumber(listing.buyer_budget_min);
-  const buyerBudgetMax = toNumber(listing.buyer_budget_max);
-  const buyerInvestment = toNumber(listing.buyer_investment_available);
-
-  if (mode === 'seller') {
-    return buyerBudgetMax || buyerInvestment || buyerBudgetMin || askingPrice;
-  }
-
-  return askingPrice || buyerInvestment || buyerBudgetMax || buyerBudgetMin;
-};
-
-const getScoreTone = (score) => {
-  if (score >= 80) {
-    return {
-      badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      ring: 'ring-emerald-100',
-      card: 'border-emerald-200 bg-emerald-50/40',
-      accent: 'text-emerald-700',
-    };
-  }
-
-  if (score >= 60) {
-    return {
-      badge: 'bg-blue-50 text-blue-700 border-blue-200',
-      ring: 'ring-blue-100',
-      card: 'border-blue-200 bg-blue-50/40',
-      accent: 'text-blue-700',
-    };
-  }
-
-  if (score >= 40) {
-    return {
-      badge: 'bg-amber-50 text-amber-700 border-amber-200',
-      ring: 'ring-amber-100',
-      card: 'border-amber-200 bg-amber-50/40',
-      accent: 'text-amber-700',
-    };
-  }
-
-  return {
-    badge: 'bg-rose-50 text-rose-700 border-rose-200',
-    ring: 'ring-rose-100',
-    card: 'border-rose-200 bg-rose-50/40',
-    accent: 'text-rose-700',
-  };
-};
+/* ── Helpers ────────────────────────────────────────────────────── */
 
 const formatMoneyCompact = (value, language) => {
   const amount = toNumber(value);
   if (!amount) return language === 'fr' ? 'Non renseigné' : 'Not provided';
-
   return new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-GB', {
     style: 'currency',
     currency: 'EUR',
@@ -281,48 +191,52 @@ const formatMoneyCompact = (value, language) => {
   }).format(amount);
 };
 
-const evaluateRangeScore = ({ value, min, max, weight, tolerance = 0.15 }) => {
-  const hasMin = min !== null;
-  const hasMax = max !== null;
+/* ── Advanced filter inputs (shared between desktop Sheet & mobile) */
 
-  if (!hasMin && !hasMax) {
-    return { points: 0, matched: false, partial: false, missing: false };
-  }
+function AdvancedFilterFields({ language, criteria, onChangeCriteria }) {
+  const field = (label, fieldMin, fieldMax, placeholderMin, placeholderMax, Icon) => (
+    <div>
+      <label className="block text-xs font-semibold text-foreground mb-1.5">{label}</label>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="relative">
+          {Icon && <Icon className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />}
+          <input
+            type="number"
+            value={criteria[fieldMin]}
+            onChange={(e) => onChangeCriteria(fieldMin, e.target.value)}
+            placeholder={placeholderMin}
+            className={`w-full h-9 px-3 bg-white border border-border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary ${Icon ? 'pl-8' : ''}`}
+          />
+        </div>
+        <div className="relative">
+          {Icon && <Icon className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />}
+          <input
+            type="number"
+            value={criteria[fieldMax]}
+            onChange={(e) => onChangeCriteria(fieldMax, e.target.value)}
+            placeholder={placeholderMax}
+            className={`w-full h-9 px-3 bg-white border border-border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary ${Icon ? 'pl-8' : ''}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
 
-  if (value === null) {
-    return { points: 0, matched: false, partial: false, missing: true };
-  }
+  return (
+    <>
+      {field(language === 'fr' ? 'Effectifs' : 'Employees', 'minEmployees', 'maxEmployees', '5', '500', Users)}
+      {field(language === 'fr' ? 'Année de création' : 'Founded year', 'minYear', 'maxYear', '1990', new Date().getFullYear().toString(), Calendar)}
+      {field(language === 'fr' ? "Chiffre d'affaires (€)" : 'Revenue (€)', 'minCA', 'maxCA', '100000', '5000000', BarChart3)}
+      {field('EBITDA (€)', 'minEBITDA', 'maxEBITDA', '0', '1000000', TrendingUp)}
+    </>
+  );
+}
 
-  let exact = true;
-  let partial = true;
-
-  if (hasMin) {
-    exact = exact && value >= min;
-    partial = partial && value >= min * (1 - tolerance);
-  }
-
-  if (hasMax) {
-    exact = exact && value <= max;
-    partial = partial && value <= max * (1 + tolerance);
-  }
-
-  if (exact) {
-    return { points: weight, matched: true, partial: false, missing: false };
-  }
-
-  if (partial) {
-    return { points: Math.round(weight * 0.55), matched: true, partial: true, missing: false };
-  }
-
-  return { points: 0, matched: false, partial: false, missing: false };
-};
+/* ── Main Component ─────────────────────────────────────────────── */
 
 export default function SmartMatching() {
   const { language } = useLanguage();
   const { user } = useAuth();
-  const sectorDropdownRef = useRef(null);
-  const locationDropdownRef = useRef(null);
-  const layoutGridRef = useRef(null);
 
   const [allListings, setAllListings] = useState([]);
   const [matchedListings, setMatchedListings] = useState([]);
@@ -331,13 +245,9 @@ export default function SmartMatching() {
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [accessStatus, setAccessStatus] = useState('loading');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showFiltersPanel, setShowFiltersPanel] = useState(true);
-  const [sectorSearch, setSectorSearch] = useState('');
-  const [showSectorDropdown, setShowSectorDropdown] = useState(false);
-  const [locationSearch, setLocationSearch] = useState('');
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('score');
 
   const [smartMatchingMode, setSmartMatchingMode] = useState(
     user?.user_metadata?.role === 'seller' ? 'seller' : 'buyer'
@@ -347,6 +257,7 @@ export default function SmartMatching() {
 
   const [criteria, setCriteria] = useState(DEFAULT_CRITERIA);
 
+  /* ── Labels ── */
   const labels = useMemo(
     () => ({
       title: language === 'fr' ? 'Smart Matching' : 'Smart Matching',
@@ -358,11 +269,7 @@ export default function SmartMatching() {
           : language === 'fr'
             ? 'Trouvez les profils acquéreurs les plus alignés avec votre entreprise'
             : 'Find buyer profiles aligned with your business',
-      criteriaPanel: language === 'fr' ? 'Critères de matching' : 'Matching criteria',
-      essentialFilters: language === 'fr' ? 'Filtres essentiels' : 'Essential filters',
-      advancedFilters: language === 'fr' ? 'Filtres avancés' : 'Advanced filters',
-      searchButton:
-        language === 'fr' ? 'Lancer la recherche et sauvegarder' : 'Search and save criteria',
+      searchButton: language === 'fr' ? 'Lancer la recherche' : 'Search',
       resetButton: language === 'fr' ? 'Réinitialiser' : 'Reset',
       noResults:
         language === 'fr'
@@ -372,20 +279,47 @@ export default function SmartMatching() {
         language === 'fr' ? 'Smart Matching en mode découverte' : 'Smart Matching in discovery mode',
       inactiveAccessDescription:
         language === 'fr'
-          ? 'Découvrez ci-dessous des exemples de matchs premium. Activez le service pour débloquer vos résultats personnalisés, les alertes et les recommandations avancées.'
-          : 'See premium match examples below. Enable the service to unlock your personalized results, alerts, and advanced recommendations.',
-      activateCta: language === 'fr' ? 'Activer Smart Matching maintenant' : 'Enable Smart Matching now',
+          ? 'Découvrez ci-dessous des exemples de matchs premium. Activez le service pour débloquer vos résultats personnalisés.'
+          : 'See premium match examples below. Enable the service to unlock your personalized results.',
+      activateCta: language === 'fr' ? 'Activer Smart Matching' : 'Enable Smart Matching',
       previewResultsTitle: language === 'fr' ? 'Exemples de résultats premium' : 'Premium result examples',
       previewResultsDescription:
         language === 'fr'
-          ? 'Aperçu non contractuel pour illustrer la qualité des matchs Smart Matching.'
-          : 'Non-contractual preview to showcase Smart Matching result quality.',
+          ? 'Aperçu non contractuel pour illustrer la qualité des matchs.'
+          : 'Non-contractual preview to showcase match quality.',
       previewCardBadge: language === 'fr' ? 'Aperçu' : 'Preview',
     }),
     [language, smartMatchingMode]
   );
 
   const isDiscoveryAccess = accessStatus === 'inactive' || accessStatus === 'unknown';
+
+  /* ── Computed ── */
+  const activeCriteriaCount = useMemo(() => {
+    let count = 0;
+    if (criteria.sectors.length > 0) count += 1;
+    if (criteria.locations.length > 0) count += 1;
+    if (criteria.buyerSectorsInterested?.length > 0) count += 1;
+    if (criteria.buyerLocations?.length > 0) count += 1;
+    if (criteria.buyerProfileType) count += 1;
+    if (criteria.businessTypeSought) count += 1;
+    if (criteria.sellerBusinessType) count += 1;
+    if (isRangeActive(criteria.minPrice, criteria.maxPrice)) count += 1;
+    if (isRangeActive(criteria.minEmployees, criteria.maxEmployees)) count += 1;
+    if (isRangeActive(criteria.minYear, criteria.maxYear)) count += 1;
+    if (isRangeActive(criteria.minCA, criteria.maxCA)) count += 1;
+    if (isRangeActive(criteria.minEBITDA, criteria.maxEBITDA)) count += 1;
+    return count;
+  }, [criteria]);
+
+  const advancedCriteriaCount = useMemo(() => {
+    let count = 0;
+    if (isRangeActive(criteria.minEmployees, criteria.maxEmployees)) count += 1;
+    if (isRangeActive(criteria.minYear, criteria.maxYear)) count += 1;
+    if (isRangeActive(criteria.minCA, criteria.maxCA)) count += 1;
+    if (isRangeActive(criteria.minEBITDA, criteria.maxEBITDA)) count += 1;
+    return count;
+  }, [criteria]);
 
   const previewMockListings = useMemo(
     () =>
@@ -423,44 +357,33 @@ export default function SmartMatching() {
 
   const displayedListings = isDiscoveryAccess ? previewMockListings : matchedListings;
 
+  const sortedListings = useMemo(() => {
+    const list = [...displayedListings];
+    if (sortBy === 'score') list.sort((a, b) => (b.smartMatchScore || 0) - (a.smartMatchScore || 0));
+    else if (sortBy === 'budget') list.sort((a, b) => (b.matchBudget || 0) - (a.matchBudget || 0));
+    else if (sortBy === 'date') list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    return list;
+  }, [displayedListings, sortBy]);
+
+  const averageScore = useMemo(() => {
+    if (displayedListings.length === 0) return 0;
+    return Math.round(
+      displayedListings.reduce((sum, item) => sum + (item.smartMatchScore || 0), 0) / displayedListings.length
+    );
+  }, [displayedListings]);
+
+  const highestScore = useMemo(
+    () => (displayedListings.length ? Math.max(...displayedListings.map((x) => x.smartMatchScore || 0)) : 0),
+    [displayedListings]
+  );
+
+  /* ── Storage key ── */
   const getStorageKey = useCallback(
     (mode) => `smartMatchingCriteria:${user?.id || 'guest'}:${mode}`,
     [user?.id]
   );
 
-  const activeCriteriaCount = useMemo(() => {
-    let count = 0;
-    if (criteria.sectors.length > 0) count += 1;
-    if (criteria.locations.length > 0) count += 1;
-    if (criteria.buyerSectorsInterested?.length > 0) count += 1;
-    if (criteria.buyerLocations?.length > 0) count += 1;
-    if (criteria.buyerProfileType) count += 1;
-    if (criteria.businessTypeSought) count += 1;
-    if (criteria.sellerBusinessType) count += 1;
-    if (isRangeActive(criteria.minPrice, criteria.maxPrice)) count += 1;
-    if (isRangeActive(criteria.minEmployees, criteria.maxEmployees)) count += 1;
-    if (isRangeActive(criteria.minYear, criteria.maxYear)) count += 1;
-    if (isRangeActive(criteria.minCA, criteria.maxCA)) count += 1;
-    if (isRangeActive(criteria.minEBITDA, criteria.maxEBITDA)) count += 1;
-    return count;
-  }, [criteria]);
-
-  const filteredSectors = useMemo(
-    () =>
-      SECTORS.filter((sector) =>
-        normalize(sector.label).includes(normalize(sectorSearch))
-      ),
-    [sectorSearch]
-  );
-
-  const filteredLocations = useMemo(
-    () =>
-      LOCATIONS.filter((location) =>
-        normalize(location.label).includes(normalize(locationSearch))
-      ),
-    [locationSearch]
-  );
-
+  /* ── Effects ── */
   useEffect(() => {
     if (canSwitchMode) return;
     setSmartMatchingMode(userRole === 'seller' ? 'seller' : 'buyer');
@@ -478,7 +401,7 @@ export default function SmartMatching() {
         ] = await Promise.all([
           supabase
             .from('businesses')
-            .select('*')
+            .select('id, type, title, sector, location, region, country, asking_price, annual_revenue, ebitda, employees, year_founded, buyer_budget_min, buyer_budget_max, buyer_investment_available, buyer_sectors_interested, buyer_locations, buyer_profile_type, business_type_sought, seller_business_type, business_type, seller_id, created_at, reference_number, views_count, hide_location, images')
             .eq('status', 'active'),
           billingService
             .getMyActiveServices(10)
@@ -531,280 +454,40 @@ export default function SmartMatching() {
       }
     };
 
-    if (user) {
-      loadListings();
-    }
+    if (user) loadListings();
   }, [user]);
 
   useEffect(() => {
     const loadFavorites = async () => {
-      if (!user?.id) {
-        setFavoriteIds([]);
-        return;
-      }
-
+      if (!user?.id) { setFavoriteIds([]); return; }
       try {
         const favorites = await favoriteService.listFavorites();
         setFavoriteIds((favorites || []).map((fav) => fav.business_id).filter(Boolean));
-      } catch {
-        setFavoriteIds([]);
-      }
+      } catch { setFavoriteIds([]); }
     };
-
     loadFavorites();
   }, [user?.id]);
 
   useEffect(() => {
     const saved = localStorage.getItem(getStorageKey(smartMatchingMode));
     if (!saved) return;
-
     try {
       const parsed = JSON.parse(saved);
       setCriteria({ ...DEFAULT_CRITERIA, ...parsed });
-    } catch {
-      setCriteria(DEFAULT_CRITERIA);
-    }
+    } catch { setCriteria(DEFAULT_CRITERIA); }
     setMatchedListings([]);
     setHasSearched(false);
-    setSectorSearch('');
-    setLocationSearch('');
   }, [smartMatchingMode, getStorageKey]);
 
+  /* ── Actions ── */
   const getMatchAnalysis = useCallback(
-    (listing) => {
-      let points = 0;
-      let totalWeight = 0;
-      let matchedCriteria = 0;
-      const highlights = [];
-      const missingFields = [];
-
-      const sectorCriteria = smartMatchingMode === 'seller'
-        ? (criteria.buyerSectorsInterested?.length ? criteria.buyerSectorsInterested : criteria.sectors)
-        : criteria.sectors;
-
-      if (sectorCriteria.length > 0) {
-        const weight = 24;
-        totalWeight += weight;
-
-        const listingSectorBlob = smartMatchingMode === 'seller'
-          ? normalize((Array.isArray(listing.buyer_sectors_interested) ? listing.buyer_sectors_interested : []).join(' '))
-          : normalize(listing.sector);
-
-        if (!listingSectorBlob) {
-          missingFields.push(language === 'fr' ? 'secteur' : 'sector');
-        } else {
-          const matched = sectorCriteria.some((sector) => listingSectorBlob.includes(normalize(sector)));
-          if (matched) {
-            points += weight;
-            matchedCriteria += 1;
-            highlights.push(language === 'fr' ? 'Secteur compatible' : 'Sector fit');
-          }
-        }
-      }
-
-      const locationCriteria = smartMatchingMode === 'seller'
-        ? (criteria.buyerLocations?.length ? criteria.buyerLocations : criteria.locations)
-        : criteria.locations;
-
-      if (locationCriteria.length > 0) {
-        const weight = 16;
-        totalWeight += weight;
-
-        const listingLocationBlob = smartMatchingMode === 'seller'
-          ? normalize((Array.isArray(listing.buyer_locations) ? listing.buyer_locations : []).join(' '))
-          : normalize([listing.location, listing.region, listing.country].filter(Boolean).join(' '));
-
-        if (!listingLocationBlob) {
-          missingFields.push(language === 'fr' ? 'localisation' : 'location');
-        } else {
-          const matched = locationCriteria.some((locValue) => {
-            const option = LOCATIONS.find((loc) => normalize(loc.value) === normalize(locValue));
-            const probes = [locValue, option?.label].filter(Boolean).map(normalize);
-            return probes.some((probe) => listingLocationBlob.includes(probe));
-          });
-
-          if (matched) {
-            points += weight;
-            matchedCriteria += 1;
-            highlights.push(language === 'fr' ? 'Zone géographique cohérente' : 'Geographic fit');
-          }
-        }
-      }
-
-      if (smartMatchingMode === 'seller' && criteria.buyerProfileType) {
-        const weight = 8;
-        totalWeight += weight;
-
-        const listingBuyerProfileType = normalize(listing.buyer_profile_type);
-        if (!listingBuyerProfileType) {
-          missingFields.push(language === 'fr' ? 'profil acquéreur' : 'buyer profile');
-        } else if (listingBuyerProfileType === normalize(criteria.buyerProfileType)) {
-          points += weight;
-          matchedCriteria += 1;
-          highlights.push(language === 'fr' ? 'Profil acquéreur aligné' : 'Buyer profile aligned');
-        }
-      }
-
-      if (smartMatchingMode === 'seller' && criteria.businessTypeSought) {
-        const weight = 8;
-        totalWeight += weight;
-
-        const listingBusinessTypeSought = normalize(listing.business_type_sought);
-        if (!listingBusinessTypeSought) {
-          missingFields.push(language === 'fr' ? 'type recherché' : 'sought type');
-        } else if (listingBusinessTypeSought === normalize(criteria.businessTypeSought)) {
-          points += weight;
-          matchedCriteria += 1;
-          highlights.push(language === 'fr' ? 'Type de cession recherché aligné' : 'Sought business type aligned');
-        }
-      }
-
-      if (smartMatchingMode === 'buyer' && criteria.sellerBusinessType) {
-        const weight = 8;
-        totalWeight += weight;
-
-        const listingSellerBusinessType = normalize(listing.seller_business_type || listing.business_type);
-        if (!listingSellerBusinessType) {
-          missingFields.push(language === 'fr' ? 'type de cession' : 'sell-side type');
-        } else if (listingSellerBusinessType === normalize(criteria.sellerBusinessType)) {
-          points += weight;
-          matchedCriteria += 1;
-          highlights.push(language === 'fr' ? 'Type de cession compatible' : 'Sell-side business type aligned');
-        }
-      }
-
-      if (isRangeActive(criteria.minPrice, criteria.maxPrice)) {
-        const weight = 24;
-        totalWeight += weight;
-
-        const budgetScore = evaluateRangeScore({
-          value: getListingBudget(listing, smartMatchingMode),
-          min: toNumber(criteria.minPrice),
-          max: toNumber(criteria.maxPrice),
-          weight,
-          tolerance: 0.2,
-        });
-
-        points += budgetScore.points;
-        if (budgetScore.matched) {
-          matchedCriteria += 1;
-          highlights.push(
-            budgetScore.partial
-              ? language === 'fr'
-                ? 'Budget proche de votre cible'
-                : 'Budget close to your target'
-              : language === 'fr'
-                ? 'Budget dans votre fourchette'
-                : 'Budget inside your range'
-          );
-        }
-        if (budgetScore.missing) {
-          missingFields.push(language === 'fr' ? 'budget' : 'budget');
-        }
-      }
-
-      if (isRangeActive(criteria.minEmployees, criteria.maxEmployees)) {
-        const weight = 10;
-        totalWeight += weight;
-        const employeesScore = evaluateRangeScore({
-          value: toNumber(listing.employees),
-          min: toNumber(criteria.minEmployees),
-          max: toNumber(criteria.maxEmployees),
-          weight,
-        });
-
-        points += employeesScore.points;
-        if (employeesScore.matched) {
-          matchedCriteria += 1;
-          highlights.push(language === 'fr' ? 'Effectifs alignés' : 'Team size aligned');
-        }
-        if (employeesScore.missing) {
-          missingFields.push(language === 'fr' ? 'effectifs' : 'employees');
-        }
-      }
-
-      if (isRangeActive(criteria.minYear, criteria.maxYear)) {
-        const weight = 8;
-        totalWeight += weight;
-        const yearScore = evaluateRangeScore({
-          value: toNumber(listing.year_founded),
-          min: toNumber(criteria.minYear),
-          max: toNumber(criteria.maxYear),
-          weight,
-          tolerance: 0.05,
-        });
-
-        points += yearScore.points;
-        if (yearScore.matched) {
-          matchedCriteria += 1;
-          highlights.push(language === 'fr' ? 'Maturité entreprise cohérente' : 'Business maturity aligned');
-        }
-        if (yearScore.missing) {
-          missingFields.push(language === 'fr' ? 'année' : 'year');
-        }
-      }
-
-      if (isRangeActive(criteria.minCA, criteria.maxCA)) {
-        const weight = 10;
-        totalWeight += weight;
-        const revenueScore = evaluateRangeScore({
-          value: toNumber(listing.annual_revenue),
-          min: toNumber(criteria.minCA),
-          max: toNumber(criteria.maxCA),
-          weight,
-        });
-
-        points += revenueScore.points;
-        if (revenueScore.matched) {
-          matchedCriteria += 1;
-          highlights.push(language === 'fr' ? 'Chiffre d\'affaires compatible' : 'Revenue compatible');
-        }
-        if (revenueScore.missing) {
-          missingFields.push(language === 'fr' ? 'CA' : 'revenue');
-        }
-      }
-
-      if (isRangeActive(criteria.minEBITDA, criteria.maxEBITDA)) {
-        const weight = 8;
-        totalWeight += weight;
-        const ebitdaScore = evaluateRangeScore({
-          value: toNumber(listing.ebitda),
-          min: toNumber(criteria.minEBITDA),
-          max: toNumber(criteria.maxEBITDA),
-          weight,
-        });
-
-        points += ebitdaScore.points;
-        if (ebitdaScore.matched) {
-          matchedCriteria += 1;
-          highlights.push(language === 'fr' ? 'EBITDA aligné' : 'EBITDA aligned');
-        }
-        if (ebitdaScore.missing) {
-          missingFields.push(language === 'fr' ? 'EBITDA' : 'EBITDA');
-        }
-      }
-
-      const score = totalWeight > 0 ? Math.round((points / totalWeight) * 100) : 0;
-      const confidence = totalWeight > 0
-        ? Math.max(20, Math.round(((totalWeight - missingFields.length * 4) / totalWeight) * 100))
-        : 0;
-
-      return {
-        score,
-        confidence,
-        matchedCriteria,
-        totalCriteria: totalWeight > 0 ? activeCriteriaCount : 0,
-        highlights,
-        missingFields,
-      };
-    },
+    (listing) => scoreCriteriaVsListing({ criteria, listing, mode: smartMatchingMode, language, activeCriteriaCount }),
     [activeCriteriaCount, criteria, language, smartMatchingMode]
   );
 
   const searchMatches = useCallback(
     ({ notifyIfLimited = false } = {}) => {
       setSearching(true);
-
       const targetType = smartMatchingMode === 'buyer' ? 'cession' : 'acquisition';
 
       let results = (allListings || [])
@@ -824,10 +507,8 @@ export default function SmartMatching() {
       results.sort((a, b) => {
         const byScore = (b.smartMatchScore || 0) - (a.smartMatchScore || 0);
         if (byScore !== 0) return byScore;
-
         const byBudget = (b.matchBudget || 0) - (a.matchBudget || 0);
         if (byBudget !== 0) return byBudget;
-
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
 
@@ -836,10 +517,9 @@ export default function SmartMatching() {
         if (notifyIfLimited) {
           toast({
             title: language === 'fr' ? 'Mode découverte actif' : 'Preview mode enabled',
-            description:
-              language === 'fr'
-                ? 'Seuls les 5 meilleurs résultats sont visibles. Activez Smart Matching pour tout débloquer.'
-                : 'Only top 5 results are visible. Enable Smart Matching to unlock all matches.',
+            description: language === 'fr'
+              ? 'Seuls les 5 meilleurs résultats sont visibles. Activez Smart Matching pour tout débloquer.'
+              : 'Only top 5 results are visible. Enable Smart Matching to unlock all matches.',
           });
         }
       }
@@ -851,134 +531,42 @@ export default function SmartMatching() {
     [accessStatus, allListings, getMatchAnalysis, language, smartMatchingMode, user?.id]
   );
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (sectorDropdownRef.current && !sectorDropdownRef.current.contains(event.target)) {
-        setShowSectorDropdown(false);
-      }
-
-      if (locationDropdownRef.current && !locationDropdownRef.current.contains(event.target)) {
-        setShowLocationDropdown(false);
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setShowSectorDropdown(false);
-        setShowLocationDropdown(false);
-      }
-    };
-
-    if (showSectorDropdown || showLocationDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [showSectorDropdown, showLocationDropdown]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const runLayoutDiagnostics = () => {
-      const viewportWidth = window.innerWidth;
-      const containerWidth = layoutGridRef.current?.clientWidth || null;
-
-      console.debug('[SmartMatching][UX_DIAG_LAYOUT]', {
-        viewportWidth,
-        containerWidth,
-        layoutMode: 'single_column',
-        filterPanelOpen: showFiltersPanel,
-        hasSearched,
-        resultCount: matchedListings.length,
-        showAdvanced,
-      });
-    };
-
-    runLayoutDiagnostics();
-    window.addEventListener('resize', runLayoutDiagnostics);
-    return () => window.removeEventListener('resize', runLayoutDiagnostics);
-  }, [hasSearched, matchedListings.length, showAdvanced, showFiltersPanel]);
-
   const saveCriteria = () => {
     localStorage.setItem(getStorageKey(smartMatchingMode), JSON.stringify(criteria));
     toast({
       title: language === 'fr' ? 'Critères sauvegardés' : 'Criteria saved',
-      description:
-        language === 'fr'
-          ? 'Vos préférences Smart Matching ont été enregistrées.'
-          : 'Your Smart Matching preferences have been saved.',
+      description: language === 'fr'
+        ? 'Vos préférences Smart Matching ont été enregistrées.'
+        : 'Your Smart Matching preferences have been saved.',
     });
-
     searchMatches({ notifyIfLimited: true });
   };
 
-  const handleChange = (field, value) => {
-    setCriteria((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleChange = (field, value) => setCriteria((prev) => ({ ...prev, [field]: value }));
 
   const resetCriteria = () => {
     setCriteria(DEFAULT_CRITERIA);
     setMatchedListings([]);
-    setSectorSearch('');
-    setLocationSearch('');
     setHasSearched(false);
   };
 
   const toggleSector = (sectorValue) => {
-    setCriteria((prev) => {
-      const newSectors = prev.sectors.includes(sectorValue)
+    setCriteria((prev) => ({
+      ...prev,
+      sectors: prev.sectors.includes(sectorValue)
         ? prev.sectors.filter((s) => s !== sectorValue)
-        : [...prev.sectors, sectorValue];
-      return { ...prev, sectors: newSectors };
-    });
+        : [...prev.sectors, sectorValue],
+    }));
   };
 
   const toggleLocation = (locationValue) => {
-    setCriteria((prev) => {
-      const newLocations = prev.locations.includes(locationValue)
+    setCriteria((prev) => ({
+      ...prev,
+      locations: prev.locations.includes(locationValue)
         ? prev.locations.filter((l) => l !== locationValue)
-        : [...prev.locations, locationValue];
-      return { ...prev, locations: newLocations };
-    });
+        : [...prev.locations, locationValue],
+    }));
   };
-
-  const FormInput = ({ icon: Icon = null, label, type = 'text', value, onChange, placeholder }) => (
-    <div className="relative min-w-0">
-      {Icon && (
-        <div className="absolute left-3 top-2 text-[#FF6B4A]">
-          <Icon className="w-4 h-4" />
-        </div>
-      )}
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] transition-all text-sm ${Icon ? 'pl-9' : ''}`}
-      />
-      {label && (
-        <label className="absolute -top-2 left-3 text-xs font-semibold text-[#111827] bg-white px-1">
-          {label}
-        </label>
-      )}
-    </div>
-  );
-
-  const averageScore = useMemo(() => {
-    if (displayedListings.length === 0) return 0;
-    return Math.round(
-      displayedListings.reduce((sum, item) => sum + (item.smartMatchScore || 0), 0) / displayedListings.length
-    );
-  }, [displayedListings]);
-
-  const highestScore = useMemo(
-    () => (displayedListings.length ? Math.max(...displayedListings.map((x) => x.smartMatchScore || 0)) : 0),
-    [displayedListings]
-  );
 
   const handleModeSwitch = (mode) => {
     setSmartMatchingMode(mode);
@@ -987,634 +575,426 @@ export default function SmartMatching() {
   };
 
   const handleToggleFavorite = async (listingId) => {
-    if (!user?.id) {
-      window.location.href = '/login';
-      return;
-    }
-
+    if (!user?.id) { window.location.href = '/login'; return; }
     try {
       await favoriteService.toggleFavorite(listingId);
       setFavoriteIds((prev) =>
-        prev.includes(listingId)
-          ? prev.filter((id) => id !== listingId)
-          : [...prev, listingId]
+        prev.includes(listingId) ? prev.filter((id) => id !== listingId) : [...prev, listingId]
       );
       toast({
         title: language === 'fr' ? 'Favoris mis à jour' : 'Favorites updated',
         description: language === 'fr'
-          ? 'Votre sélection Smart Matching a été enregistrée.'
-          : 'Your Smart Matching selection has been saved.',
+          ? 'Votre sélection a été enregistrée.'
+          : 'Your selection has been saved.',
       });
     } catch {
       toast({
         title: language === 'fr' ? 'Action impossible' : 'Action unavailable',
         description: language === 'fr'
-          ? 'Impossible de mettre à jour les favoris pour le moment.'
-          : 'Unable to update favorites right now.',
+          ? 'Impossible de mettre à jour les favoris.'
+          : 'Unable to update favorites.',
       });
     }
   };
 
   const isPreviewMode = isDiscoveryAccess;
 
+  /* ── RENDER ───────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F7F8FA] via-white to-[#F3F5F8]">
-      <div className="bg-white/95 border-b border-gray-200 sticky top-0 z-30 backdrop-blur">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen bg-background">
+      {/* ═══════ HEADER ═══════ */}
+      <div className="bg-white/95 border-b border-border sticky top-0 z-30 backdrop-blur">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-3">
+          <div className="flex items-center justify-between gap-3">
+            {/* Left: logo + title */}
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6D] flex items-center justify-center shadow-md ring-4 ring-[#FF6B4A]/10">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ring-2 ring-primary/10" style={{ background: 'var(--gradient-coral)' }}>
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold text-[#3B4759] truncate">{labels.title}</h1>
-                <p className="text-sm text-[#4B5563] truncate">{labels.subtitle}</p>
+                <h1 className="text-lg md:text-xl font-heading font-bold text-foreground truncate">{labels.title}</h1>
+                <p className="hidden md:block text-xs text-muted-foreground truncate">{labels.subtitle}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="hidden md:flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-[#3B4759]">
-                <ShieldCheck className="w-4 h-4 text-[#FF6B4A]" />
-                {activeCriteriaCount}{' '}
-                {language === 'fr' ? 'critères actifs' : 'active filters'}
+            {/* Center/Right: mode switcher */}
+            {canSwitchMode && (
+              <div className="flex items-center bg-muted rounded-xl border border-border p-1 gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch('buyer')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                    smartMatchingMode === 'buyer'
+                      ? 'bg-white text-primary shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  {language === 'fr' ? 'Acquérir' : 'Acquire'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch('seller')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                    smartMatchingMode === 'seller'
+                      ? 'bg-white text-primary shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Store className="w-4 h-4" />
+                  {language === 'fr' ? 'Céder' : 'Sell'}
+                </button>
               </div>
-
-              {canSwitchMode && (
-                <div className="flex gap-1.5 p-1 bg-gray-100 rounded-xl border border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => handleModeSwitch('buyer')}
-                    className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
-                      smartMatchingMode === 'buyer'
-                        ? 'bg-[#FF6B4A] text-white shadow-sm'
-                        : 'bg-transparent text-[#3B4759] hover:bg-white'
-                    }`}
-                  >
-                    {language === 'fr' ? 'Acquérir' : 'Acquire'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModeSwitch('seller')}
-                    className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
-                      smartMatchingMode === 'seller'
-                        ? 'bg-[#FF6B4A] text-white shadow-sm'
-                        : 'bg-transparent text-[#3B4759] hover:bg-white'
-                    }`}
-                  >
-                    {language === 'fr' ? 'Céder' : 'Sell'}
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
+      {/* ═══════ FILTER BAR (desktop) ═══════ */}
+      <SmartMatchingFilterBar
+        language={language}
+        criteria={criteria}
+        onChangeCriteria={handleChange}
+        onToggleSector={toggleSector}
+        onToggleLocation={toggleLocation}
+        onSave={saveCriteria}
+        onReset={resetCriteria}
+        saving={searching}
+        smartMatchingMode={smartMatchingMode}
+        advancedCount={advancedCriteriaCount}
+      >
+        <AdvancedFilterFields language={language} criteria={criteria} onChangeCriteria={handleChange} />
+      </SmartMatchingFilterBar>
+
+      {/* ═══════ FILTER CHIPS ═══════ */}
+      <SmartMatchingFilterChips
+        language={language}
+        criteria={criteria}
+        onToggleSector={toggleSector}
+        onToggleLocation={toggleLocation}
+        onChangeCriteria={handleChange}
+      />
+
+      {/* ═══════ MAIN CONTENT ═══════ */}
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-4 space-y-4">
+        {/* Access banner */}
         {(accessStatus === 'inactive' || accessStatus === 'unknown') && (
-          <div className="rounded-2xl border border-[#FF6B4A]/30 bg-gradient-to-r from-[#FFF4F1] to-[#FFF8F6] p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="rounded-xl border border-primary/30 bg-primary-light p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[#FF6B4A] inline-flex items-center gap-2">
+              <p className="text-sm font-semibold text-primary inline-flex items-center gap-2">
                 <Lock className="w-4 h-4" />
                 {accessStatus === 'inactive'
                   ? labels.inactiveAccessTitle
-                  : language === 'fr'
-                    ? 'Accès Smart Matching non vérifié'
-                    : 'Smart Matching access not verified'}
+                  : language === 'fr' ? 'Accès Smart Matching non vérifié' : 'Smart Matching access not verified'}
               </p>
-                <p className="text-sm text-[#3B4759] mt-1">
-                  {accessStatus === 'inactive'
-                    ? labels.inactiveAccessDescription
-                    : language === 'fr'
+              <p className="text-sm text-foreground mt-0.5">
+                {accessStatus === 'inactive'
+                  ? labels.inactiveAccessDescription
+                  : language === 'fr'
                     ? 'Vous pouvez continuer à utiliser la recherche, mais l\'activation vous garantit toutes les fonctionnalités premium.'
                     : 'You can keep using search, but activation guarantees full premium features.'}
-                </p>
-              </div>
-              <Link
-                to={createPageUrl('Abonnement')}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B4A] hover:bg-[#FF5A3A] text-white px-4 py-2.5 font-semibold text-sm whitespace-nowrap"
-              >
-                {labels.activateCta}
-              </Link>
+              </p>
             </div>
+            <Link
+              to={createPageUrl('Abonnement')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary hover:bg-primary-hover text-white px-4 py-2 font-semibold text-sm whitespace-nowrap"
+            >
+              {labels.activateCta}
+            </Link>
+          </div>
         )}
 
-        <div ref={layoutGridRef} className="space-y-4">
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-bold text-[#3B4759]">{labels.criteriaPanel}</h2>
-                <p className="text-xs text-[#6B7280] mt-1">
-                  {language === 'fr'
-                    ? 'Vue mono-colonne ergonomique avec filtres repliables et résultats pleine largeur.'
-                    : 'Ergonomic single-column view with collapsible filters and full-width results.'}
-                </p>
-              </div>
+        {/* ═══════ INLINE STATS + SORT ═══════ */}
+        {displayedListings.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <span>
+                <span className="font-mono font-bold text-foreground">{displayedListings.length}</span>
+                {' '}{language === 'fr' ? 'résultat(s)' : 'result(s)'}
+              </span>
+              <span className="hidden sm:inline text-border">|</span>
+              <span className="hidden sm:inline">
+                {language === 'fr' ? 'Score moyen' : 'Avg score'}{' '}
+                <span className="font-mono font-bold text-foreground">{averageScore}%</span>
+              </span>
+              <span className="hidden sm:inline text-border">|</span>
+              <span className="hidden sm:inline">
+                {language === 'fr' ? 'Meilleur' : 'Top'}{' '}
+                <span className="font-mono font-bold text-foreground">{highestScore}%</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="text-sm bg-transparent border-none text-foreground font-medium cursor-pointer focus:outline-none"
+              >
+                <option value="score">{language === 'fr' ? 'Score' : 'Score'}</option>
+                <option value="budget">{language === 'fr' ? 'Budget' : 'Budget'}</option>
+                <option value="date">{language === 'fr' ? 'Date' : 'Date'}</option>
+              </select>
+            </div>
+          </div>
+        )}
 
+        {/* Preview banner */}
+        {isPreviewMode && displayedListings.length > 0 && (
+          <div className="rounded-xl border border-primary/30 bg-primary-light px-3 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold text-primary">{labels.previewResultsTitle}</p>
+              <p className="text-xs text-primary-hover">{labels.previewResultsDescription}</p>
+            </div>
+            <Link
+              to={createPageUrl('Abonnement')}
+              className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary-hover"
+            >
+              {labels.activateCta}
+            </Link>
+          </div>
+        )}
+
+        {/* ═══════ LOADING ═══════ */}
+        {(loading || searching) && (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item} className="h-48 rounded-xl border border-border bg-white animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {/* ═══════ ERROR ═══════ */}
+        {error && !loading && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">{error}</div>
+        )}
+
+        {/* ═══════ EMPTY: no results after search ═══════ */}
+        {!loading && !searching && !error && hasSearched && matchedListings.length === 0 && !isDiscoveryAccess && (
+          <div className="text-center py-16 bg-white border border-border rounded-xl">
+            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <Search className="w-7 h-7 text-muted-foreground" />
+            </div>
+            <p className="text-foreground font-semibold">{labels.noResults}</p>
+            <p className="text-muted-foreground text-sm mt-1.5 max-w-md mx-auto">
+              {language === 'fr'
+                ? 'Essayez d\'élargir votre budget, vos zones géographiques ou vos secteurs d\'activité.'
+                : 'Try widening your budget, locations, or sectors.'}
+            </p>
+            <button
+              type="button"
+              onClick={resetCriteria}
+              className="mt-4 px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              {labels.resetButton}
+            </button>
+          </div>
+        )}
+
+        {/* ═══════ EMPTY: before first search ═══════ */}
+        {!loading && !searching && !error && !hasSearched && !isDiscoveryAccess && (
+          <div className="text-center py-16 bg-white border border-border rounded-xl">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Zap className="w-7 h-7 text-primary" />
+            </div>
+            <p className="text-foreground font-semibold text-lg">
+              {language === 'fr' ? 'Trouvez votre match idéal' : 'Find your ideal match'}
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-[#FF6B4A]/10 text-[#FF6B4A] font-semibold">
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  {activeCriteriaCount}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowFiltersPanel((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-[#3B4759] hover:bg-gray-50"
-                >
-                  {showFiltersPanel
-                    ? language === 'fr'
-                      ? 'Masquer filtres'
-                      : 'Hide filters'
-                    : language === 'fr'
-                      ? 'Afficher filtres'
-                      : 'Show filters'}
-                </button>
+                <span className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">1</span>
+                {language === 'fr' ? 'Sélectionnez vos critères' : 'Select your criteria'}
+              </div>
+              <div className="hidden sm:block w-8 h-px bg-border" />
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">2</span>
+                {language === 'fr' ? 'Lancez la recherche' : 'Start the search'}
+              </div>
+              <div className="hidden sm:block w-8 h-px bg-border" />
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">3</span>
+                {language === 'fr' ? 'Découvrez vos matchs' : 'Discover your matches'}
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen(true)}
+              className="mt-6 md:hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm"
+              style={{ background: 'var(--gradient-coral)' }}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {language === 'fr' ? 'Configurer les filtres' : 'Set up filters'}
+            </button>
+          </div>
+        )}
 
-            {showFiltersPanel && (
-              <div className="space-y-4 mt-4 pt-4 border-t border-gray-200">
-                <div>
-                  <p className="text-xs font-bold text-[#3B4759] uppercase tracking-wide mb-2">{labels.essentialFilters}</p>
+        {/* ═══════ RESULTS: preview mode ═══════ */}
+        {!loading && !searching && isPreviewMode && displayedListings.length > 0 && (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {displayedListings.map((listing) => (
+              <BusinessCard
+                key={listing.id}
+                business={listing}
+                isFavorite={false}
+                onToggleFavorite={() => {}}
+                fetchSellerLogo={false}
+                detailsUrl={createPageUrl('Abonnement')}
+                hideMessageButton
+                hideFavoriteButton
+              />
+            ))}
+          </div>
+        )}
 
-                  <div className="mb-3 relative" ref={sectorDropdownRef}>
-                    <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Secteurs' : 'Sectors'}</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={sectorSearch}
-                        onChange={(e) => setSectorSearch(e.target.value)}
-                        onFocus={() => setShowSectorDropdown(true)}
-                        placeholder={language === 'fr' ? 'Chercher un secteur...' : 'Search a sector...'}
-                        className="w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] text-sm"
-                        aria-expanded={showSectorDropdown}
-                        aria-controls="sector-dropdown"
-                      />
-                      <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+        {/* ═══════ RESULTS: real matches ═══════ */}
+        {!loading && !searching && !isPreviewMode && sortedListings.length > 0 && (
+          <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AnimatePresence mode="popLayout">
+              {sortedListings.map((listing, index) => {
+                const tone = getScoreTone(listing.smartMatchScore || 0);
+                const detailsUrl = listing.isMock
+                  ? createPageUrl('Abonnement')
+                  : createBusinessDetailsUrl(listing);
+                const highlights = listing.smartMatchMeta?.highlights?.slice(0, 3) || [];
+                const isFavorite = favoriteIds.includes(listing.id);
+                const confidence = listing.smartMatchMeta?.confidence || 0;
 
-                      {showSectorDropdown && (
-                        <div
-                          id="sector-dropdown"
-                          role="listbox"
-                          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-40 max-h-52 overflow-y-auto"
-                        >
-                          {filteredSectors.length > 0 ? (
-                            filteredSectors.map((sector) => (
-                              <button
-                                key={sector.value}
-                                type="button"
-                                aria-pressed={criteria.sectors.includes(sector.value)}
-                                onClick={() => toggleSector(sector.value)}
-                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 transition-all ${
-                                  criteria.sectors.includes(sector.value)
-                                    ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-semibold'
-                                    : 'text-[#3B4759]'
-                                }`}
-                              >
-                                <div
-                                  className={`w-4 h-4 border-2 rounded ${
-                                    criteria.sectors.includes(sector.value)
-                                      ? 'bg-[#FF6B4A] border-[#FF6B4A]'
-                                      : 'border-gray-300'
-                                  }`}
-                                />
-                                {sector.label}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">
-                              {language === 'fr' ? 'Aucun secteur trouvé' : 'No sector found'}
-                            </div>
-                          )}
-                        </div>
+                return (
+                  <motion.article
+                    key={listing.id}
+                    layout
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.25, delay: index * 0.04 }}
+                    whileHover={{ y: -3 }}
+                    className={`rounded-xl border p-4 shadow-sm transition-shadow hover:shadow-hover ${tone.card}`}
+                  >
+                    {/* Header: title + score ring */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        {listing.isMock && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-[10px] font-bold uppercase tracking-wide text-primary mb-1">
+                            {labels.previewCardBadge}
+                          </span>
+                        )}
+                        <h3 className="text-sm md:text-base font-heading font-bold text-foreground line-clamp-2">
+                          {listing.title || listing.company || (language === 'fr' ? 'Annonce sans titre' : 'Untitled listing')}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {listing.location || listing.region || listing.country || (language === 'fr' ? 'Non précisé' : 'N/A')}
+                        </p>
+                      </div>
+                      <ScoreRing score={listing.smartMatchScore || 0} size={48} />
+                    </div>
+
+                    {/* Tags */}
+                    <div className="mt-2.5 flex flex-wrap gap-1">
+                      {listing.sector && (
+                        <span className="px-2 py-0.5 rounded-full bg-muted border border-border text-xs text-foreground">
+                          {listing.sector}
+                        </span>
                       )}
-                    </div>
-
-                    {criteria.sectors.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {criteria.sectors.map((sectorValue) => {
-                          const sectorLabel = SECTORS.find((s) => s.value === sectorValue)?.label;
-                          return (
-                            <div
-                              key={sectorValue}
-                              className="flex items-center gap-1 px-2 py-1 bg-[#FF6B4A]/10 border border-[#FF6B4A] rounded-full text-xs font-semibold text-[#FF6B4A]"
-                            >
-                              {sectorLabel || sectorValue}
-                              <button
-                                type="button"
-                                onClick={() => toggleSector(sectorValue)}
-                                className="ml-1 hover:text-red-600 transition-colors"
-                                aria-label={language === 'fr' ? 'Retirer le secteur' : 'Remove sector'}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mb-3 relative" ref={locationDropdownRef}>
-                    <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Localisations' : 'Locations'}</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={locationSearch}
-                        onChange={(e) => setLocationSearch(e.target.value)}
-                        onFocus={() => setShowLocationDropdown(true)}
-                        placeholder={language === 'fr' ? 'Chercher une zone...' : 'Search a location...'}
-                        className="w-full py-2 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF6B4A] focus:ring-1 focus:ring-[#FF6B4A] text-sm"
-                        aria-expanded={showLocationDropdown}
-                        aria-controls="location-dropdown"
-                      />
-                      <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
-
-                      {showLocationDropdown && (
-                        <div
-                          id="location-dropdown"
-                          role="listbox"
-                          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-40 max-h-52 overflow-y-auto"
-                        >
-                          {filteredLocations.length > 0 ? (
-                            filteredLocations.map((location) => (
-                              <button
-                                key={location.value}
-                                type="button"
-                                aria-pressed={criteria.locations.includes(location.value)}
-                                onClick={() => toggleLocation(location.value)}
-                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 transition-all ${
-                                  criteria.locations.includes(location.value)
-                                    ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] font-semibold'
-                                    : 'text-[#3B4759]'
-                                }`}
-                              >
-                                <div
-                                  className={`w-4 h-4 border-2 rounded ${
-                                    criteria.locations.includes(location.value)
-                                      ? 'bg-[#FF6B4A] border-[#FF6B4A]'
-                                      : 'border-gray-300'
-                                  }`}
-                                />
-                                {location.label}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">
-                              {language === 'fr' ? 'Aucune localisation trouvée' : 'No location found'}
-                            </div>
-                          )}
-                        </div>
+                      {listing.matchBudget && (
+                        <span className="px-2 py-0.5 rounded-full bg-muted border border-border text-xs font-numbers font-semibold text-primary">
+                          {formatMoneyCompact(listing.matchBudget, language)}
+                        </span>
                       )}
+                      {listing.employees ? (
+                        <span className="px-2 py-0.5 rounded-full bg-muted border border-border text-xs text-foreground inline-flex items-center gap-0.5">
+                          <Users className="w-3 h-3" /> {listing.employees}
+                        </span>
+                      ) : null}
                     </div>
 
-                    {criteria.locations.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {criteria.locations.map((locationValue) => {
-                          const locationLabel = LOCATIONS.find((l) => l.value === locationValue)?.label;
-                          return (
-                            <div
-                              key={locationValue}
-                              className="flex items-center gap-1 px-2 py-1 bg-[#FF6B4A]/10 border border-[#FF6B4A] rounded-full text-xs font-semibold text-[#FF6B4A]"
-                            >
-                              {locationLabel || locationValue}
-                              <button
-                                type="button"
-                                onClick={() => toggleLocation(locationValue)}
-                                className="ml-1 hover:text-red-600 transition-colors"
-                                aria-label={language === 'fr' ? 'Retirer la localisation' : 'Remove location'}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#3B4759] mb-1">
-                      {smartMatchingMode === 'buyer'
-                        ? language === 'fr'
-                          ? 'Budget cible (€)'
-                          : 'Target budget (€)'
-                        : language === 'fr'
-                          ? 'Budget acheteur attendu (€)'
-                          : 'Expected buyer budget (€)'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <FormInput
-                        label="Min"
-                        type="number"
-                        value={criteria.minPrice}
-                        onChange={(v) => handleChange('minPrice', v)}
-                        placeholder="100000"
-                      />
-                      <FormInput
-                        label="Max"
-                        type="number"
-                        value={criteria.maxPrice}
-                        onChange={(v) => handleChange('maxPrice', v)}
-                        placeholder="2000000"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced((prev) => !prev)}
-                    className="text-[#FF6B4A] font-semibold text-xs flex items-center gap-1 hover:gap-2 transition-all"
-                  >
-                    {showAdvanced ? '▼' : '▶'} {labels.advancedFilters}
-                  </button>
-
-                  {showAdvanced && (
-                    <div className="mt-3 border-t border-gray-200 pt-3 space-y-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Effectifs' : 'Employees'}</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <FormInput icon={Users} label="Min" type="number" value={criteria.minEmployees} onChange={(v) => handleChange('minEmployees', v)} placeholder="5" />
-                          <FormInput icon={Users} label="Max" type="number" value={criteria.maxEmployees} onChange={(v) => handleChange('maxEmployees', v)} placeholder="500" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Année de création' : 'Founded year'}</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <FormInput icon={Calendar} label="Min" type="number" value={criteria.minYear} onChange={(v) => handleChange('minYear', v)} placeholder="1990" />
-                          <FormInput icon={Calendar} label="Max" type="number" value={criteria.maxYear} onChange={(v) => handleChange('maxYear', v)} placeholder={new Date().getFullYear().toString()} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-[#3B4759] mb-1">{language === 'fr' ? 'Chiffre d\'affaires (€)' : 'Revenue (€)'}</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <FormInput icon={BarChart3} label="Min" type="number" value={criteria.minCA} onChange={(v) => handleChange('minCA', v)} placeholder="100000" />
-                          <FormInput icon={BarChart3} label="Max" type="number" value={criteria.maxCA} onChange={(v) => handleChange('maxCA', v)} placeholder="5000000" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-[#3B4759] mb-1">EBITDA (€)</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <FormInput icon={TrendingUp} label="Min" type="number" value={criteria.minEBITDA} onChange={(v) => handleChange('minEBITDA', v)} placeholder="0" />
-                          <FormInput icon={TrendingUp} label="Max" type="number" value={criteria.maxEBITDA} onChange={(v) => handleChange('maxEBITDA', v)} placeholder="1000000" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={saveCriteria}
-                    disabled={loading || searching}
-                    className="flex-1 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6D] text-white py-2.5 rounded-lg font-semibold hover:shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60"
-                  >
-                    <Send className="w-4 h-4" />
-                    {labels.searchButton}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resetCriteria}
-                    className="px-3 bg-gray-100 text-[#3B4759] py-2.5 rounded-lg font-semibold hover:bg-gray-200 transition-all inline-flex items-center justify-center"
-                    aria-label={labels.resetButton}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section className="space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-5">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm min-w-0">
-                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
-                    <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Résultats' : 'Results'}</p>
-                    <p className="text-lg font-bold text-[#3B4759]">{displayedListings.length}</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
-                    <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Score moyen' : 'Average score'}</p>
-                    <p className="text-lg font-bold text-[#3B4759]">{averageScore}%</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
-                    <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Meilleur score' : 'Top score'}</p>
-                    <p className="text-lg font-bold text-[#3B4759]">{highestScore}%</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-3">
-                    <p className="text-xs text-[#6B7280]">{language === 'fr' ? 'Type ciblé' : 'Target type'}</p>
-                    <p className="text-sm font-semibold text-[#3B4759]">
-                      {smartMatchingMode === 'buyer'
-                        ? language === 'fr'
-                          ? 'Annonces de cession'
-                          : 'Sell-side listings'
-                        : language === 'fr'
-                          ? 'Profils acquéreurs'
-                          : 'Buyer profiles'}
-                    </p>
-                  </div>
-              </div>
-
-              {isPreviewMode && (
-                <div className="mt-3 rounded-xl border border-[#FF6B4A]/30 bg-[#FFF6F3] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-semibold text-[#FF6B4A]">{labels.previewResultsTitle}</p>
-                    <p className="text-xs text-[#7C2D12]">{labels.previewResultsDescription}</p>
-                  </div>
-                  <Link
-                    to={createPageUrl('Abonnement')}
-                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-[#FF6B4A] text-white text-xs font-semibold hover:bg-[#FF5A3A]"
-                  >
-                    {labels.activateCta}
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {(loading || searching) && (
-              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {[1, 2, 3, 4, 5, 6].map((item) => (
-                  <div key={item} className="h-48 rounded-2xl border border-gray-200 bg-white animate-pulse" />
-                ))}
-              </div>
-            )}
-
-            {error && !loading && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-
-            {!loading && !searching && !error && hasSearched && matchedListings.length === 0 && !isDiscoveryAccess && (
-              <div className="text-center py-16 bg-white border border-gray-200 rounded-2xl">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8 text-gray-400" />
-                </div>
-                <p className="text-[#111827] font-medium">{labels.noResults}</p>
-                <p className="text-[#6B7280] text-sm mt-1">
-                  {language === 'fr'
-                    ? 'Élargissez votre budget, vos zones ou vos secteurs.'
-                    : 'Widen your budget, locations, or sectors.'}
-                </p>
-              </div>
-            )}
-
-            {!loading && !searching && !error && !hasSearched && !isDiscoveryAccess && (
-              <div className="text-center py-16 bg-white border border-gray-200 rounded-2xl">
-                <div className="w-16 h-16 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-8 h-8 text-[#FF6B4A]" />
-                </div>
-                <p className="text-[#111827] font-medium">
-                  {language === 'fr'
-                    ? 'Configurez vos critères puis lancez le matching'
-                    : 'Set your criteria and start matching'}
-                </p>
-              </div>
-            )}
-
-            {!loading && !searching && displayedListings.length > 0 && (
-              isPreviewMode ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-2">
-                  {displayedListings.map((listing) => (
-                    <BusinessCard
-                      key={listing.id}
-                      business={listing}
-                      isFavorite={false}
-                      onToggleFavorite={() => {}}
-                      fetchSellerLogo={false}
-                      detailsUrl={createPageUrl('Abonnement')}
-                      hideMessageButton
-                      hideFavoriteButton
-                    />
-                  ))}
-                </div>
-              ) : (
-              <div className="grid sm:grid-cols-2 gap-4 xl:gap-5">
-                {displayedListings.map((listing) => {
-                  const tone = getScoreTone(listing.smartMatchScore || 0);
-                  const detailsUrl = listing.isMock
-                    ? createPageUrl('Abonnement')
-                    : createBusinessDetailsUrl(listing);
-                  const highlights = listing.smartMatchMeta?.highlights?.slice(0, 3) || [];
-                  const isFavorite = favoriteIds.includes(listing.id);
-
-                  return (
-                    <article
-                      key={listing.id}
-                      className={`rounded-2xl border p-4 md:p-5 shadow-sm transition-all hover:shadow-md ${tone.card}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          {listing.isMock && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 text-[10px] font-bold uppercase tracking-wide text-[#FF6B4A] mb-1">
-                              {labels.previewCardBadge}
-                            </span>
-                          )}
-                          <h3 className="text-base md:text-lg font-bold text-[#3B4759] line-clamp-2">
-                            {listing.title || listing.company || (language === 'fr' ? 'Annonce sans titre' : 'Untitled listing')}
-                          </h3>
-                          <p className="text-xs text-[#6B7280] mt-1 inline-flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5" />
-                            {listing.location || listing.region || listing.country || (language === 'fr' ? 'Localisation non précisée' : 'Location not provided')}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col items-end gap-2">
-                          {!listing.isMock && (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleFavorite(listing.id)}
-                              className={`inline-flex items-center justify-center w-9 h-9 rounded-full border transition-all ${
-                                isFavorite
-                                  ? 'bg-rose-500 text-white border-rose-500'
-                                  : 'bg-white text-gray-500 border-gray-300 hover:border-rose-400 hover:text-rose-500'
-                              }`}
-                              aria-label={language === 'fr' ? 'Ajouter aux favoris' : 'Add to favorites'}
-                              title={language === 'fr' ? 'Ajouter aux favoris' : 'Add to favorites'}
-                            >
-                              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-                            </button>
-                          )}
-
-                          <div className={`inline-flex items-center justify-center min-w-[64px] h-12 px-2 rounded-xl border text-lg font-bold ${tone.badge} ${tone.ring} ring-2`}>
-                            {listing.smartMatchScore}%
+                    {/* Highlights */}
+                    <div className="mt-2.5 space-y-1">
+                      {highlights.length > 0 ? (
+                        highlights.map((highlight, idx) => (
+                          <div key={`${listing.id}-${idx}`} className="flex items-start gap-1.5">
+                            <CheckCircle2 className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${tone.accent}`} />
+                            <p className={`text-xs font-medium ${tone.accent}`}>{highlight}</p>
                           </div>
-                        </div>
-                      </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {language === 'fr'
+                            ? 'Ajoutez plus de critères pour des explications détaillées.'
+                            : 'Add more criteria for detailed explanations.'}
+                        </p>
+                      )}
+                    </div>
 
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {listing.sector && (
-                          <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs text-[#3B4759]">
-                            {listing.sector}
-                          </span>
-                        )}
-                        {listing.matchBudget && (
-                          <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs font-semibold text-[#FF6B4A]">
-                            {formatMoneyCompact(listing.matchBudget, language)}
-                          </span>
-                        )}
-                        {listing.employees ? (
-                          <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs text-[#3B4759] inline-flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {listing.employees}
-                          </span>
-                        ) : null}
-                        {listing.year_founded ? (
-                          <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs text-[#3B4759] inline-flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {listing.year_founded}
-                          </span>
-                        ) : null}
+                    {/* Confidence bar */}
+                    <div className="mt-2.5 space-y-0.5">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{language === 'fr' ? 'Confiance' : 'Confidence'}</span>
+                        <span className="font-mono">{confidence}%</span>
                       </div>
+                      <Progress value={confidence} className="h-1" />
+                    </div>
 
-                      <div className="mt-3 space-y-1.5">
-                        {highlights.length > 0 ? (
-                          highlights.map((highlight, index) => (
-                            <p key={`${listing.id}-${index}`} className={`text-xs font-medium ${tone.accent}`}>
-                              • {highlight}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-xs text-[#6B7280]">
-                            {language === 'fr'
-                              ? 'Renseignez davantage de critères pour enrichir les explications de matching.'
-                              : 'Add more criteria to get richer matching explanations.'}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="mt-3 text-xs text-[#6B7280]">
-                        {language === 'fr' ? 'Confiance des données' : 'Data confidence'}: {listing.smartMatchMeta?.confidence || 0}%
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <Link
-                          to={detailsUrl}
-                          className="inline-flex items-center justify-center py-2 rounded-lg bg-[#FF6B4A] text-white font-semibold text-sm hover:bg-[#FF5A3A]"
+                    {/* CTA */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <Link
+                        to={detailsUrl}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg text-white font-semibold text-sm hover:shadow-hover transition-all"
+                        style={{ background: 'var(--gradient-coral)' }}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        {language === 'fr' ? 'Voir' : 'View'}
+                      </Link>
+                      {!listing.isMock && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleFavorite(listing.id)}
+                          className={`h-9 w-9 flex items-center justify-center rounded-lg border transition-all ${
+                            isFavorite
+                              ? 'bg-rose-500 text-white border-rose-500'
+                              : 'bg-white text-muted-foreground border-border hover:border-rose-400 hover:text-rose-500'
+                          }`}
+                          aria-label={language === 'fr' ? 'Favoris' : 'Favorite'}
                         >
-                          {language === 'fr' ? 'Voir l\'annonce' : 'View listing'}
-                        </Link>
-                        <Link
-                          to={detailsUrl}
-                          className="inline-flex items-center justify-center py-2 rounded-lg border border-gray-300 text-[#3B4759] font-semibold text-sm hover:bg-gray-50"
-                        >
-                          {language === 'fr' ? 'Détails du match' : 'Match details'}
-                        </Link>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-              )
-            )}
-          </section>
-        </div>
+                          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+                        </button>
+                      )}
+                    </div>
+                  </motion.article>
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
+        )}
       </div>
+
+      {/* ═══════ MOBILE: floating filter button ═══════ */}
+      <button
+        type="button"
+        onClick={() => setMobileFiltersOpen(true)}
+        className="md:hidden fixed bottom-6 left-4 right-4 z-40 h-12 text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm"
+        style={{ background: 'var(--gradient-coral)' }}
+      >
+        <SlidersHorizontal className="w-4 h-4" />
+        {language === 'fr' ? 'Filtres' : 'Filters'}
+        {activeCriteriaCount > 0 && (
+          <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{activeCriteriaCount}</span>
+        )}
+      </button>
+
+      {/* ═══════ MOBILE: filter sheet ═══════ */}
+      <SmartMatchingFiltersMobile
+        open={mobileFiltersOpen}
+        onOpenChange={setMobileFiltersOpen}
+        language={language}
+        criteria={criteria}
+        onChangeCriteria={handleChange}
+        onToggleSector={toggleSector}
+        onToggleLocation={toggleLocation}
+        onSave={saveCriteria}
+        onReset={resetCriteria}
+        saving={searching}
+        smartMatchingMode={smartMatchingMode}
+      />
     </div>
   );
 }

@@ -7,16 +7,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  MessageSquare, 
-  Send, 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  MessageSquare,
+  Send,
   ArrowLeft,
   Search,
   Loader2,
   Check,
   CheckCheck,
   AlertCircle,
-  BellRing
+  BellRing,
+  Trash2,
+  Pin,
+  PinOff,
+  WifiOff,
+  Wifi
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -66,6 +81,8 @@ export default function Messages() {
   const [messageError, setMessageError] = useState('');
   const [sendError, setSendError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -81,6 +98,13 @@ export default function Messages() {
   const [featureAlertLoading, setFeatureAlertLoading] = useState(false);
   const [featureAlertStatus, setFeatureAlertStatus] = useState('idle');
   const [featureAlertMessage, setFeatureAlertMessage] = useState('');
+  const [messageToDelete, setMessageToDelete] = useState(null);
+  const [pinnedConversationIds, setPinnedConversationIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('pinnedConversations') || '[]'); }
+    catch { return []; }
+  });
+  const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [showReconnected, setShowReconnected] = useState(false);
   const [isTabVisible, setIsTabVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
   const [backgroundNotificationCount, setBackgroundNotificationCount] = useState(0);
   const lastDealActionRef = useRef(0);
@@ -137,6 +161,30 @@ export default function Messages() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Online/offline detection and auto-reconnect
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setShowReconnected(true);
+      // Reload data on reconnect
+      loadData();
+      if (selectedConversation?.id) {
+        loadMessages(selectedConversation.id);
+      }
+      setTimeout(() => setShowReconnected(false), 3000);
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setShowReconnected(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [selectedConversation?.id]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -370,6 +418,11 @@ export default function Messages() {
     if (!conv?.id) return;
     setSelectedConversation(conv);
     setShowInbox(false);
+    setMessageSearchQuery('');
+    setShowMessageSearch(false);
+    // Restore draft for this conversation
+    const draft = localStorage.getItem(`draft_${conv.id}`) || '';
+    setNewMessage(draft);
     navigate(createPageUrl(`Messages?conversation=${conv.id}`));
   };
 
@@ -714,6 +767,14 @@ export default function Messages() {
   const handleMessageChange = (e) => {
     const value = e.target.value;
     setNewMessage(value);
+    // Save draft to localStorage
+    if (selectedConversation?.id) {
+      if (value.trim()) {
+        localStorage.setItem(`draft_${selectedConversation.id}`, value);
+      } else {
+        localStorage.removeItem(`draft_${selectedConversation.id}`);
+      }
+    }
     if (value.length > MAX_MESSAGE_LENGTH) {
       setMessageError(
         language === 'fr'
@@ -754,6 +815,26 @@ export default function Messages() {
     }, 3000); // Stop typing after 3 seconds of inactivity
 
     setTypingTimeout(timeout);
+  };
+
+  const togglePinConversation = (convId) => {
+    setPinnedConversationIds((prev) => {
+      const next = prev.includes(convId) ? prev.filter((id) => id !== convId) : [...prev, convId];
+      localStorage.setItem('pinnedConversations', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleDeleteMessage = async () => {
+    if (!messageToDelete) return;
+    try {
+      await messageService.deleteMessage(messageToDelete.id);
+      setMessages((prev) => prev.filter((m) => m.id !== messageToDelete.id));
+    } catch (err) {
+      console.error('Error deleting message:', err);
+    } finally {
+      setMessageToDelete(null);
+    }
   };
 
   const sendMessage = async () => {
@@ -846,6 +927,9 @@ export default function Messages() {
       }
 
       setNewMessage('');
+      if (selectedConversation?.id) {
+        localStorage.removeItem(`draft_${selectedConversation.id}`);
+      }
     } catch (e) {
       console.error(e);
       setSendError(
@@ -1276,7 +1360,7 @@ export default function Messages() {
   };
 
   const filteredConversations = useMemo(() => {
-    return conversations.filter((conv) => {
+    const filtered = conversations.filter((conv) => {
       const otherId = getOtherParticipantId(conv);
       if (otherId === HIDDEN_CONTACT_ID) return false;
       const title = getConversationTitle(conv).toLowerCase();
@@ -1299,7 +1383,21 @@ export default function Messages() {
       }
       return true;
     });
-  }, [conversations, searchQuery, conversationFilter, user?.id, participantProfiles, language]);
+    // Sort pinned conversations to the top
+    return filtered.sort((a, b) => {
+      const aPinned = pinnedConversationIds.includes(a.id);
+      const bPinned = pinnedConversationIds.includes(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+  }, [conversations, searchQuery, conversationFilter, user?.id, participantProfiles, language, pinnedConversationIds]);
+
+  const filteredMessages = useMemo(() => {
+    if (!messageSearchQuery.trim()) return messages;
+    const q = messageSearchQuery.toLowerCase();
+    return messages.filter((msg) => (msg.content || '').toLowerCase().includes(q));
+  }, [messages, messageSearchQuery]);
 
   const inboxStats = useMemo(() => {
     return conversations.reduce(
@@ -1449,10 +1547,38 @@ export default function Messages() {
     );
   }
 
+  const connectionBanner = (!isOnline || showReconnected) ? (
+    <AnimatePresence>
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={{ height: 'auto', opacity: 1 }}
+        exit={{ height: 0, opacity: 0 }}
+        className={`flex items-center justify-center gap-2 py-2 text-xs font-medium ${
+          !isOnline
+            ? 'bg-red-50 text-red-600 border-b border-red-200'
+            : 'bg-green-50 text-green-600 border-b border-green-200'
+        }`}
+      >
+        {!isOnline ? (
+          <>
+            <WifiOff className="w-3.5 h-3.5" />
+            {language === 'fr' ? 'Connexion perdue...' : 'Connection lost...'}
+          </>
+        ) : (
+          <>
+            <Wifi className="w-3.5 h-3.5" />
+            {language === 'fr' ? 'Reconnecté' : 'Reconnected'}
+          </>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  ) : null;
+
   if (isConversationView) {
     return (
       <div className="h-full min-h-0 w-full min-w-0 flex bg-background overflow-hidden">
         <div className="flex-1 min-h-0 flex flex-col bg-background">
+          {connectionBanner}
           {/* Chat Header */}
           <div className="bg-card border-b border-border px-4 py-3 sm:p-4 flex items-center gap-3 sm:gap-4 sticky top-0 z-10">
             <button
@@ -1486,6 +1612,34 @@ export default function Messages() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {showMessageSearch ? (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={messageSearchQuery}
+                    onChange={(e) => setMessageSearchQuery(e.target.value)}
+                    placeholder={language === 'fr' ? 'Rechercher...' : 'Search...'}
+                    className="h-8 w-40 sm:w-52 text-sm"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setShowMessageSearch(false); setMessageSearchQuery(''); }}
+                    className="p-1.5 hover:bg-muted rounded-md"
+                  >
+                    <span className="sr-only">Close</span>
+                    <svg className="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowMessageSearch(true)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                  title={language === 'fr' ? 'Rechercher dans les messages' : 'Search messages'}
+                >
+                  <Search className="w-4 h-4 text-muted-foreground" />
+                </button>
+              )}
               {isSelectedConversationReadOnly ? (
                 isSelectedConversationBlockedByCurrentUser ? (
                   <Button
@@ -1570,13 +1724,20 @@ export default function Messages() {
                   </Button>
                 </div>
               )}
-              {messages.length === 0 && (
+              {filteredMessages.length === 0 && (
                 <div className="text-center text-sm text-muted-foreground py-10">
-                  {language === 'fr' ? 'Aucun message pour le moment.' : 'No messages yet.'}
+                  {messageSearchQuery.trim()
+                    ? (language === 'fr' ? 'Aucun message trouvé.' : 'No messages found.')
+                    : (language === 'fr' ? 'Aucun message pour le moment.' : 'No messages yet.')}
+                </div>
+              )}
+              {messageSearchQuery.trim() && filteredMessages.length > 0 && (
+                <div className="text-center text-xs text-muted-foreground py-1.5">
+                  {filteredMessages.length} {language === 'fr' ? 'résultat(s)' : 'result(s)'}
                 </div>
               )}
               <AnimatePresence initial={false}>
-                {messages.map((msg) => {
+                {filteredMessages.map((msg) => {
                   const isOwn = msg.sender_id === user?.id;
                   const senderId = msg.sender_id;
                   const senderLabel = shouldShowProfile ? getParticipantLabel(senderId) : (language === 'fr' ? 'Utilisateur' : 'User');
@@ -1605,22 +1766,41 @@ export default function Messages() {
                       </motion.div>
 
                       <div className={`max-w-[78%] sm:max-w-[70%]`}>
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          transition={{ duration: 0.2 }}
-                          className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 cursor-pointer text-sm sm:text-base ${
-                            isOwn
-                              ? 'bg-primary text-white rounded-br-md'
-                              : 'bg-card text-foreground shadow-sm rounded-bl-md'
-                          }`}
-                        >
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        </motion.div>
+                        <div className="relative">
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            transition={{ duration: 0.2 }}
+                            className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 cursor-pointer text-sm sm:text-base ${
+                              isOwn
+                                ? 'bg-primary text-white rounded-br-md'
+                                : 'bg-card text-foreground shadow-sm rounded-bl-md'
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                          </motion.div>
+                          {isOwn && (
+                            <button
+                              type="button"
+                              onClick={() => setMessageToDelete(msg)}
+                              className={`absolute top-1 ${isOwn ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-all`}
+                              title={language === 'fr' ? 'Supprimer' : 'Delete'}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                         <div className={`flex items-center gap-1 mt-1 text-[11px] sm:text-xs text-muted-foreground ${isOwn ? 'justify-end' : 'justify-start'}`}>
                           <span>{formatMessageTime(msg.created_at)}</span>
                           {isOwn && (
                             msg.read ? (
-                              <CheckCheck className="w-4 h-4 text-primary" />
+                              <>
+                                <CheckCheck className="w-4 h-4 text-primary" />
+                                {msg.updated_at && msg.updated_at !== msg.created_at && (
+                                  <span className="text-primary/70">
+                                    {language === 'fr' ? 'Vu' : 'Seen'} {format(new Date(msg.updated_at), 'HH:mm')}
+                                  </span>
+                                )}
+                              </>
                             ) : (
                               <Check className="w-4 h-4" />
                             )
@@ -1701,7 +1881,7 @@ export default function Messages() {
                     disabled={sending || isSelectedConversationReadOnly || (!isConversationAccepted && selectedConversation?.participant_2_id === user?.id)}
                   />
                   <div className="flex items-center justify-between mt-1 text-[11px] sm:text-xs text-muted-foreground">
-                    <span>
+                    <span className={newMessage.length > 1900 ? 'text-red-500 font-medium' : ''}>
                       {newMessage.length}/{MAX_MESSAGE_LENGTH}
                     </span>
                     {messageError && (
@@ -1894,14 +2074,42 @@ export default function Messages() {
             </div>
           </div>
         </div>
+
+        {/* Delete message confirmation */}
+        <AlertDialog open={!!messageToDelete} onOpenChange={(open) => { if (!open) setMessageToDelete(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {language === 'fr' ? 'Supprimer ce message ?' : 'Delete this message?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {language === 'fr'
+                  ? 'Cette action est irréversible. Le message sera définitivement supprimé.'
+                  : 'This action cannot be undone. The message will be permanently deleted.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {language === 'fr' ? 'Annuler' : 'Cancel'}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteMessage}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                {language === 'fr' ? 'Supprimer' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
 
   return (
-    <div className="h-full min-h-0 w-full min-w-0 flex bg-background overflow-hidden">
+    <div className="h-full min-h-0 w-full min-w-0 flex flex-col bg-background overflow-hidden">
+      {connectionBanner}
       {/* Conversations List */}
-      <div className="w-full min-w-0 bg-card border-r border-border flex flex-col min-h-0">
+      <div className="w-full min-w-0 bg-card border-r border-border flex flex-col min-h-0 flex-1">
         <div className="px-4 sm:px-6 py-5 border-b border-border bg-card">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -1944,9 +2152,46 @@ export default function Messages() {
 
         <ScrollArea className="flex-1 bg-background min-w-0 min-h-0">
           {filteredConversations.length === 0 ? (
-            <div className="p-8 text-center">
-              <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">{t('no_conversations')}</p>
+            <div className="p-10 text-center max-w-md mx-auto">
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="w-8 h-8 text-primary" />
+              </div>
+              {conversations.length === 0 ? (
+                <>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
+                    {language === 'fr' ? 'Aucune conversation' : 'No conversations yet'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    {language === 'fr'
+                      ? 'Parcourez les annonces et contactez un vendeur ou un acquéreur pour démarrer une conversation.'
+                      : 'Browse listings and contact a seller or buyer to start a conversation.'}
+                  </p>
+                  <Button
+                    onClick={() => navigate(createPageUrl('Annonces'))}
+                    className="text-white font-semibold"
+                    style={{ background: 'var(--gradient-coral)' }}
+                  >
+                    {language === 'fr' ? 'Voir les annonces' : 'Browse listings'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
+                    {language === 'fr' ? 'Aucun résultat' : 'No results'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {language === 'fr'
+                      ? 'Aucune conversation ne correspond à votre recherche ou filtre actuel.'
+                      : 'No conversations match your current search or filter.'}
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setSearchQuery(''); setConversationFilter('all'); }}
+                  >
+                    {language === 'fr' ? 'Réinitialiser les filtres' : 'Reset filters'}
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -1974,6 +2219,7 @@ export default function Messages() {
                   ? (language === 'fr' ? 'En attente' : 'Pending')
                   : '';
                 const replied = unread === 0 && Boolean(conv.last_message);
+                const hasDraft = !!localStorage.getItem(`draft_${conv.id}`);
                 const subjectPreview = conv.last_message || (language === 'fr' ? 'Nouveau message' : 'New message');
                 const businessTitle = conv.business_title || conv.subject || (language === 'fr' ? 'Annonce' : 'Listing');
                 const typeLabel = conv.business_type === 'acquisition'
@@ -2004,7 +2250,10 @@ export default function Messages() {
                             {requesterCompany && (
                               <p className="text-xs text-muted-foreground truncate">{requesterCompany}</p>
                             )}
-                            <p className="text-xs text-muted-foreground truncate">{subjectPreview}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {hasDraft && <span className="text-primary font-medium">{language === 'fr' ? 'Brouillon : ' : 'Draft: '}</span>}
+                              {subjectPreview}
+                            </p>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
@@ -2019,11 +2268,24 @@ export default function Messages() {
                       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground gap-2">
                         <span className="truncate max-w-[55%]">{businessTitle}</span>
                         <div className="flex items-center gap-2">
+                          {pinnedConversationIds.includes(conv.id) && (
+                            <Pin className="w-3 h-3 text-primary" />
+                          )}
                           {statusLabel && (
                             <span className={`px-2 py-1 rounded-full text-[10px] ${statusTone}`}>
                               {statusLabel}
                             </span>
                           )}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); togglePinConversation(conv.id); }}
+                            className="p-1 rounded hover:bg-muted transition-colors"
+                            title={pinnedConversationIds.includes(conv.id) ? (language === 'fr' ? 'Désépingler' : 'Unpin') : (language === 'fr' ? 'Épingler' : 'Pin')}
+                          >
+                            {pinnedConversationIds.includes(conv.id)
+                              ? <PinOff className="w-3.5 h-3.5 text-primary" />
+                              : <Pin className="w-3.5 h-3.5 text-muted-foreground" />}
+                          </button>
                           {conversationFilter === 'archived' && (
                             <Button
                               type="button"
@@ -2091,7 +2353,17 @@ export default function Messages() {
                             {replied ? (language === 'fr' ? 'Oui' : 'Yes') : (language === 'fr' ? 'Non' : 'No')}
                           </span>
                         </div>
-                        <div className="flex justify-center">
+                        <div className="flex justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); togglePinConversation(conv.id); }}
+                            className={`p-1.5 rounded-md transition-colors ${pinnedConversationIds.includes(conv.id) ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-muted'}`}
+                            title={pinnedConversationIds.includes(conv.id) ? (language === 'fr' ? 'Désépingler' : 'Unpin') : (language === 'fr' ? 'Épingler' : 'Pin')}
+                          >
+                            {pinnedConversationIds.includes(conv.id)
+                              ? <PinOff className="w-3.5 h-3.5" />
+                              : <Pin className="w-3.5 h-3.5" />}
+                          </button>
                           {conversationFilter === 'archived' ? (
                             <Button
                               type="button"
