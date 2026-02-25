@@ -35,6 +35,7 @@ import { motion } from 'framer-motion';
 import FinancialChart from '@/components/Financial/FinancialChart';
 import BentoPhotoGallery from '@/components/BentoPhotoGallery';
 import LogoCard from '@/components/ui/LogoCard';
+import { getPartnerLogoUrl } from '@/constants/partners';
 import { FRENCH_DEPARTMENTS } from '@/utils/frenchDepartmentsData';
 import { EUROPEAN_COUNTRIES } from '@/utils/europeanCountries';
 
@@ -156,9 +157,15 @@ export default function BusinessDetails() {
           .eq('id', business.seller_id)
           .maybeSingle();
 
-        if (profileData) {
-          setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url || null);
+        if (profileData && (profileData.logo_url || profileData.avatar_url)) {
+          setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url);
+          return;
         }
+      }
+      // Fallback: partner logo from external_url
+      const partnerLogo = getPartnerLogoUrl(business?.external_url);
+      if (partnerLogo) {
+        setSellerFallbackLogo(partnerLogo);
       }
     } catch (error) {
       console.error('Error loading business logo:', error);
