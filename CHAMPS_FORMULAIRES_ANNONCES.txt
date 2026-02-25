@@ -1,0 +1,245 @@
+================================================================================
+           RIVIQO — CHAMPS DES FORMULAIRES D'ANNONCES
+================================================================================
+
+================================================================================
+  FORMULAIRE CESSION (type: "cession") — Annonce de vente d'entreprise
+================================================================================
+
+--- INFORMATIONS GÉNÉRALES ---
+
+title              | Titre                        | text (max 55 chars) | REQUIS
+                   | Ex: "Restaurant gastronomique Paris 8ème"
+
+description        | Description                  | textarea            | Optionnel
+                   | Décrivez l'activité et les points forts
+
+sector             | Secteur                      | select              | REQUIS
+                   | Valeurs: technology, retail, hospitality, manufacturing, services,
+                   |   healthcare, construction, transport, agriculture, real_estate,
+                   |   finance, ecommerce, beauty, education, events, logistics,
+                   |   food_beverage, automotive, energy, media, telecom, legal,
+                   |   consulting, sports_fitness, tourism, luxury, pharma, crafts, other
+
+business_type      | Type de Cession              | select              | REQUIS
+                   | Valeurs: entreprise, fond_de_commerce, franchise
+
+reason_for_sale    | Raison de la cession         | select              | Optionnel
+                   | Valeurs: retirement, new_project, health, relocation, other
+
+location           | Ville                        | text                | REQUIS
+                   | Ex: "Lyon", "Paris", "Bordeaux"
+
+department         | Département                  | text                | Optionnel
+                   | Ex: "75", "69", "33"
+
+region             | Région                       | text                | Optionnel (auto)
+                   | Ex: "Île-de-France", "Auvergne-Rhône-Alpes"
+
+country            | Pays                         | select              | Optionnel (défaut: france)
+                   | Valeurs: france, belgium, switzerland, germany, italy, spain,
+                   |   netherlands, portugal, austria, poland, czechia, hungary,
+                   |   romania, greece, sweden, denmark, finland, ireland, luxembourg, cyprus
+
+hide_location      | Masquer la localisation      | boolean             | Optionnel (défaut: false)
+
+
+--- INFORMATIONS FINANCIÈRES ---
+
+asking_price       | Prix demandé (EUR)           | number              | REQUIS
+                   | Ex: 500000
+
+annual_revenue     | Chiffre d'affaires annuel (EUR) | number           | Optionnel
+                   | Ex: 1000000
+
+ebitda             | EBITDA (EUR)                 | number              | Optionnel
+                   | Ex: 200000
+
+employees          | Nombre d'employés            | number              | Optionnel
+                   | Ex: 10
+
+year_founded       | Année de création            | number              | Optionnel
+                   | Ex: 2010
+
+
+--- JURIDIQUE & ADMINISTRATIF ---
+
+legal_structure    | Structure juridique          | select              | Optionnel
+                   | Valeurs: sarl, sas, sa, eurl, sasu, sci, snc, auto_entrepreneur, other
+
+registration_number | Numéro SIREN/SIRET          | text                | Optionnel
+                   | Ex: "123 456 789 00012"
+
+lease_info         | Baux commerciaux             | textarea            | Optionnel
+                   | Loyer, durée, clauses particulières
+
+licenses           | Licences et autorisations    | textarea            | Optionnel
+                   | Licences nécessaires à l'exploitation
+
+
+--- MARCHÉ & OPPORTUNITÉS ---
+
+market_position    | Positionnement sur le marché | textarea            | Optionnel
+
+competitive_advantages | Avantages concurrentiels | textarea            | Optionnel
+
+growth_opportunities | Opportunités de développement | textarea         | Optionnel
+
+customer_base      | Description de la clientèle  | textarea            | Optionnel
+
+
+--- CHAMPS OPTIONNELS AFFICHAGE ---
+
+cession_details    | Détails concernant la cession | textarea           | Optionnel
+show_cession_details | Afficher dans l'annonce     | boolean            | Optionnel (défaut: false)
+
+surface_area       | Taille de la surface         | text                | Optionnel
+                   | Ex: "120 m²"
+show_surface_area  | Afficher dans l'annonce       | boolean            | Optionnel (défaut: false)
+
+
+--- IMAGES ---
+
+images             | Images de l'annonce          | array d'objets      | Optionnel (max 5)
+                   | Format: [{url: "https://...", isDefault: true/false}]
+
+
+--- HISTORIQUE FINANCIER (array d'objets, une entrée par année) ---
+
+financial_years[].year           | Année              | number
+financial_years[].revenue        | CA (EUR)           | number
+financial_years[].ebitda         | EBITDA (EUR)       | number
+financial_years[].ebit           | EBIT (EUR)         | number
+financial_years[].net_result     | Résultat net (EUR) | number
+financial_years[].employees_count | Effectifs          | number
+
+
+--- CHAMPS SYSTÈME (auto-générés, ne pas remplir manuellement) ---
+
+status             | Statut                       | string              | Défaut: "pending"
+reference_number   | Référence                    | string              | Auto-généré (ex: RVQ-7821)
+seller_id          | ID vendeur                   | uuid                | Auto (user.id)
+seller_email       | Email vendeur                | string              | Auto (user.email)
+type               | Type d'annonce               | string              | "cession"
+
+
+--- NOUVEAU CHAMP PARTENAIRE ---
+
+external_url       | URL du site partenaire       | text (URL)          | Optionnel
+                   | Si rempli, redirige vers le site source au lieu de la page détail Riviqo
+                   | Ex: "https://www.cessionpme.com/annonce/12345"
+
+
+================================================================================
+  FORMULAIRE ACQUISITION (type: "acquisition") — Profil acheteur
+================================================================================
+
+--- INFORMATIONS GÉNÉRALES ---
+
+title              | Titre                        | text (max 55 chars) | REQUIS
+                   | Ex: "Cherche entreprise tech ou restaurant"
+
+description        | Description                  | textarea            | REQUIS
+                   | Décrivez votre profil et vos objectifs d'acquisition
+
+
+--- BUDGET ---
+
+buyer_budget_min   | Budget minimum (EUR)         | number              | Optionnel
+                   | Ex: 100000
+
+buyer_budget_max   | Budget maximum (EUR)         | number              | Optionnel
+                   | Ex: 1000000
+
+buyer_investment_available | Financement disponible (EUR) | number      | Optionnel
+                   | Ex: 500000
+
+
+--- CRITÈRES DE RECHERCHE ---
+
+buyer_sectors_interested | Secteurs d'intérêt      | array de strings    | REQUIS (min 1)
+                   | Valeurs: technology, retail, hospitality, manufacturing, services,
+                   |   healthcare, construction, transport, agriculture, real_estate,
+                   |   finance, ecommerce, beauty, education, events, logistics,
+                   |   food_beverage, automotive, energy, media, telecom, legal,
+                   |   consulting, sports_fitness, tourism, luxury, pharma, crafts, other
+
+business_type_sought | Type recherché              | select              | REQUIS
+                   | Valeurs: entreprise, fond_de_commerce, franchise
+
+buyer_revenue_min  | CA minimum recherché (EUR)   | number              | Optionnel
+                   | Ex: 500000
+
+buyer_revenue_max  | CA maximum recherché (EUR)   | number              | Optionnel
+                   | Ex: 5000000
+
+buyer_employees_min | Nombre d'employés min        | number              | Optionnel
+
+buyer_employees_max | Nombre d'employés max        | number              | Optionnel
+
+
+--- PROFIL ACHETEUR ---
+
+buyer_profile_type | Type de profil               | select              | REQUIS
+                   | Valeurs: individual, investor, pe_fund, company, other
+                   | Labels: "Reprise personnelle", "Investisseur",
+                   |   "Fonds de capital-investissement", "Entreprise", "Autre"
+
+buyer_locations    | Lieux d'intérêt              | multi-select        | REQUIS
+                   | Départements français (01-95, 2a, 2b) + pays européens
+
+buyer_notes        | Notes et critères additionnels | textarea           | Optionnel
+
+buyer_image        | Photo de profil              | image (max 1)       | Optionnel
+                   | Format: [{url: "https://...", isDefault: true}]
+
+buyer_document_url | URL du document              | string              | Optionnel (auto upload)
+buyer_document_name | Nom du document             | string              | Optionnel (auto upload)
+                   | Formats acceptés: PDF, DOC, DOCX
+
+
+--- CHAMPS SYSTÈME (auto-générés) ---
+
+status             | Statut                       | string              | Défaut: "pending"
+reference_number   | Référence                    | string              | Auto-généré
+seller_id          | ID acheteur                  | uuid                | Auto (user.id)
+seller_email       | Email acheteur               | string              | Auto (user.email)
+type               | Type d'annonce               | string              | "acquisition"
+
+
+--- NOUVEAU CHAMP PARTENAIRE ---
+
+external_url       | URL du site partenaire       | text (URL)          | Optionnel
+                   | Si rempli, redirige vers le site source
+
+
+================================================================================
+  VALEURS DE RÉFÉRENCE
+================================================================================
+
+SECTEURS (30):
+  technology, retail, hospitality, manufacturing, services, healthcare,
+  construction, transport, agriculture, real_estate, finance, ecommerce,
+  beauty, education, events, logistics, food_beverage, automotive, energy,
+  media, telecom, legal, consulting, sports_fitness, tourism, luxury,
+  pharma, crafts, other
+
+PAYS EUROPÉENS (20):
+  france, belgium, switzerland, germany, italy, spain, netherlands,
+  portugal, austria, poland, czechia, hungary, romania, greece, sweden,
+  denmark, finland, ireland, luxembourg, cyprus
+
+TYPES DE CESSION:
+  entreprise, fond_de_commerce, franchise
+
+RAISONS DE CESSION:
+  retirement, new_project, health, relocation, other
+
+STRUCTURES JURIDIQUES:
+  sarl, sas, sa, eurl, sasu, sci, snc, auto_entrepreneur, other
+
+PROFILS ACHETEUR:
+  individual, investor, pe_fund, company, other
+
+STATUTS:
+  pending, active, closed, archived
