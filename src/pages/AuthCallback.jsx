@@ -18,12 +18,11 @@ export default function AuthCallback() {
   const verifyEmail = async () => {
     try {
       const code = searchParams.get('code');
-      const type = searchParams.get('type');
 
       if (!code) {
         setStatus('error');
-        setMessage(language === 'fr' 
-          ? 'Code de vérification manquant' 
+        setMessage(language === 'fr'
+          ? 'Code de vérification manquant'
           : 'Verification code missing');
         setTimeout(() => navigate('/login'), 3000);
         return;
@@ -40,7 +39,6 @@ export default function AuthCallback() {
         navigate('/Annonces');
       }, 2000);
     } catch (error) {
-      console.error('Email verification failed:', error);
       setStatus('error');
       setMessage(language === 'fr'
         ? 'Erreur lors de la vérification. Veuillez réessayer.'
@@ -67,7 +65,7 @@ export default function AuthCallback() {
   const t = translations[language] || translations.en;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3B4759] via-[#2C3544] to-[#3B4759] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-charcoal via-charcoal-light to-charcoal flex items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -81,12 +79,12 @@ export default function AuthCallback() {
               transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
               className="flex justify-center mb-6"
             >
-              <Loader2 className="w-16 h-16 text-[#FF6B4A]" />
+              <Loader2 className="w-16 h-16 text-primary" />
             </motion.div>
-            <h2 className="font-display text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">
               {t.verifying}
             </h2>
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {language === 'fr'
                 ? 'Veuillez patienter pendant que nous vérifions votre adresse email...'
                 : 'Please wait while we verify your email address...'}
@@ -102,15 +100,15 @@ export default function AuthCallback() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="flex justify-center mb-6"
             >
-              <CheckCircle className="w-16 h-16 text-green-500" />
+              <CheckCircle className="w-16 h-16 text-success" />
             </motion.div>
-            <h2 className="font-display text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">
               {t.success}
             </h2>
-            <p className="text-gray-500 mb-6">
+            <p className="text-muted-foreground mb-6">
               {message}
             </p>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {t.redirecting}
             </p>
           </>
@@ -124,15 +122,15 @@ export default function AuthCallback() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="flex justify-center mb-6"
             >
-              <AlertCircle className="w-16 h-16 text-red-500" />
+              <AlertCircle className="w-16 h-16 text-destructive" />
             </motion.div>
-            <h2 className="font-display text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">
               {t.error}
             </h2>
-            <p className="text-gray-500 mb-6">
+            <p className="text-muted-foreground mb-6">
               {message}
             </p>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {language === 'fr'
                 ? 'Vous serez redirigé vers la page de connexion...'
                 : 'You will be redirected to the login page...'}

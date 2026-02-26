@@ -587,7 +587,7 @@ export default function Home() {
                   className="listing-card w-[376px] shrink-0 bg-white rounded-2xl border border-[#EDE5DF] shadow-md overflow-hidden">
                   {/* Image */}
                   <div className="relative h-48">
-                    <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" loading="lazy" />
+                    <img src={listing.image} alt={listing.title} width={400} height={192} className="w-full h-full object-cover" loading="lazy" />
                     <div className="absolute inset-0"
                       style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.08) 50%, transparent 100%)' }} />
                     {/* Badges gauche */}

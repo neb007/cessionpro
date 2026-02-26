@@ -182,9 +182,16 @@ export default function FAQ() {
     setOpenQuestion(null);
   };
 
+  const faqItems = CATEGORIES.flatMap(cat =>
+    cat.questions.map(q => ({
+      question: isFr ? q.qFr : q.qEn,
+      answer: isFr ? q.aFr : q.aEn,
+    }))
+  );
+
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
-      <SEO pageName="FAQ" />
+      <SEO pageName="FAQ" faqItems={faqItems} />
       {/* Hero */}
       <section className="pt-20 pb-14 px-4 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD8CC] bg-[#FFF4F1] px-4 py-1.5 text-[#FF6B4A] text-sm font-medium mb-6">

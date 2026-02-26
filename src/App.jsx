@@ -8,7 +8,7 @@ import { pagesConfig } from './pages.config'
 import AdminAnnonces from './pages/AdminAnnonces';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError.jsx';
@@ -29,7 +29,6 @@ const PUBLIC_PAGES = [
   'PasswordReset',
   'AuthCallback',
   'Checkout',
-  'Annonces',
   'BusinessDetails',
   'Valuations',
   'Financing',
@@ -67,7 +66,7 @@ const ProtectedRoute = ({ page, path, isAuthenticated, isLoadingAuth, requireAdm
   }
 
   if (!isAuthenticated) {
-    return <UserNotRegisteredError />;
+    return <Navigate to="/login" replace />;
   }
 
   if (requireAdmin && user?.email?.toLowerCase() !== ADMIN_EMAIL) {

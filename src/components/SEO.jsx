@@ -9,9 +9,10 @@ import {
   getJsonLdSoftwareApp,
   getJsonLdArticle,
   getJsonLdBlog,
+  getJsonLdFAQ,
 } from '@/config/seo.config';
 
-export default function SEO({ pageName }) {
+export default function SEO({ pageName, slug, ogImage, faqItems }) {
   const { language } = useLanguage();
   const lang = language === 'fr' ? 'fr' : 'en';
 
@@ -21,8 +22,11 @@ export default function SEO({ pageName }) {
   // Fallback title/description
   const title = pageConfig?.[lang]?.title || `${pageName} | Riviqo`;
   const description = pageConfig?.[lang]?.description || '';
-  const canonicalUrl = `${SEO_DEFAULTS.baseUrl}/${pageName}`;
+  const canonicalUrl = slug
+    ? `${SEO_DEFAULTS.baseUrl}/${pageName}/${slug}`
+    : `${SEO_DEFAULTS.baseUrl}/${pageName}`;
   const locale = SEO_DEFAULTS.locale[lang];
+  const image = ogImage || SEO_DEFAULTS.ogImage;
 
   // Build JSON-LD scripts
   const jsonLdScripts = [];
@@ -43,6 +47,8 @@ export default function SEO({ pageName }) {
         jsonLdScripts.push(getJsonLdArticle(title, description, canonicalUrl));
       } else if (type === 'Blog') {
         jsonLdScripts.push(getJsonLdBlog());
+      } else if (type === 'FAQPage' && faqItems?.length) {
+        jsonLdScripts.push(getJsonLdFAQ(faqItems));
       }
     }
   }
@@ -55,7 +61,12 @@ export default function SEO({ pageName }) {
       {isNoIndex ? (
         <meta name="robots" content="noindex, nofollow" />
       ) : (
-        <link rel="canonical" href={canonicalUrl} />
+        <>
+          <link rel="canonical" href={canonicalUrl} />
+          <link rel="alternate" hreflang="fr" href={canonicalUrl} />
+          <link rel="alternate" hreflang="en" href={canonicalUrl} />
+          <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
+        </>
       )}
 
       {/* Open Graph */}
@@ -65,13 +76,15 @@ export default function SEO({ pageName }) {
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:image" content={SEO_DEFAULTS.ogImage} />
+      <meta property="og:image" content={image} />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:site" content={SEO_DEFAULTS.twitterHandle} />
+      <meta name="twitter:creator" content={SEO_DEFAULTS.twitterHandle} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={SEO_DEFAULTS.ogImage} />
+      <meta name="twitter:image" content={image} />
 
       {/* JSON-LD */}
       {jsonLdScripts.map((schema, i) => (

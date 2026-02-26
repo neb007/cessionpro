@@ -181,6 +181,36 @@ export const SEO_PAGES = {
       description: 'Share your confidential documents securely. Certified Data Room for your M&A operations.',
     },
   },
+  MentionsLegales: {
+    fr: {
+      title: 'Mentions légales | Riviqo',
+      description: 'Mentions légales de Riviqo : éditeur, hébergeur, propriété intellectuelle et conditions d\'utilisation.',
+    },
+    en: {
+      title: 'Legal notice | Riviqo',
+      description: 'Riviqo legal notice: publisher, hosting, intellectual property and terms of use.',
+    },
+  },
+  CGU: {
+    fr: {
+      title: 'Conditions générales d\'utilisation | Riviqo',
+      description: 'Conditions générales d\'utilisation de la plateforme Riviqo. Droits, obligations et responsabilités.',
+    },
+    en: {
+      title: 'Terms and conditions | Riviqo',
+      description: 'Riviqo platform terms and conditions. Rights, obligations and responsibilities.',
+    },
+  },
+  PolitiqueConfidentialite: {
+    fr: {
+      title: 'Politique de confidentialité | Riviqo',
+      description: 'Politique de confidentialité et protection des données personnelles de Riviqo. Conforme au RGPD.',
+    },
+    en: {
+      title: 'Privacy policy | Riviqo',
+      description: 'Riviqo privacy policy and personal data protection. GDPR compliant.',
+    },
+  },
 };
 
 export const NOINDEX_PAGES = [
@@ -188,7 +218,6 @@ export const NOINDEX_PAGES = [
   'Messages', 'Settings', 'Profile', 'CreateBusiness', 'MyListings', 'MyLeads',
   'Leads', 'Favorites', 'Billing', 'Abonnement', 'SmartMatching', 'SmartMatchingNotifications',
   'Categories', 'Annonces', 'BusinessDetails',
-  'CGU', 'MentionsLegales', 'PolitiqueConfidentialite',
 ];
 
 export function getJsonLdOrganization() {
@@ -199,7 +228,10 @@ export function getJsonLdOrganization() {
     url: BASE_URL,
     logo: `${BASE_URL}/riviqo-logo.png`,
     description: 'Solution de cession et reprise d\'entreprise en France et en Europe',
-    sameAs: [],
+    sameAs: [
+      'https://www.linkedin.com/company/riviqo',
+      'https://twitter.com/riviqo',
+    ],
   };
 }
 
@@ -266,5 +298,20 @@ export function getJsonLdBlog() {
       '@type': 'Organization',
       name: 'Riviqo',
     },
+  };
+}
+
+export function getJsonLdFAQ(items) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map(({ question, answer }) => ({
+      '@type': 'Question',
+      name: question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: answer,
+      },
+    })),
   };
 }
