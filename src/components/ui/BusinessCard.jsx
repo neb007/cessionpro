@@ -15,6 +15,7 @@ import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 import { calculateGrowthPercentage } from '@/utils/growthCalculator';
 import LogoCard from '@/components/ui/LogoCard';
+import { getPartnerLogoUrl } from '@/constants/partners';
 
 
 const sectorColors = {
@@ -66,19 +67,26 @@ export default function BusinessCard({
   }, [authUser]);
 
   const loadBusinessLogo = async () => {
+    // 1) Try business_logos table
     try {
       if (business?.id) {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('business_logos')
           .select('logo_url')
           .eq('business_id', business.id)
           .maybeSingle();
 
-        if (data && !error) {
+        if (data?.logo_url) {
           setSellerProfile(data);
           return;
         }
       }
+    } catch {
+      // Table might not exist — continue to fallback
+    }
+
+    // 2) Fallback: profiles table
+    try {
       if (business?.seller_id) {
         const { data: profileData } = await supabase
           .from('profiles')
@@ -86,13 +94,19 @@ export default function BusinessCard({
           .eq('id', business.seller_id)
           .maybeSingle();
 
-        if (profileData && (profileData.logo_url || profileData.avatar_url)) {
+        if (profileData?.logo_url || profileData?.avatar_url) {
           setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url);
           return;
         }
       }
-    } catch (error) {
-      console.error('Error loading business logo:', error);
+    } catch {
+      // Silently fail
+    }
+
+    // 3) Fallback: static partner logo from external_url
+    const partnerLogo = getPartnerLogoUrl(business?.external_url);
+    if (partnerLogo) {
+      setSellerFallbackLogo(partnerLogo);
     }
   };
   

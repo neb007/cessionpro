@@ -80,17 +80,17 @@ export default function SmartMatchingFeatures() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD8CC] bg-[#FFF4F1] px-4 py-1.5 text-[#FF6B4A] text-sm font-medium mb-6">
             <Sparkles className="w-3.5 h-3.5" />
-            {isFr ? 'Matching intelligent' : 'Smart matching'}
+            {isFr ? 'Cession \u00b7 Acquisition' : 'Sale \u00b7 Acquisition'}
           </div>
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-[#3B4759] leading-tight mb-6">
             {isFr
-              ? 'Trouvez la contrepartie idéale avec le SmartMatching Riviqo'
-              : 'Find the ideal counterpart with Riviqo SmartMatching'}
+              ? 'Cédez ou reprenez plus vite grâce au SmartMatching Riviqo'
+              : 'Sell or acquire faster with Riviqo SmartMatching'}
           </h1>
           <p className="text-lg text-[#6B7A94] max-w-2xl mx-auto mb-8 leading-relaxed">
             {isFr
-              ? "L'algorithme de Riviqo analyse vos critères en profondeur pour vous présenter uniquement les opportunités réellement compatibles. Moins de bruit, plus de précision — pour des opérations qui aboutissent."
-              : "Riviqo's algorithm deeply analyzes your criteria to present only truly compatible opportunities. Less noise, more precision — for transactions that succeed."}
+              ? "Vous cherchez une entreprise à céder ou à acquérir ? Le SmartMatching analyse vos critères et vous connecte automatiquement aux opportunités les plus compatibles. Gagnez des semaines de recherche et concentrez-vous sur les deals qui comptent."
+              : "Looking to sell or acquire a business? SmartMatching analyzes your criteria and automatically connects you to the most compatible opportunities. Save weeks of searching and focus on the deals that matter."}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to={createPageUrl('AccountCreation')}>

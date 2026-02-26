@@ -130,6 +130,17 @@ export const SEO_PAGES = {
     },
     jsonLd: ['Article'],
   },
+  GuideRepreneuriat: {
+    fr: {
+      title: 'Le repreneuriat : devenir entrepreneur par la reprise d\'entreprise | Riviqo',
+      description: 'Guide complet du repreneuriat : définition, avantages vs création, profil du repreneur idéal, étapes clés, financement et erreurs à éviter. Tout savoir pour entreprendre par la reprise.',
+    },
+    en: {
+      title: 'Entrepreneurship through acquisition: the complete guide | Riviqo',
+      description: 'Complete ETA guide: definition, advantages vs startup, ideal buyer profile, key steps, financing and mistakes to avoid. Everything you need to know about acquiring a business.',
+    },
+    jsonLd: ['Article'],
+  },
   Expert: {
     fr: {
       title: 'Espace professionnels M&A — Réseau Riviqo',

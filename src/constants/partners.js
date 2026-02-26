@@ -1,7 +1,7 @@
 // Partner logo mapping: domain → local logo path
 const PARTNER_LOGOS = {
-  'fusacq.com': '/images/partners/fusacq.svg',
-  'cessionpme.com': '/images/partners/cessionpme.svg',
+  'fusacq.com': '/images/partners/fusacq.jpeg',
+  'cessionpme.com': '/images/partners/cessionpme.jpeg',
 };
 
 export function getPartnerLogoUrl(externalUrl) {

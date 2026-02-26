@@ -39,6 +39,7 @@ import { FRENCH_DEPARTMENTS } from '@/utils/frenchDepartmentsData';
 import { EUROPEAN_COUNTRIES } from '@/utils/europeanCountries';
 import BusinessCard from '@/components/ui/BusinessCard';
 import { findListingMatches } from '@/services/smartMatchingScorer';
+import { getPartnerLogoUrl } from '@/constants/partners';
 
 const sectorColors = {
   technology: 'bg-violet-100 text-violet-700',
@@ -162,24 +163,24 @@ export default function BusinessDetails() {
   }, [authUser]);
 
   const loadBusinessLogo = async () => {
+    // 1) Try business_logos table
     try {
-      console.log('Loading logo for business:', business.id);
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('business_logos')
         .select('logo_url')
         .eq('business_id', business.id)
         .maybeSingle();
 
-      if (error) {
-        console.log('Logo not found or error:', error.message);
-      }
-
-      if (data) {
-        console.log('Logo found:', data);
+      if (data?.logo_url) {
         setBusinessLogo(data);
         return;
       }
+    } catch {
+      // Table might not exist — continue to fallback
+    }
 
+    // 2) Fallback: profiles table
+    try {
       if (business?.seller_id) {
         const { data: profileData } = await supabase
           .from('profiles')
@@ -187,13 +188,19 @@ export default function BusinessDetails() {
           .eq('id', business.seller_id)
           .maybeSingle();
 
-        if (profileData && (profileData.logo_url || profileData.avatar_url)) {
+        if (profileData?.logo_url || profileData?.avatar_url) {
           setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url);
           return;
         }
       }
-    } catch (error) {
-      console.error('Error loading business logo:', error);
+    } catch {
+      // Silently fail
+    }
+
+    // 3) Fallback: static partner logo from external_url
+    const partnerLogo = getPartnerLogoUrl(business?.external_url);
+    if (partnerLogo) {
+      setSellerFallbackLogo(partnerLogo);
     }
   };
 

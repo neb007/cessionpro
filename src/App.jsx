@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -8,12 +8,18 @@ import { pagesConfig } from './pages.config'
 import AdminAnnonces from './pages/AdminAnnonces';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError.jsx';
 import { LanguageProvider } from '@/components/i18n/LanguageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -38,6 +44,7 @@ const PUBLIC_PAGES = [
   'Expert',
   'GuideCession',
   'GuideRepreneur',
+  'GuideRepreneuriat',
   'FAQ',
   'Dataroom',
   'SmartMatching',
@@ -192,6 +199,7 @@ function App() {
                 v7_relativeSplatPath: true,
               }}
             >
+              <ScrollToTop />
               <NavigationTracker />
               <AuthenticatedApp />
             </Router>

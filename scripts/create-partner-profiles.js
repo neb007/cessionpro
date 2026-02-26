@@ -46,14 +46,14 @@ const PARTNERS = [
     email: 'fusacq@partners.riviqo.com',
     company_name: 'Fusacq',
     full_name: 'Fusacq',
-    logo_url: '/images/partners/fusacq.svg',
+    logo_url: '/images/partners/fusacq.jpeg',
     domain: 'fusacq.com',
   },
   {
     email: 'cessionpme@partners.riviqo.com',
     company_name: 'CessionPME',
     full_name: 'CessionPME',
-    logo_url: '/images/partners/cessionpme.svg',
+    logo_url: '/images/partners/cessionpme.jpeg',
     domain: 'cessionpme.com',
   },
 ];

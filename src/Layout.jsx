@@ -44,7 +44,8 @@ function LayoutContent({ children, currentPageName }) {
   // Pages that manage their own nav or don't need a public nav
   const noPublicNavPages = ['Home', 'Login', 'Register', 'AccountCreation',
     'AuthCallback', 'PasswordReset'];
-  const showPublicNav = !isAuthenticated && !shouldRenderSidebar
+  const showPublicNav = (!isAuthenticated || hideSidebarPages.includes(currentPageName))
+    && !shouldRenderSidebar
     && !noPublicNavPages.includes(currentPageName);
 
   return (

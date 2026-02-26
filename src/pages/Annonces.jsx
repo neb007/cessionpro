@@ -628,7 +628,7 @@ export default function Businesses() {
                     business={business}
                     isFavorite={favorites.includes(business.id)}
                     onToggleFavorite={toggleFavorite}
-                    fetchSellerLogo={false}
+
                     isFeatured={business.isFeatured}
                     featuredLabel={business.featuredLabel}
                     smartMatchScore={smartMatchScores[business.id] ?? null}

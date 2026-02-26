@@ -10,7 +10,8 @@ import {
   FolderLock, Users, Calculator, Landmark, Banknote,
   BadgeCheck, MapPin, Eye, TrendingUp, CheckCircle2,
   Phone, FileText, UserCheck, Handshake, ClipboardList,
-  AlertTriangle, Clock, BarChart3, Building2, ChevronDown
+  AlertTriangle, Clock, BarChart3, Building2, ChevronDown,
+  Menu, X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SEO from '@/components/SEO';
@@ -71,6 +72,9 @@ export default function Home() {
   );
 
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  const closeMobile = () => { setMobileOpen(false); setMobileToolsOpen(false); };
 
   const topNavLinks = [
     { label: isFr ? 'Céder' : 'Sell', to: createPageUrl('Ceder') },
@@ -315,17 +319,70 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-3">
               <Link to={createPageUrl('Login')}
-                className="text-[#3B4759] hover:text-[#FF6B4A] transition-colors font-display font-medium text-sm px-3 py-2">
+                className="hidden sm:block text-[#3B4759] hover:text-[#FF6B4A] transition-colors font-display font-medium text-sm px-3 py-2">
                 {isFr ? 'Se connecter' : 'Login'}
               </Link>
-              <Link to={createPageUrl('AccountCreation')}>
+              <Link to={createPageUrl('AccountCreation')} className="hidden sm:inline-flex">
                 <Button className="bg-[#FF6B4A] hover:bg-[#FF5733] text-white rounded-full px-5 font-display font-semibold text-sm">
+                  {isFr ? 'Commencer gratuitement' : 'Start for free'}
+                </Button>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="md:hidden p-2 text-[#3B4759] hover:text-[#FF6B4A] transition-colors"
+                aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              >
+                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* Mobile menu */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-[#F0ECE6] bg-white px-4 py-4 space-y-1">
+            {topNavLinks.map((link) => (
+              <Link key={link.label} to={link.to} onClick={closeMobile}
+                className="block px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors">
+                {link.label}
+              </Link>
+            ))}
+            <button
+              type="button"
+              onClick={() => setMobileToolsOpen(!mobileToolsOpen)}
+              className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors"
+            >
+              {isFr ? 'Outils' : 'Tools'}
+              <ChevronDown className={`w-4 h-4 transition-transform ${mobileToolsOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {mobileToolsOpen && (
+              <div className="pl-3 space-y-1">
+                {toolItems.map((tool) => (
+                  <Link key={tool.page} to={createPageUrl(tool.page)} onClick={closeMobile}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#FFF0ED] transition-colors group">
+                    <div className="w-7 h-7 rounded-lg bg-[#FFF0ED] flex items-center justify-center group-hover:bg-[#FFD5C7] transition-colors flex-shrink-0">
+                      <tool.icon className="w-4 h-4 text-[#FF6B4A]" />
+                    </div>
+                    <span className="text-sm font-medium text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors font-display">
+                      {isFr ? tool.labelFr : tool.labelEn}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <div className="pt-3 border-t border-[#F0ECE6] space-y-2 sm:hidden">
+              <Link to={createPageUrl('Login')} onClick={closeMobile}
+                className="block px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors">
+                {isFr ? 'Se connecter' : 'Login'}
+              </Link>
+              <Link to={createPageUrl('AccountCreation')} onClick={closeMobile}>
+                <Button className="w-full bg-[#FF6B4A] hover:bg-[#FF5733] text-white rounded-full font-display font-semibold text-sm">
                   {isFr ? 'Commencer gratuitement' : 'Start for free'}
                 </Button>
               </Link>
             </div>
           </div>
-        </div>
+        )}
       </nav>
 
       {/* ══════════════════════════════════════════

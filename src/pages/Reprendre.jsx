@@ -114,17 +114,17 @@ export default function Reprendre() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#FFD8CC] bg-[#FFF4F1] px-4 py-1.5 text-[#FF6B4A] text-sm font-medium mb-6">
             <TrendingUp className="w-3.5 h-3.5" />
-            {isFr ? 'Acquisition d\'entreprise' : 'Business acquisition'}
+            {isFr ? 'Repreneuriat' : 'Entrepreneurship through acquisition'}
           </div>
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-[#3B4759] leading-tight mb-6">
             {isFr
-              ? 'Reprendre une entreprise : trouvez la bonne cible, structurez votre financement.'
-              : 'Acquire a business: find the right target, structure your financing.'}
+              ? 'Le repreneuriat : devenez entrepreneur en reprenant une entreprise existante.'
+              : 'Entrepreneurship through acquisition: become a business owner by acquiring an existing company.'}
           </h1>
           <p className="text-lg text-[#6B7A94] max-w-2xl mx-auto mb-8 leading-relaxed">
             {isFr
-              ? "De la recherche de cibles au closing, Riviqo — plateforme et service d'accompagnement M&A — vous accompagne avec des annonces vérifiées, des outils d'analyse et une équipe d'experts dédiés à votre acquisition."
-              : "From target search to closing, Riviqo — a platform and M&A advisory service — supports you with verified listings, analysis tools and a dedicated expert team for your acquisition."}
+              ? "Le repreneuriat est la voie la plus rapide et la plus sûre vers l'entrepreneuriat. Reprenez une entreprise rentable avec un historique prouvé, une clientèle établie et des revenus dès le premier jour. Riviqo vous accompagne de la recherche à la signature."
+              : "Entrepreneurship through acquisition is the fastest and safest path to business ownership. Take over a profitable company with a proven track record, established customers and revenue from day one. Riviqo supports you from search to signing."}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to={createPageUrl('Annonces')}>

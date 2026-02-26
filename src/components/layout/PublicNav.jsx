@@ -5,7 +5,7 @@ import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
-import { Banknote, Calculator, ChevronDown, Globe, Landmark } from 'lucide-react';
+import { Banknote, Calculator, ChevronDown, Globe, Landmark, Menu, X } from 'lucide-react';
 
 const toolItems = [
   { icon: Calculator, labelFr: 'Simulateur valorisation', labelEn: 'Valuation simulator', page: 'Valuations' },
@@ -17,6 +17,13 @@ export default function PublicNav() {
   const { language, changeLanguage } = useLanguage();
   const isFr = language === 'fr';
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+
+  const closeMobile = () => {
+    setMobileOpen(false);
+    setMobileToolsOpen(false);
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-[#F0ECE6]">
@@ -77,7 +84,7 @@ export default function PublicNav() {
             </Link>
           </div>
 
-          {/* Auth buttons */}
+          {/* Auth buttons + hamburger */}
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -92,14 +99,83 @@ export default function PublicNav() {
               className="hidden sm:block text-[#3B4759] hover:text-[#FF6B4A] transition-colors font-display font-medium text-sm px-3 py-2">
               {isFr ? 'Se connecter' : 'Login'}
             </Link>
-            <Link to={createPageUrl('AccountCreation')}>
+            <Link to={createPageUrl('AccountCreation')} className="hidden sm:inline-flex">
               <Button className="bg-[#FF6B4A] hover:bg-[#FF5733] text-white rounded-full px-5 font-display font-semibold text-sm">
                 {isFr ? 'Commencer gratuitement' : 'Start for free'}
               </Button>
             </Link>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden p-2 text-[#3B4759] hover:text-[#FF6B4A] transition-colors"
+              aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-[#F0ECE6] bg-white">
+          <div className="px-4 py-4 space-y-1">
+            <Link to={createPageUrl('Ceder')} onClick={closeMobile}
+              className="block px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors">
+              {isFr ? 'Céder' : 'Sell'}
+            </Link>
+            <Link to={createPageUrl('Reprendre')} onClick={closeMobile}
+              className="block px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors">
+              {isFr ? 'Reprendre' : 'Buy'}
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setMobileToolsOpen(!mobileToolsOpen)}
+              className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors"
+            >
+              {isFr ? 'Outils' : 'Tools'}
+              <ChevronDown className={`w-4 h-4 transition-transform ${mobileToolsOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {mobileToolsOpen && (
+              <div className="pl-3 space-y-1">
+                {toolItems.map((tool) => (
+                  <Link
+                    key={tool.page}
+                    to={createPageUrl(tool.page)}
+                    onClick={closeMobile}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#FFF0ED] transition-colors group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-[#FFF0ED] flex items-center justify-center group-hover:bg-[#FFD5C7] transition-colors flex-shrink-0">
+                      <tool.icon className="w-4 h-4 text-[#FF6B4A]" />
+                    </div>
+                    <span className="text-sm font-medium text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors font-display">
+                      {isFr ? tool.labelFr : tool.labelEn}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <Link to={createPageUrl('Expert')} onClick={closeMobile}
+              className="block px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors">
+              {isFr ? 'Experts' : 'Experts'}
+            </Link>
+
+            <div className="pt-3 border-t border-[#F0ECE6] space-y-2 sm:hidden">
+              <Link to={createPageUrl('Login')} onClick={closeMobile}
+                className="block px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors">
+                {isFr ? 'Se connecter' : 'Login'}
+              </Link>
+              <Link to={createPageUrl('AccountCreation')} onClick={closeMobile}>
+                <Button className="w-full bg-[#FF6B4A] hover:bg-[#FF5733] text-white rounded-full font-display font-semibold text-sm">
+                  {isFr ? 'Commencer gratuitement' : 'Start for free'}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

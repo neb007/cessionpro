@@ -53,6 +53,7 @@ import Reprendre from './pages/Reprendre';
 import Expert from './pages/Expert';
 import GuideCession from './pages/GuideCession';
 import GuideRepreneur from './pages/GuideRepreneur';
+import GuideRepreneuriat from './pages/GuideRepreneuriat';
 import AuthCallback from './pages/AuthCallback';
 import BusinessDetails from './pages/BusinessDetails';
 import Annonces from './pages/Annonces';
@@ -97,6 +98,7 @@ export const PAGES = {
     "Expert": Expert,
     "GuideCession": GuideCession,
     "GuideRepreneur": GuideRepreneur,
+    "GuideRepreneuriat": GuideRepreneuriat,
     "AuthCallback": AuthCallback,
     "BusinessDetails": BusinessDetails,
     "Annonces": Annonces,

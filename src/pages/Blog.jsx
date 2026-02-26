@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, FileText, TrendingUp, Landmark, Calculator } from 'lucide-react';
+import { ArrowRight, BookOpen, FileText, TrendingUp, Landmark, Calculator, Rocket } from 'lucide-react';
 import SEO from '@/components/SEO';
 
 const ARTICLES = [
@@ -31,6 +31,18 @@ const ARTICLES = [
     categoryEn: 'Guide',
     readTimeFr: '30 min de lecture',
     readTimeEn: '30 min read',
+  },
+  {
+    slug: 'GuideRepreneuriat',
+    icon: Rocket,
+    titleFr: 'Le repreneuriat : devenir entrepreneur par la reprise d\'entreprise',
+    titleEn: 'Entrepreneurship through acquisition: become a business owner',
+    descFr: 'Qu\'est-ce que le repreneuriat ? Avantages vs création, profil du repreneur, étapes clés, financement et erreurs à éviter. Le guide complet.',
+    descEn: 'What is entrepreneurship through acquisition? Advantages vs startup, buyer profile, key steps, financing and mistakes to avoid. The complete guide.',
+    categoryFr: 'Guide',
+    categoryEn: 'Guide',
+    readTimeFr: '20 min de lecture',
+    readTimeEn: '20 min read',
   },
   {
     slug: 'Valuations',
