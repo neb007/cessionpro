@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 import { motion } from 'framer-motion';
 import { resizeLogo, validateLogoFile, createPreviewUrl, revokePreviewUrl } from '@/utils/logoResizer';
 import {
@@ -218,12 +219,20 @@ export default function Profile() {
     
     setProcessingLogo(true);
     try {
-      // Create a proper File from blob
+      // Upload to Supabase Storage
       const file = new File([logoPreview.blob], 'logo.webp', { type: 'image/webp' });
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      
-      handleChange('avatar_url', file_url);
-      handleChange('logo_url', file_url);
+      const fileName = `${Date.now()}_logo.webp`;
+      const { data, error } = await supabase.storage
+        .from('Cession')
+        .upload(fileName, file);
+      if (error) throw error;
+      const { data: publicUrl } = supabase.storage
+        .from('Cession')
+        .getPublicUrl(data.path);
+      const fileUrl = publicUrl.publicUrl;
+
+      handleChange('avatar_url', fileUrl);
+      handleChange('logo_url', fileUrl);
       
       // Clean up
       revokePreviewUrl(logoPreview.url);
@@ -261,7 +270,7 @@ export default function Profile() {
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
       console.error('Error removing logo:', error);
-      alert(language === 'fr' ? 'Erreur lors de la suppression du logo' : 'Error removing logo');
+      toast({ title: language === 'fr' ? 'Erreur lors de la suppression du logo' : 'Error removing logo', variant: 'destructive' });
     } finally {
       setProcessingLogo(false);
     }
@@ -272,11 +281,12 @@ export default function Profile() {
     const vatNumber = String(formData.vat_number || '').trim();
 
     if (companyName && !vatNumber) {
-      alert(
-        language === 'fr'
+      toast({
+        title: language === 'fr'
           ? 'Le numéro de TVA est obligatoire si le champ société est renseigné.'
-          : 'VAT number is required when company name is provided.'
-      );
+          : 'VAT number is required when company name is provided.',
+        variant: 'destructive'
+      });
       return;
     }
 
@@ -301,7 +311,6 @@ export default function Profile() {
 
       // Update via Supabase profileService
       await updateProfile(user.id, profileUpdateData);
-      console.log('Updating profile: ', profileUpdateData);
 
       const data = {
         email: formData.email,
@@ -350,14 +359,13 @@ export default function Profile() {
       });
       
       setSaved(true);
-      console.log('Profile saved successfully');
       setTimeout(() => setSaved(false), 3000);
       
       // Reload profile
       await loadUser();
     } catch (e) {
       console.error('Error saving profile:', e);
-      alert(language === 'fr' ? 'Erreur lors de la sauvegarde du profil' : 'Error saving profile');
+      toast({ title: language === 'fr' ? 'Erreur lors de la sauvegarde du profil' : 'Error saving profile', variant: 'destructive' });
     }
     setSaving(false);
   };
@@ -383,11 +391,11 @@ export default function Profile() {
                     <img 
                       src={formData.logo_url || formData.avatar_url}
                       alt="Logo"
-                      className="w-24 h-24 rounded-xl object-cover shadow-md bg-gray-100"
+                      className="w-24 h-24 rounded-xl object-cover shadow-md bg-muted"
                     />
                   ) : (
-                    <div className="w-24 h-24 rounded-xl bg-gray-200 flex items-center justify-center shadow-md">
-                      <Building2 className="w-10 h-10 text-gray-400" />
+                    <div className="w-24 h-24 rounded-xl bg-muted flex items-center justify-center shadow-md">
+                      <Building2 className="w-10 h-10 text-muted-foreground" />
                     </div>
                   )}
                   {formData.avatar_url && (
@@ -395,15 +403,15 @@ export default function Profile() {
                       type="button"
                       onClick={handleRemoveLogo}
                       disabled={processingLogo}
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-gray-500 hover:text-gray-700"
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-muted-foreground hover:text-foreground"
                       aria-label={language === 'fr' ? 'Supprimer le logo' : 'Remove logo'}
                       title={language === 'fr' ? 'Supprimer le logo' : 'Remove logo'}
                     >
                       <X className="w-3 h-3" />
                     </button>
                   )}
-                  <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
-                    <Camera className="w-4 h-4 text-gray-600" />
+                  <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
+                    <Camera className="w-4 h-4 text-muted-foreground" />
                     <input
                       type="file"
                       accept="image/*"
@@ -413,11 +421,11 @@ export default function Profile() {
                   </label>
                 </div>
                 <div className="flex-1">
-                  <h2 className="font-display text-xl font-semibold text-gray-900">
+                  <h2 className="font-heading text-xl font-semibold text-foreground">
                     {formData.first_name} {formData.last_name}
                   </h2>
-                  <p className="text-gray-600 text-sm font-medium">{formData.company_name}</p>
-                  <p className="text-gray-500 text-sm">{user?.email}</p>
+                  <p className="text-muted-foreground text-sm font-medium">{formData.company_name}</p>
+                  <p className="text-muted-foreground text-sm">{user?.email}</p>
                 </div>
               </div>
 
@@ -455,7 +463,7 @@ export default function Profile() {
           {/* Contact Info */}
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="font-display flex items-center gap-2">
+              <CardTitle className="font-heading flex items-center gap-2">
                 <User className="w-5 h-5 text-primary" />
                 {language === 'fr' ? 'Informations de contact' : 'Contact Information'}
               </CardTitle>
@@ -547,19 +555,19 @@ export default function Profile() {
           </Card>
 
           {/* Messaging Settings */}
-          <Card className="border-0 shadow-sm bg-gradient-to-r from-orange-50 to-transparent">
+          <Card className="border-0 shadow-sm bg-primary/5">
             <CardHeader>
-              <CardTitle className="font-display flex items-center gap-2">
+              <CardTitle className="font-heading flex items-center gap-2">
                 📧 {language === 'fr' ? 'Paramètres Messagerie' : 'Messaging Settings'}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl backdrop-blur-sm mb-4">
                 <div>
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-foreground">
                     {language === 'fr' ? 'Afficher mon identité' : 'Show my identity'}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {language === 'fr'
                       ? 'Nom/prénom ou société visibles lors des messages'
                       : 'Your name/company is shown when sending messages'}
@@ -570,11 +578,11 @@ export default function Profile() {
                   onCheckedChange={(v) => handleChange('show_real_identity', v)}
                 />
               </div>
-              <div className="mt-4 p-4 bg-white/60 rounded-xl border border-[#FF6B4A]/20">
-                <p className="font-medium text-gray-900">
+              <div className="mt-4 p-4 bg-white/60 rounded-xl border border-primary/20">
+                <p className="font-medium text-foreground">
                   {language === 'fr' ? 'Notification Smart Matching' : 'Smart Matching notifications'}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {language === 'fr'
                     ? `Fréquence actuelle : ${getSmartMatchingAlertFrequencyLabel(smartMatchingAlerts.frequency, language)}`
                     : `Current frequency: ${getSmartMatchingAlertFrequencyLabel(smartMatchingAlerts.frequency, language)}`}
@@ -596,7 +604,7 @@ export default function Profile() {
             <Button
               onClick={handleSubmit}
               disabled={saving}
-              className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 min-w-40"
+              className="bg-primary hover:bg-primary/90 min-w-40"
             >
               {saving ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -617,7 +625,7 @@ export default function Profile() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2"
+              className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive flex items-center gap-2"
             >
               <AlertCircle className="w-5 h-5" />
               {logoError}
@@ -630,7 +638,7 @@ export default function Profile() {
       <Dialog open={showLogoModal} onOpenChange={setShowLogoModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display">
+            <DialogTitle className="font-heading">
               {language === 'fr' ? 'Aperçu du logo' : 'Logo Preview'}
             </DialogTitle>
           </DialogHeader>
@@ -647,14 +655,14 @@ export default function Profile() {
                 />
               </div>
               
-              <div className="text-center text-sm text-gray-500">
+              <div className="text-center text-sm text-muted-foreground">
                 <p>{logoPreview.width}x{logoPreview.height}px</p>
               </div>
 
               <Button
                 onClick={uploadResizedLogo}
                 disabled={processingLogo}
-                className="w-full bg-gradient-to-r from-primary to-blue-600"
+                className="w-full bg-primary hover:bg-primary/90"
               >
                 {processingLogo ? (
                   <>

@@ -4,7 +4,17 @@ import { toast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { billingService } from '@/services/billingService';
 import { useSearchParams } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
 import { CheckCircle2, FileText } from 'lucide-react';
+
+const statusVariant = (status) => {
+  const s = String(status || '').toLowerCase();
+  if (s === 'paid' || s === 'succeeded' || s === 'complete') return 'bg-success/10 text-success border-0';
+  if (s === 'pending' || s === 'processing') return 'bg-warning/10 text-warning border-0';
+  if (s === 'failed' || s === 'expired') return 'bg-destructive/10 text-destructive border-0';
+  if (s === 'cancelled' || s === 'refunded') return 'bg-muted text-muted-foreground border-0';
+  return 'bg-primary/10 text-primary border-0';
+};
 
 const formatMoney = (amountCents, currency = 'eur', language = 'fr') => {
   if (amountCents == null) return '-';
@@ -112,7 +122,7 @@ export default function Billing() {
 
   return (
     <div className="w-full max-w-none px-0 py-4">
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+      <div className="bg-white rounded-3xl shadow-sm border border-border p-8">
         {showPaymentSuccess ? (
           <div className="rounded-2xl border border-success/20 bg-success/10 p-4 mb-6">
             <p className="text-sm font-semibold text-success inline-flex items-center gap-2">
@@ -124,43 +134,65 @@ export default function Billing() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-sm text-[#3B4759]">
-            {labels.loading}
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border border-border rounded-xl p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 flex-1">
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-3 w-14" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-3 w-10" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-5 w-28" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-28" />
+              </div>
+            ))}
           </div>
         ) : transactions.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 p-8 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <FileText className="w-5 h-5 text-gray-500" />
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+              <FileText className="w-5 h-5 text-muted-foreground" />
             </div>
-            <p className="text-sm text-[#111827]">{labels.emptyTransactions}</p>
+            <p className="text-sm text-muted-foreground">{labels.emptyTransactions}</p>
           </div>
         ) : (
           <div className="space-y-3">
             {transactions.map((txn) => (
               <div
                 key={txn.id}
-                className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border border-gray-100 rounded-xl p-4"
+                className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border border-border rounded-xl p-4"
               >
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm flex-1">
                   <div>
-                    <p className="text-xs text-[#111827]">{labels.amount}</p>
-                    <p className="font-medium text-[#3B4759]">
+                    <p className="text-xs text-muted-foreground">{labels.amount}</p>
+                    <p className="font-medium text-foreground">
                       {formatMoney(txn.amount_paid_cents, txn.currency, language)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#111827]">{labels.status}</p>
-                    <Badge className="w-fit bg-orange-100 text-orange-700 border-0 mt-0.5">
+                    <p className="text-xs text-muted-foreground">{labels.status}</p>
+                    <Badge className={`w-fit mt-0.5 ${statusVariant(txn.status)}`}>
                       {txn.status || '-'}
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-xs text-[#111827]">{labels.date}</p>
-                    <p className="font-medium text-[#3B4759]">{formatDate(txn.created_at, language)}</p>
+                    <p className="text-xs text-muted-foreground">{labels.date}</p>
+                    <p className="font-medium text-foreground">{formatDate(txn.created_at, language)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#111827]">{labels.items}</p>
-                    <p className="font-medium text-[#3B4759] break-words">{formatItems(txn.item_codes)}</p>
+                    <p className="text-xs text-muted-foreground">{labels.items}</p>
+                    <p className="font-medium text-foreground break-words">{formatItems(txn.item_codes)}</p>
                   </div>
                 </div>
 
@@ -169,12 +201,12 @@ export default function Billing() {
                     href={txn.invoice_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-[#FF6B4A] font-semibold underline-offset-2 hover:underline"
+                    className="text-xs text-primary font-semibold underline-offset-2 hover:underline"
                   >
                     {labels.invoice}: {labels.openInvoice}
                   </a>
                 ) : (
-                  <span className="text-xs text-[#6B7280]">{labels.invoice}: -</span>
+                  <span className="text-xs text-muted-foreground">{labels.invoice}: -</span>
                 )}
               </div>
             ))}

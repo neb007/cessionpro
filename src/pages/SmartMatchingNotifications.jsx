@@ -46,7 +46,7 @@ function InfoTip({ content }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" className="text-gray-400 hover:text-gray-600" aria-label="Aide">
+          <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="Aide">
             <CircleHelp className="w-4 h-4" />
           </button>
         </TooltipTrigger>
@@ -261,7 +261,7 @@ export default function SmartMatchingNotifications() {
                 <SelectItem key={sector.value} value={sector.value}>{sector.label}</SelectItem>
               ))
           ) : (
-            <div className="px-3 py-2 text-xs text-gray-500">
+            <div className="px-3 py-2 text-xs text-muted-foreground">
               {language === 'fr' ? 'Tous les secteurs sont déjà sélectionnés' : 'All sectors are already selected'}
             </div>
           )}
@@ -273,13 +273,13 @@ export default function SmartMatchingNotifications() {
           {values.map((value) => (
             <span
               key={value}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 text-xs font-semibold text-[#FF6B4A]"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary"
             >
               {getSectorLabel(value)}
               <button
                 type="button"
                 onClick={() => onRemove(value)}
-                className="hover:text-[#FF5A3A]"
+                className="hover:text-primary"
                 aria-label={language === 'fr' ? 'Retirer' : 'Remove'}
               >
                 <X className="w-3 h-3" />
@@ -322,11 +322,11 @@ export default function SmartMatchingNotifications() {
           placeholder={language === 'fr' ? 'Saisir une localisation...' : 'Type a location...'}
           className="pr-9"
         />
-        <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+        <Search className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground" />
       </div>
 
       {showSuggestions && (
-        <div className="absolute z-30 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-56 overflow-y-auto">
+        <div className="absolute z-30 mt-1 w-full rounded-lg border border-border bg-white shadow-lg max-h-56 overflow-y-auto">
           {suggestions.length > 0 ? (
             suggestions.map((location) => (
               <button
@@ -337,13 +337,13 @@ export default function SmartMatchingNotifications() {
                   onAdd(location.value);
                   setQuery('');
                 }}
-                className="w-full px-3 py-2 text-left text-sm text-[#3B4759] hover:bg-gray-100"
+                className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
               >
                 {location.label}
               </button>
             ))
           ) : (
-            <div className="px-3 py-2 text-sm text-gray-500">{emptyText}</div>
+            <div className="px-3 py-2 text-sm text-muted-foreground">{emptyText}</div>
           )}
         </div>
       )}
@@ -353,13 +353,13 @@ export default function SmartMatchingNotifications() {
           {selectedValues.map((value) => (
             <span
               key={value}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 text-xs font-semibold text-[#FF6B4A]"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary"
             >
               {getLocationLabel(value)}
               <button
                 type="button"
                 onClick={() => onRemove(value)}
-                className="hover:text-[#FF5A3A]"
+                className="hover:text-primary"
                 aria-label={language === 'fr' ? 'Retirer' : 'Remove'}
               >
                 <X className="w-3 h-3" />
@@ -372,9 +372,9 @@ export default function SmartMatchingNotifications() {
   );
 
   const renderCessionBlock = ({ title }) => (
-    <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
+    <div className="space-y-4 rounded-2xl border border-border p-4">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-bold text-[#3B4759]">{title}</h4>
+        <h4 className="text-sm font-bold text-foreground">{title}</h4>
         <InfoTip
           content={language === 'fr'
             ? 'Critères appliqués aux annonces cession (vendeurs).'
@@ -477,9 +477,9 @@ export default function SmartMatchingNotifications() {
   );
 
   const renderAcquisitionBlock = ({ title }) => (
-    <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
+    <div className="space-y-4 rounded-2xl border border-border p-4">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-bold text-[#3B4759]">{title}</h4>
+        <h4 className="text-sm font-bold text-foreground">{title}</h4>
         <InfoTip
           content={language === 'fr'
             ? 'Critères appliqués aux annonces acquisition (repreneurs).'
@@ -585,11 +585,11 @@ export default function SmartMatchingNotifications() {
 
   return (
     <div className="py-2 space-y-6">
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-[#FFF6F3] to-white">
+      <Card className="border-0 shadow-sm bg-primary/5">
         <CardHeader>
-          <CardTitle className="font-display flex items-center justify-between gap-3 text-[#3B4759]">
+          <CardTitle className="font-heading flex items-center justify-between gap-3 text-foreground">
             <span className="inline-flex items-center gap-2">
-              <Bell className="w-5 h-5 text-[#FF6B4A]" />
+              <Bell className="w-5 h-5 text-primary" />
               {language === 'fr' ? 'Notification Smart Matching' : 'Smart Matching Notifications'}
             </span>
 
@@ -600,7 +600,7 @@ export default function SmartMatchingNotifications() {
                     <button
                       type="button"
                       onClick={() => setShowSetupTooltip((prev) => !prev)}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#FF6B4A]/10 text-[#FF6B4A]"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary"
                       aria-label={language === 'fr' ? 'Aide configuration' : 'Configuration help'}
                     >
                       <Sparkles className="w-4 h-4" />
@@ -624,7 +624,7 @@ export default function SmartMatchingNotifications() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-[#4B5563]">
+          <p className="text-sm text-muted-foreground">
             {language === 'fr'
               ? 'Configurez vos critères par profil et votre fréquence d’alerte dans une interface claire, orientée usage quotidien.'
               : 'Configure profile-based criteria and alert frequency in a clear, daily-use interface.'}
@@ -634,7 +634,7 @@ export default function SmartMatchingNotifications() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-display text-[#3B4759] text-base inline-flex items-center gap-2">
+          <CardTitle className="font-heading text-foreground text-base inline-flex items-center gap-2">
             {language === 'fr' ? 'Critères de recherche' : 'Search criteria'}
             <InfoTip content={helperText.profile} />
           </CardTitle>
@@ -664,7 +664,7 @@ export default function SmartMatchingNotifications() {
 
           {criteriaProfile === 'cabinet' && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-[#FF6B4A]/20 bg-[#FFF6F3] px-3 py-3 text-xs text-[#7C2D12] space-y-1">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-3 text-xs text-primary space-y-1">
                 <p className="font-semibold">
                   {language === 'fr' ? 'Parcours cabinet (vente + achat)' : 'Advisor workflow (sell + buy)'}
                 </p>
@@ -701,18 +701,18 @@ export default function SmartMatchingNotifications() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="font-display text-[#3B4759] text-base inline-flex items-center gap-2">
+          <CardTitle className="font-heading text-foreground text-base inline-flex items-center gap-2">
             {language === 'fr' ? 'Notifications email' : 'Email notifications'}
             <InfoTip content={helperText.frequency} />
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-[#3B4759]">
+              <p className="text-sm font-semibold text-foreground">
                 {language === 'fr' ? 'Activer les alertes Smart Matching' : 'Enable Smart Matching alerts'}
               </p>
-              <p className="text-xs text-gray-500">{helperText.noEmail}</p>
+              <p className="text-xs text-muted-foreground">{helperText.noEmail}</p>
             </div>
             <Switch
               checked={alerts.enabled}
@@ -750,14 +750,14 @@ export default function SmartMatchingNotifications() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#FF6B4A]/20 bg-[#FFF6F3] px-3 py-2 text-xs text-[#7C2D12]">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
             {helperText.noEmail}
           </div>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving} className="bg-[#FF6B4A] hover:bg-[#FF5A3A]">
+        <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90">
           <Save className="w-4 h-4 mr-2" />
           {saved
             ? language === 'fr' ? 'Enregistré' : 'Saved'

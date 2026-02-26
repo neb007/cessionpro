@@ -1,32 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { User, CreditCard, Bell, FileText } from 'lucide-react';
+import { useLanguage } from '@/components/i18n/LanguageContext';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Profile from './Profile';
 import Abonnement from './Abonnement';
 import Billing from './Billing';
 import SmartMatchingNotifications from './SmartMatchingNotifications';
 
-const tabs = [
-  {
-    key: 'profile',
-    label: 'Profil',
-    icon: User
-  },
-  {
-    key: 'pricing',
-    label: 'Abonnement',
-    icon: CreditCard
-  },
-  {
-    key: 'billing',
-    label: 'Facturation',
-    icon: FileText
-  },
-  {
-    key: 'smartmatching-notifications',
-    label: 'Notification Smart Matching',
-    icon: Bell
-  }
+const tabConfig = [
+  { key: 'profile', label: { fr: 'Profil', en: 'Profile' }, icon: User },
+  { key: 'pricing', label: { fr: 'Abonnement', en: 'Subscription' }, icon: CreditCard },
+  { key: 'billing', label: { fr: 'Facturation', en: 'Billing' }, icon: FileText },
+  { key: 'smartmatching-notifications', label: { fr: 'Notifications SM', en: 'SM Notifications' }, icon: Bell }
 ];
 
 const resolveSettingsTab = (tabValue) => {
@@ -53,6 +39,7 @@ const resolveSettingsTab = (tabValue) => {
 };
 
 export default function Settings() {
+  const { language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => resolveSettingsTab(searchParams.get('tab')));
 
@@ -70,39 +57,38 @@ export default function Settings() {
   return (
     <div className="w-full max-w-none mx-0 px-0 py-8 overflow-x-hidden">
       <div className="mb-6 px-4 sm:px-6 lg:px-8">
-        <h1 className="font-display text-2xl text-[#3B4759]">Paramètres</h1>
-        <p className="text-sm text-[#111827]">
-          Gérez votre profil, votre facturation et vos notifications sans quitter cette page.
+        <h1 className="font-heading text-2xl text-foreground">
+          {language === 'fr' ? 'Paramètres' : 'Settings'}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {language === 'fr'
+            ? 'Gérez votre profil, votre facturation et vos notifications sans quitter cette page.'
+            : 'Manage your profile, billing and notifications from this page.'}
         </p>
       </div>
 
-      <div className="flex flex-nowrap sm:flex-wrap gap-2 border-b border-gray-200 mb-6 overflow-x-auto pb-1 px-4 sm:px-6 lg:px-8">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => handleTabChange(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                isActive
-                  ? 'border-[#FF6B4A] text-[#FF6B4A] bg-orange-50'
-                  : 'border-transparent text-[#111827] hover:text-[#3B4759]'
-              }`}
-            >
-              {Icon ? <Icon className="w-4 h-4" /> : null}
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <div className="px-4 sm:px-6 lg:px-8 overflow-x-auto">
+          <TabsList className="w-full sm:w-auto justify-start bg-muted/50 mb-6">
+            {tabConfig.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger key={tab.key} value={tab.key} className="gap-2 whitespace-nowrap">
+                  <Icon className="w-4 h-4" />
+                  {tab.label[language] || tab.label.fr}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </div>
 
-      <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-3 sm:p-6 lg:p-8 overflow-x-hidden">
-        {activeTab === 'profile' && <Profile />}
-        {activeTab === 'pricing' && <Abonnement />}
-        {activeTab === 'billing' && <Billing />}
-        {activeTab === 'smartmatching-notifications' && <SmartMatchingNotifications />}
-      </div>
+        <div className="w-full bg-white rounded-2xl border border-border shadow-sm p-3 sm:p-6 lg:p-8 overflow-x-hidden">
+          <TabsContent value="profile"><Profile /></TabsContent>
+          <TabsContent value="pricing"><Abonnement /></TabsContent>
+          <TabsContent value="billing"><Billing /></TabsContent>
+          <TabsContent value="smartmatching-notifications"><SmartMatchingNotifications /></TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }
