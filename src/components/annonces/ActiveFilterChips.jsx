@@ -1,8 +1,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-const formatCompactCurrency = (value) =>
-  new Intl.NumberFormat('fr-FR', {
+const formatCompactCurrency = (value, language = 'fr') =>
+  new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
     style: 'currency',
     currency: 'EUR',
     maximumFractionDigits: 0,
@@ -22,8 +22,8 @@ export default function ActiveFilterChips({
   const max = Number(filtersState.budgetMax) || 5000000;
 
   return (
-    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-      <span className="text-sm text-gray-500">
+    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+      <span className="text-sm text-muted-foreground">
         {language === 'fr' ? 'Filtres actifs:' : 'Active filters:'}
       </span>
       <div className="flex flex-wrap gap-2">
@@ -45,9 +45,9 @@ export default function ActiveFilterChips({
         )}
         {(min > 0 || max < 5000000) && (
           <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-            {min > 0 ? formatCompactCurrency(min) : ''}
+            {min > 0 ? formatCompactCurrency(min, language) : ''}
             {min > 0 && max < 5000000 ? ' - ' : ''}
-            {max < 5000000 ? formatCompactCurrency(max) : ''}
+            {max < 5000000 ? formatCompactCurrency(max, language) : ''}
             <button
               onClick={() => {
                 onUpdateFilter('budgetMin', '');

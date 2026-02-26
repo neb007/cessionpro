@@ -11,12 +11,12 @@ export default function SortControl({ value, onChange, language, compact = false
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {!compact && (
-        <span className="text-xs sm:text-sm text-[#111827]">
+        <span className="text-xs sm:text-sm text-foreground">
           {language === 'fr' ? 'Tri:' : 'Sort by:'}
         </span>
       )}
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-9 w-full sm:w-44 text-xs sm:text-sm border-gray-300 rounded-lg bg-white">
+        <SelectTrigger className="h-9 w-full sm:w-44 text-xs sm:text-sm border-border rounded-lg bg-white">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

@@ -24,17 +24,17 @@ export default function FilterBarDesktop({
   const isDepartmentDisabled = (filtersState.country || '').trim().toLowerCase() !== 'france';
 
   return (
-    <div className="hidden sm:block w-full bg-[#FAF9F7]">
-      <div className="grid grid-cols-12 gap-2 mb-3 pb-3 border-b border-[#E7E2DE]">
+    <div className="hidden sm:block w-full bg-background">
+      <div className="grid grid-cols-12 gap-2 mb-3 pb-3 border-b border-border">
         <div className="col-span-8">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
               value={filtersState.query}
               onChange={(e) => onUpdateFilter('query', e.target.value)}
               placeholder={t('search_placeholder')}
-              className="pl-9 h-9 text-sm border-gray-300 focus:border-primary rounded-lg w-full bg-white"
+              className="pl-9 h-9 text-sm border-border focus:border-primary rounded-lg w-full bg-white"
             />
           </div>
         </div>
@@ -46,7 +46,7 @@ export default function FilterBarDesktop({
       <div className="grid grid-cols-5 gap-2">
         <div>
           <Select value={filtersState.sector} onValueChange={(v) => onUpdateFilter('sector', v)}>
-            <SelectTrigger className="h-9 w-full rounded-lg border-gray-300 bg-white text-sm">
+            <SelectTrigger className="h-9 w-full rounded-lg border-border bg-white text-sm">
               <SelectValue placeholder={language === 'fr' ? 'Secteur' : 'Sector'} />
             </SelectTrigger>
             <SelectContent>
@@ -80,7 +80,7 @@ export default function FilterBarDesktop({
             language={language}
           />
           {isDepartmentDisabled && (
-            <p className="text-[11px] text-gray-500 mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               {language === 'fr' ? 'Disponible pour la France' : 'Available for France'}
             </p>
           )}
@@ -92,7 +92,7 @@ export default function FilterBarDesktop({
             value={filtersState.budgetMin}
             onChange={(e) => onUpdateFilter('budgetMin', e.target.value)}
             placeholder={language === 'fr' ? 'Min' : 'Min'}
-            className="h-9 w-full rounded-lg border-gray-300 bg-white text-sm"
+            className="h-9 w-full rounded-lg border-border bg-white text-sm"
           />
         </div>
 
@@ -102,7 +102,7 @@ export default function FilterBarDesktop({
             value={filtersState.budgetMax}
             onChange={(e) => onUpdateFilter('budgetMax', e.target.value)}
             placeholder={language === 'fr' ? 'Max' : 'Max'}
-            className="h-9 w-full rounded-lg border-gray-300 bg-white text-sm"
+            className="h-9 w-full rounded-lg border-border bg-white text-sm"
           />
         </div>
       </div>
