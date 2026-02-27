@@ -238,7 +238,7 @@ export default function Sidebar({ user }) {
         {/* Sidebar Content */}
         <div className="p-0 flex flex-col h-full font-sans text-sm font-medium">
           {/* Logo Section */}
-          <div className="flex items-center justify-between px-4 py-4">
+          <div className="flex items-center justify-center px-4 py-4">
             <Link to="/" className="flex items-center gap-3">
               <Logo size="sm" showText={false} />
             </Link>

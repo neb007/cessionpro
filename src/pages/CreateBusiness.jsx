@@ -16,6 +16,7 @@ import { normalizeImageArray } from '@/utils/imageHelpers';
 import { generateUniqueReference } from '@/utils/referenceGenerator';
 import { computeListingCompletionScore } from '@/utils/listingCompletionScore';
 import { getDefaultImageForSector } from '@/constants/defaultImages';
+import { PRICING } from '@/constants/pricing';
 
 const TITLE_MAX_LENGTH = 55;
 
@@ -130,6 +131,8 @@ export default function CreateBusiness() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [listingCount, setListingCount] = useState(0);
+  const [limitReached, setLimitReached] = useState(false);
   
   const [formData, setFormData] = useState({
     // Seller fields
@@ -200,9 +203,24 @@ export default function CreateBusiness() {
 
   const checkAuth = async () => {
     try {
-      // Check for edit mode
+      // Check listing limit (only for new listings)
       const urlParams = new URLSearchParams(window.location.search);
       const editId = urlParams.get('edit');
+
+      if (!editId && user?.id) {
+        const { count, error: countError } = await supabase
+          .from('businesses')
+          .select('id', { count: 'exact', head: true })
+          .eq('seller_id', user.id);
+        if (!countError) {
+          setListingCount(count || 0);
+          if (count >= PRICING.free.freeListings) {
+            setLimitReached(true);
+          }
+        }
+      }
+
+      // Check for edit mode
         if (editId && user) {
         const businesses = await base44.entities.Business.filter({ id: editId });
         if (businesses && businesses.length > 0) {
@@ -490,6 +508,40 @@ export default function CreateBusiness() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (limitReached && !editingId) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#FF6B4A]/10 flex items-center justify-center">
+            <ArrowLeft className="w-8 h-8 text-[#FF6B4A]" />
+          </div>
+          <h2 className="font-display text-2xl font-bold text-gray-900">
+            {language === 'fr' ? 'Limite d\'annonces atteinte' : 'Listing limit reached'}
+          </h2>
+          <p className="text-gray-600 leading-relaxed">
+            {language === 'fr'
+              ? `Vous avez utilisé vos ${PRICING.free.freeListings} annonces gratuites (${listingCount}/${PRICING.free.freeListings}). Pour publier davantage, passez à un plan supérieur.`
+              : `You have used all ${PRICING.free.freeListings} free listings (${listingCount}/${PRICING.free.freeListings}). Upgrade your plan to publish more.`}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => navigate(createPageUrl('MyListings'))}
+              className="px-6 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+            >
+              {language === 'fr' ? 'Mes annonces' : 'My listings'}
+            </button>
+            <button
+              onClick={() => navigate('/Settings?tab=pricing')}
+              className="px-6 py-3 rounded-xl bg-[#FF6B4A] text-white hover:bg-[#e55a3a] transition-colors font-medium"
+            >
+              {language === 'fr' ? 'Voir les offres' : 'View plans'}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

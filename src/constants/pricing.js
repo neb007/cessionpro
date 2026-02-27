@@ -8,10 +8,16 @@ export const PRICING = {
   // Free Model
   free: {
     photosPerListing: 1,
-    frenchLabel: 'Modèle de Publication (GRATUIT)',
-    englishLabel: 'Free Publication Model',
-    frenchDescription: 'Publication d\'annonces gratuite pour vendeurs et acheteurs',
-    englishDescription: 'Free listing publication for sellers and buyers'
+    freeContacts: 1,
+    freeListings: 4,
+    frenchLabel: 'Plan Gratuit',
+    englishLabel: 'Free Plan',
+    frenchDescription: 'Publiez vos annonces gratuitement et profitez de vos premiers crédits offerts.',
+    englishDescription: 'Publish your listings for free and enjoy your first complimentary credits.',
+    features: {
+      fr: ['4 annonces gratuites', '1 photo par annonce', '1 mise en relation offerte', 'Accès aux simulateurs', 'Messagerie intégrée'],
+      en: ['4 free listings', '1 photo per listing', '1 free contact', 'Access to simulators', 'Built-in messaging']
+    }
   },
 
   // Photo Packages

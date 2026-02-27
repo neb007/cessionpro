@@ -6,7 +6,7 @@ import { SidebarProvider, useSidebar } from '@/lib/SidebarContext';
 import { useAuth } from '@/lib/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import PublicNav from '@/components/layout/PublicNav';
-import Logo from '@/components/Logo';
+
 import { Menu } from 'lucide-react';
 
 const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap';
@@ -131,9 +131,7 @@ function LayoutContent({ children, currentPageName }) {
               <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
                 <div className="lg:col-span-1">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#FF6B4A] flex items-center justify-center">
-                      <Logo size="sm" showText={false} />
-                    </div>
+                    <img src="/riviqo-favicon.svg" alt="Riviqo" className="w-9 h-9 rounded-xl" />
                     <span className="font-display font-bold text-lg text-white">Riviqo</span>
                   </div>
                   <p className="text-sm text-[#9EABC1] leading-relaxed">

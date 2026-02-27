@@ -51,6 +51,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
 import { sponsorshipService } from '@/services/sponsorshipService';
 import { computeListingCompletionScore } from '@/utils/listingCompletionScore';
+import { PRICING } from '@/constants/pricing';
 
 const statusConfig = {
   active: { label: 'active', color: 'bg-green-100 text-green-700', icon: CheckCircle },
@@ -384,7 +385,18 @@ export default function MyListings() {
                   </p>
                   <LayoutList className="w-4 h-4 text-primary" />
                 </div>
-                <p className="text-2xl font-bold text-foreground leading-none">{myListings.length}</p>
+                <p className="text-2xl font-bold text-foreground leading-none">
+                  {myListings.length}
+                  <span className="text-sm font-normal text-muted-foreground ml-1">/ {PRICING.free.freeListings} {language === 'fr' ? 'gratuites' : 'free'}</span>
+                </p>
+                {myListings.length >= PRICING.free.freeListings && (
+                  <p className="text-xs text-[#FF6B4A] font-medium mt-1">
+                    {language === 'fr' ? 'Limite atteinte — ' : 'Limit reached — '}
+                    <button onClick={() => navigate('/Settings?tab=pricing')} className="underline hover:no-underline">
+                      {language === 'fr' ? 'augmenter le quota' : 'upgrade quota'}
+                    </button>
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground mt-3">
                   {activeListings} {language === 'fr' ? 'actif(s)' : 'active'} • {totalViews} {language === 'fr' ? 'vues' : 'views'}
                 </p>

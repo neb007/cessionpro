@@ -183,6 +183,8 @@ export const AuthProvider = ({ children }) => {
           profile_type: userData.profile_type,
           transaction_size: userData.transaction_size,
           sectors: userData.sectors ? (typeof userData.sectors === 'string' ? JSON.parse(userData.sectors) : userData.sectors) : [],
+          photos_remaining_balance: 1,
+          contact_credits_balance: 1,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' });

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
+import { PRICING } from '@/constants/pricing';
 
 /**
  * Hook to manage user credits and subscriptions
@@ -8,9 +9,11 @@ import { supabase } from '@/api/supabaseClient';
 export const useUserCredits = () => {
   const [credits, setCredits] = useState({
     photos: 1, // Default 1 free photo per listing
-    contacts: 0,
+    contacts: 1, // Default 1 free contact
     subscriptions: {}
   });
+  const [listingsCount, setListingsCount] = useState(0);
+  const maxFreeListings = PRICING.free.freeListings;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
@@ -44,16 +47,27 @@ export const useUserCredits = () => {
         // Set defaults if profile doesn't exist yet
         setCredits({
           photos: 1,
-          contacts: 0,
+          contacts: 1,
           subscriptions: {}
         });
       } else {
         setCredits({
           photos: data?.photos_remaining_balance || 1,
-          contacts: data?.contact_credits_balance || 0,
+          contacts: data?.contact_credits_balance || 1,
           subscriptions: data?.active_subscriptions || {}
         });
       }
+
+      // Load listings count
+      const { count, error: countError } = await supabase
+        .from('businesses')
+        .select('id', { count: 'exact', head: true })
+        .eq('seller_id', user.id);
+
+      if (!countError) {
+        setListingsCount(count || 0);
+      }
+
       setError(null);
     } catch (err) {
       console.error('Error in useUserCredits:', err);
@@ -245,6 +259,10 @@ export const useUserCredits = () => {
     return credits.subscriptions && credits.subscriptions[subscriptionId] === true;
   };
 
+  const hasListingCredits = () => {
+    return listingsCount < maxFreeListings;
+  };
+
   // Refresh credits from server
   const refreshCredits = async () => {
     await loadUserCredits();
@@ -256,6 +274,8 @@ export const useUserCredits = () => {
     loading,
     error,
     userId,
+    listingsCount,
+    maxFreeListings,
 
     // Methods
     deductPhotoCredit,
@@ -267,7 +287,8 @@ export const useUserCredits = () => {
     // Checkers
     hasPhotoCredits,
     hasContactCredits,
-    hasSubscription
+    hasSubscription,
+    hasListingCredits
   };
 };
 

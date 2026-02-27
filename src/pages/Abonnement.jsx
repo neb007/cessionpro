@@ -486,6 +486,44 @@ export default function Abonnement() {
         </div>
       )}
 
+      {/* ─── Free Plan Banner ─── */}
+      <section className="rounded-2xl border border-success/20 bg-success/5 px-4 py-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
+            <CheckCircle2 className="w-5 h-5 text-success" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-semibold text-foreground">
+                {language === 'fr' ? 'Plan Gratuit' : 'Free Plan'}
+              </h2>
+              <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
+                {language === 'fr' ? 'Inclus' : 'Included'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {language === 'fr'
+                ? 'Votre compte inclut gratuitement :'
+                : 'Your account includes for free:'}
+            </p>
+            <ul className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <li className="flex items-center gap-1.5 text-sm text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
+                {language === 'fr' ? '4 annonces gratuites' : '4 free listings'}
+              </li>
+              <li className="flex items-center gap-1.5 text-sm text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
+                {language === 'fr' ? '1 photo par annonce' : '1 photo per listing'}
+              </li>
+              <li className="flex items-center gap-1.5 text-sm text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
+                {language === 'fr' ? '1 mise en relation offerte' : '1 free contact'}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Credits / Balances ─── */}
       <section id="service-hub" className="rounded-2xl border border-border bg-white px-4 py-4 shadow-sm">
         <h2 className="text-base font-semibold text-foreground">{l.creditsTitle}</h2>

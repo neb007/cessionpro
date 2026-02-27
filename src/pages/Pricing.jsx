@@ -288,6 +288,44 @@ export default function Pricing() {
       <SEO pageName="Pricing" />
       <div className="max-w-5xl mx-auto">
 
+        {/* FREE PLAN SECTION */}
+        <section className="mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50/80 to-white p-6"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="font-display text-xl font-bold text-[#3B4759]">
+                    {language === 'fr' ? 'Plan Gratuit' : 'Free Plan'}
+                  </h2>
+                  <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                    {language === 'fr' ? 'Inclus' : 'Included'}
+                  </Badge>
+                </div>
+                <p className="text-sm text-[#6B7A94] mb-4">
+                  {language === 'fr' ? PRICING.free.frenchDescription : PRICING.free.englishDescription}
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {(PRICING.free.features[language] || PRICING.free.features.fr).map((feat, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-sm text-[#3B4759]">
+                      <Check className="w-4 h-4 text-green-600 shrink-0" />
+                      {feat}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="text-center sm:text-right shrink-0">
+                <span className="font-display text-4xl font-bold text-green-600">0€</span>
+                <p className="text-xs text-[#6B7A94] mt-1">{language === 'fr' ? 'pour toujours' : 'forever'}</p>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
         {/* ADVISORY SECTION */}
         <section className="mb-12">
           <div className="text-center mb-8">
