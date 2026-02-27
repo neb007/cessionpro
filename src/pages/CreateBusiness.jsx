@@ -7,6 +7,7 @@ import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import AnnouncementTypeRadio from '@/components/AnnouncementTypeRadio';
+import FormStepper from '@/components/FormStepper';
 import CompletionChecklist from '@/components/CompletionChecklist';
 import SellerForm from '@/components/SellerForm';
 import BuyerForm from '@/components/BuyerForm';
@@ -78,6 +79,19 @@ const BUYER_TRACKED_FIELDS = [
   'buyer_notes',
   'buyer_image',
   'buyer_document_url'
+];
+
+const SELLER_STEPS = [
+  { label: "L'essentiel" },
+  { label: 'Chiffres & finances' },
+  { label: 'Positionnement' },
+  { label: 'Photos & options' },
+];
+
+const BUYER_STEPS = [
+  { label: 'Votre profil' },
+  { label: 'Critères' },
+  { label: 'Finalisation' },
 ];
 
 const isFieldFilled = (value) => {
@@ -173,6 +187,9 @@ export default function CreateBusiness() {
   
   const [announcementType, setAnnouncementType] = useState('sale');
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const steps = announcementType === 'sale' ? SELLER_STEPS : BUYER_STEPS;
   
   // Auto-save hook
  const { saveDraftNow, loadDraft, hasDraft } = useAutoSave(formData, 'createBusinessDraft', 30000);
@@ -549,10 +566,20 @@ export default function CreateBusiness() {
         {/* Announcement Type Radio */}
         <AnnouncementTypeRadio
           announcementType={announcementType}
-          onChange={setAnnouncementType}
+          onChange={(type) => {
+            setAnnouncementType(type);
+            setCurrentStep(0);
+          }}
           language={language}
           disabled={!!editingId}
           hideOption={null}
+        />
+
+        {/* Step Progress */}
+        <FormStepper
+          steps={steps}
+          currentStep={currentStep}
+          onStepChange={setCurrentStep}
         />
 
         {/* Conditional Form Rendering */}
@@ -568,6 +595,8 @@ export default function CreateBusiness() {
             user={user}
             editingId={editingId}
             completion={rawCompletion}
+            currentStep={currentStep}
+            onStepChange={setCurrentStep}
           />
         ) : (
           <BuyerForm
@@ -581,6 +610,8 @@ export default function CreateBusiness() {
             user={user}
             editingId={editingId}
             completion={rawCompletion}
+            currentStep={currentStep}
+            onStepChange={setCurrentStep}
           />
         )}
 

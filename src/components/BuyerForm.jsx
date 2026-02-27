@@ -18,7 +18,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip';
-import { Save, Send, Loader2, Search, X, Upload, FileText, Eye, Info } from 'lucide-react';
+import { Save, Send, Loader2, Search, X, Upload, FileText, Eye, Info, ChevronLeft, ChevronRight, User, Filter, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import ImageGallery from '@/components/ImageGallery';
 import { getDefaultImageForSector } from '@/constants/defaultImages';
 import { base44 } from '@/api/base44Client';
@@ -27,6 +28,8 @@ import { SECTORS } from '@/constants/sectors';
 
 const BUSINESS_TYPES = ['entreprise', 'fond_de_commerce', 'franchise'];
 const TITLE_MAX_LENGTH = 55;
+const TOTAL_STEPS = 3;
+
 const EUROPEAN_COUNTRIES = [
   { value: 'france', label: '🇫🇷 France' },
   { value: 'belgium', label: '🇧🇪 Belgique' },
@@ -149,7 +152,6 @@ const FRENCH_DEPARTMENTS = [
   { value: '95', label: '95 - Val-d\'Oise' }
 ];
 
-// Get label for location value
 const getLocationLabel = (value) => {
   const dept = FRENCH_DEPARTMENTS.find(d => d.value === value);
   if (dept) return dept.label;
@@ -168,7 +170,9 @@ export default function BuyerForm({
   t,
   user,
   editingId,
-  completion
+  completion,
+  currentStep = 0,
+  onStepChange
 }) {
   const [locationInput, setLocationInput] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
@@ -217,12 +221,10 @@ export default function BuyerForm({
 
   const isTrackableField = (target) => {
     if (!target || typeof target.matches !== 'function') return false;
-
     if (target.matches('input')) {
       const inputType = String(target.getAttribute('type') || 'text').toLowerCase();
       return !['button', 'submit', 'reset', 'hidden', 'file', 'checkbox', 'radio'].includes(inputType);
     }
-
     return target.matches('textarea, [role="combobox"], [contenteditable="true"]');
   };
 
@@ -233,7 +235,6 @@ export default function BuyerForm({
       setFocusIndicator(null);
       return;
     }
-
     const rect = target.getBoundingClientRect();
     const top = Math.max(20, Math.min(rect.top + (rect.height / 2), window.innerHeight - 20));
     const indicatorSize = 32;
@@ -242,37 +243,25 @@ export default function BuyerForm({
     const minInsideField = rect.left + 4;
     const leftInsideField = Math.max(minInsideField, rawLeft);
     const left = Math.max(14, Math.min(leftInsideField, window.innerWidth - 14));
-
     setFocusIndicator({ top, left });
   };
 
-  const handleFormFocusCapture = (event) => {
-    const target = event?.target;
-    updateFocusIndicator(target);
-  };
-
+  const handleFormFocusCapture = (event) => updateFocusIndicator(event?.target);
   const handleFormClickCapture = (event) => {
     const target = event?.target;
     if (!target?.closest) return;
     const focusableTarget = target.closest('input, textarea, [role="combobox"], [contenteditable="true"]');
-    if (isTrackableField(focusableTarget)) {
-      updateFocusIndicator(focusableTarget);
-    }
+    if (isTrackableField(focusableTarget)) updateFocusIndicator(focusableTarget);
   };
-
   const handleFormScroll = () => {
     const activeElement = document.activeElement;
     if (activeElement && scrollAreaRef.current?.contains(activeElement) && isTrackableField(activeElement)) {
       updateFocusIndicator(activeElement);
     }
   };
-
   const handleFormBlurCapture = (event) => {
     const nextFocusedElement = event?.relatedTarget;
-    if (nextFocusedElement && scrollAreaRef.current?.contains(nextFocusedElement)) {
-      return;
-    }
-
+    if (nextFocusedElement && scrollAreaRef.current?.contains(nextFocusedElement)) return;
     requestAnimationFrame(() => {
       const activeElement = document.activeElement;
       if (activeElement && scrollAreaRef.current?.contains(activeElement) && isTrackableField(activeElement)) {
@@ -305,7 +294,6 @@ export default function BuyerForm({
   const handleDocumentUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     setUploadingDocument(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
@@ -324,36 +312,25 @@ export default function BuyerForm({
     handleChange('buyer_document_name', '');
   };
 
-  useEffect(() => () => {
-    clearPublishToast();
-  }, []);
+  useEffect(() => () => { clearPublishToast(); }, []);
 
   useEffect(() => {
     console.debug('[completion-indicator-form]', {
-      form: 'buyer',
-      completionScore,
-      requiredCompletionScore,
-      allRequiredFilled,
-      isHighCompletion
+      form: 'buyer', completionScore, requiredCompletionScore, allRequiredFilled, isHighCompletion
     });
   }, [completionScore, requiredCompletionScore, allRequiredFilled, isHighCompletion]);
 
-  // Filter locations based on input
   const getFilteredLocations = () => {
-    if (!locationInput.trim()) {
-      return [];
-    }
+    if (!locationInput.trim()) return [];
     const searchTerm = locationInput.toLowerCase();
-    const depts = FRENCH_DEPARTMENTS.filter(dept => 
-      dept.label.toLowerCase().includes(searchTerm) && 
+    const depts = FRENCH_DEPARTMENTS.filter(dept =>
+      dept.label.toLowerCase().includes(searchTerm) &&
       !formData.buyer_locations.includes(dept.value)
     ).slice(0, 5);
-    
-    const countries = EUROPEAN_COUNTRIES.filter(country => 
+    const countries = EUROPEAN_COUNTRIES.filter(country =>
       country.label.toLowerCase().includes(searchTerm) &&
       !formData.buyer_locations.includes(country.value)
     ).slice(0, 5);
-    
     return [...depts, ...countries];
   };
 
@@ -377,24 +354,23 @@ export default function BuyerForm({
     </div>
   );
 
-  // Auto-generate default image based on first selected sector
   useEffect(() => {
     if (formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0) {
       const firstSector = formData.buyer_sectors_interested[0];
       const defaultImageUrl = getDefaultImageForSector(firstSector);
-      
-      // Only set default if no custom image is uploaded
       const hasCustomImage = formData.buyer_image && formData.buyer_image.some(img => !img.isDefault);
       if (!hasCustomImage) {
-        handleChange('buyer_image', [
-          {
-            url: defaultImageUrl,
-            isDefault: true
-          }
-        ]);
+        handleChange('buyer_image', [{ url: defaultImageUrl, isDefault: true }]);
       }
     }
   }, [formData.buyer_sectors_interested]);
+
+  // Scroll to top of form when step changes
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentStep]);
 
   return (
     <TooltipProvider delayDuration={120}>
@@ -422,343 +398,406 @@ export default function BuyerForm({
               </div>
             </div>
           )}
+
           <div className="space-y-4 md:space-y-6">
-            {/* Main Form */}
-            <div className="space-y-4 md:space-y-6">
-            {/* Basic Info */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Search className="w-5 h-5 text-primary" />
-              {language === 'fr' ? 'Informations générale' : 'General Information'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Label><span className="text-red-500">*</span> {t('title')}</Label>
-              <Input
-                value={formData.title}
-                onChange={(e) => handleChange('title', e.target.value)}
-                placeholder={language === 'fr' ? 'Ex: Cherche entreprise tech ou restaurant' : 'Ex: Looking for tech or restaurant business'}
-                className="mt-2"
-                maxLength={TITLE_MAX_LENGTH}
-                required
-              />
-              <p className="text-[11px] text-gray-500 mt-1 text-right">
-                {(formData.title || '').length}/{TITLE_MAX_LENGTH}
-              </p>
-            </div>
+            {/* Step Content */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`buyer-step-${currentStep}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+                className="space-y-4 md:space-y-6"
+              >
+                {/* ============ STEP 0: Votre profil ============ */}
+                {currentStep === 0 && (
+                  <>
+                    {/* Basic Info */}
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="font-display flex items-center gap-2">
+                          <User className="w-5 h-5 text-primary" />
+                          {language === 'fr' ? 'Votre profil' : 'Your Profile'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div>
+                          <Label><span className="text-red-500">*</span> {t('title')}</Label>
+                          <Input
+                            value={formData.title}
+                            onChange={(e) => handleChange('title', e.target.value)}
+                            placeholder={language === 'fr' ? 'Ex: Cherche entreprise tech ou restaurant' : 'Ex: Looking for tech or restaurant business'}
+                            className="mt-2"
+                            maxLength={TITLE_MAX_LENGTH}
+                            required
+                          />
+                          <p className="text-[11px] text-gray-500 mt-1 text-right">
+                            {(formData.title || '').length}/{TITLE_MAX_LENGTH}
+                          </p>
+                        </div>
 
-            <div>
-              <Label>{withTooltip(<><span className="text-red-500">*</span> {t('description')}</>, language === 'fr' ? 'Présentez votre profil et objectifs de reprise.' : 'Describe your buyer profile and objectives.')}</Label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
-                placeholder={language === 'fr' ? 'Décrivez votre profil et vos objectifs...' : 'Describe your profile and objectives...'}
-                className="mt-2 min-h-32"
-                required
-              />
-            </div>
-          </CardContent>
-        </Card>
+                        <div>
+                          <Label>{withTooltip(<><span className="text-red-500">*</span> {t('description')}</>, language === 'fr' ? 'Présentez votre profil et objectifs de reprise.' : 'Describe your buyer profile and objectives.')}</Label>
+                          <Textarea
+                            value={formData.description}
+                            onChange={(e) => handleChange('description', e.target.value)}
+                            placeholder={language === 'fr' ? 'Décrivez votre profil et vos objectifs...' : 'Describe your profile and objectives...'}
+                            className="mt-2 min-h-32"
+                            required
+                          />
+                        </div>
 
-        {/* Budget */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">
-              {language === 'fr' ? 'Budget' : 'Budget'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <Label>{withTooltip(language === 'fr' ? 'Budget minimum (€)' : 'Minimum Budget (€)', language === 'fr' ? 'Montant minimal envisagé pour l’opération.' : 'Minimum expected budget for the deal.')}</Label>
-                <Input
-                  type="number"
-                  value={formData.buyer_budget_min}
-                  onChange={(e) => handleChange('buyer_budget_min', e.target.value)}
-                  placeholder="100000"
-                  className="mt-2 font-mono"
-                />
-              </div>
-              <div>
-                <Label>{withTooltip(language === 'fr' ? 'Budget maximum (€)' : 'Maximum Budget (€)', language === 'fr' ? 'Montant maximal cible pour l’opération.' : 'Maximum target budget for the deal.')}</Label>
-                <Input
-                  type="number"
-                  value={formData.buyer_budget_max}
-                  onChange={(e) => handleChange('buyer_budget_max', e.target.value)}
-                  placeholder="1000000"
-                  className="mt-2 font-mono"
-                />
-              </div>
-            </div>
-            <div>
-              <Label>{withTooltip(language === 'fr' ? 'Financement disponible (€)' : 'Investment Available (€)', language === 'fr' ? 'Capacité de financement mobilisable rapidement.' : 'Funding capacity available quickly.')}</Label>
-              <Input
-                type="number"
-                value={formData.buyer_investment_available}
-                onChange={(e) => handleChange('buyer_investment_available', e.target.value)}
-                placeholder="500000"
-                className="mt-2 font-mono"
-              />
-            </div>
-          </CardContent>
-        </Card>
+                        <div>
+                          <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Type de profil' : 'Profile Type'}</>, language === 'fr' ? "Votre posture d'acquéreur." : 'Your acquisition profile.')}</Label>
+                          <Select value={formData.buyer_profile_type} onValueChange={(v) => handleChange('buyer_profile_type', v)}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue placeholder={language === 'fr' ? 'Sélectionner' : 'Select'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="individual">{language === 'fr' ? 'Reprise personnelle' : 'Individual Buyout'}</SelectItem>
+                              <SelectItem value="investor">{language === 'fr' ? 'Investisseur' : 'Investor'}</SelectItem>
+                              <SelectItem value="pe_fund">{language === 'fr' ? 'Fonds de capital-investissement' : 'PE Fund'}</SelectItem>
+                              <SelectItem value="company">{language === 'fr' ? 'Entreprise' : 'Company'}</SelectItem>
+                              <SelectItem value="other">{language === 'fr' ? 'Autre' : 'Other'}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-        {/* Business Criteria */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">
-              <span className="text-red-500">*</span> {language === 'fr' ? 'Critères de recherche' : 'Search Criteria'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Secteurs d\'intérêt' : 'Interested Sectors'}</>, language === 'fr' ? 'Sélectionnez les secteurs cibles.' : 'Select your target sectors.')}</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {SECTORS.map(sector => (
-                  <label key={sector} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.buyer_sectors_interested.includes(sector)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleChange('buyer_sectors_interested', [...formData.buyer_sectors_interested, sector]);
-                        } else {
-                          handleChange('buyer_sectors_interested', formData.buyer_sectors_interested.filter(s => s !== sector));
-                        }
-                      }}
-                      className="rounded"
-                    />
-                    <span className="text-sm">{t(sector)}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                    {/* Budget */}
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="font-display">
+                          {language === 'fr' ? 'Budget' : 'Budget'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div>
+                            <Label>{withTooltip(language === 'fr' ? 'Budget minimum (€)' : 'Minimum Budget (€)', language === 'fr' ? "Montant minimal envisagé pour l'opération." : 'Minimum expected budget for the deal.')}</Label>
+                            <Input
+                              type="number"
+                              value={formData.buyer_budget_min}
+                              onChange={(e) => handleChange('buyer_budget_min', e.target.value)}
+                              placeholder="100000"
+                              className="mt-2 font-mono"
+                            />
+                          </div>
+                          <div>
+                            <Label>{withTooltip(language === 'fr' ? 'Budget maximum (€)' : 'Maximum Budget (€)', language === 'fr' ? "Montant maximal cible pour l'opération." : 'Maximum target budget for the deal.')}</Label>
+                            <Input
+                              type="number"
+                              value={formData.buyer_budget_max}
+                              onChange={(e) => handleChange('buyer_budget_max', e.target.value)}
+                              placeholder="1000000"
+                              className="mt-2 font-mono"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label>{withTooltip(language === 'fr' ? 'Financement disponible (€)' : 'Investment Available (€)', language === 'fr' ? 'Capacité de financement mobilisable rapidement.' : 'Funding capacity available quickly.')}</Label>
+                          <Input
+                            type="number"
+                            value={formData.buyer_investment_available}
+                            onChange={(e) => handleChange('buyer_investment_available', e.target.value)}
+                            placeholder="500000"
+                            className="mt-2 font-mono"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
 
-            <div>
-              <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Type de Cession recherché' : 'Business Type Sought'}</>, language === 'fr' ? 'Type d’actif que vous souhaitez acquérir.' : 'Type of asset you seek to acquire.')}</Label>
-              <Select value={formData.business_type_sought} onValueChange={(v) => handleChange('business_type_sought', v)}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder={language === 'fr' ? 'Sélectionner un type' : 'Select type'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUSINESS_TYPES.map(bt => (
-                    <SelectItem key={bt} value={bt}>
-                      {bt === 'entreprise' ? (language === 'fr' ? 'Entreprise' : 'Company') : 
-                       bt === 'fond_de_commerce' ? (language === 'fr' ? 'Fond de Commerce' : 'Business Fund') :
-                       (language === 'fr' ? 'Franchise' : 'Franchise')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {/* ============ STEP 1: Critères de recherche ============ */}
+                {currentStep === 1 && (
+                  <>
+                    {/* Sectors & Business Type */}
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="font-display flex items-center gap-2">
+                          <Filter className="w-5 h-5 text-primary" />
+                          {language === 'fr' ? 'Critères de recherche' : 'Search Criteria'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? "Secteurs d'intérêt" : 'Interested Sectors'}</>, language === 'fr' ? 'Sélectionnez les secteurs cibles.' : 'Select your target sectors.')}</Label>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            {SECTORS.map(sector => (
+                              <label key={sector} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.buyer_sectors_interested.includes(sector)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      handleChange('buyer_sectors_interested', [...formData.buyer_sectors_interested, sector]);
+                                    } else {
+                                      handleChange('buyer_sectors_interested', formData.buyer_sectors_interested.filter(s => s !== sector));
+                                    }
+                                  }}
+                                  className="rounded"
+                                />
+                                <span className="text-sm">{t(sector)}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <Label>{withTooltip(language === 'fr' ? 'CA minimum (€)' : 'Minimum Revenue (€)', language === 'fr' ? 'Seuil minimal de chiffre d’affaires recherché.' : 'Minimum revenue threshold desired.')}</Label>
-                <Input
-                  type="number"
-                  value={formData.buyer_revenue_min}
-                  onChange={(e) => handleChange('buyer_revenue_min', e.target.value)}
-                  placeholder="500000"
-                  className="mt-2 font-mono"
-                />
-              </div>
-              <div>
-                <Label>{withTooltip(language === 'fr' ? 'CA maximum (€)' : 'Maximum Revenue (€)', language === 'fr' ? 'Seuil maximal de chiffre d’affaires recherché.' : 'Maximum revenue threshold desired.')}</Label>
-                <Input
-                  type="number"
-                  value={formData.buyer_revenue_max}
-                  onChange={(e) => handleChange('buyer_revenue_max', e.target.value)}
-                  placeholder="5000000"
-                  className="mt-2 font-mono"
-                />
-              </div>
-              <div>
-                <Label>{withTooltip(language === 'fr' ? 'Nombre d\'employés min' : 'Minimum Employees', language === 'fr' ? 'Taille d’équipe minimale.' : 'Minimum team size.')}</Label>
-                <Input
-                  type="number"
-                  value={formData.buyer_employees_min}
-                  onChange={(e) => handleChange('buyer_employees_min', e.target.value)}
-                  placeholder="5"
-                  className="mt-2 font-mono"
-                />
-              </div>
-              <div>
-                <Label>{withTooltip(language === 'fr' ? 'Nombre d\'employés max' : 'Maximum Employees', language === 'fr' ? 'Taille d’équipe maximale.' : 'Maximum team size.')}</Label>
-                <Input
-                  type="number"
-                  value={formData.buyer_employees_max}
-                  onChange={(e) => handleChange('buyer_employees_max', e.target.value)}
-                  placeholder="50"
-                  className="mt-2 font-mono"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                        <div>
+                          <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Type de Cession recherché' : 'Business Type Sought'}</>, language === 'fr' ? "Type d'actif que vous souhaitez acquérir." : 'Type of asset you seek to acquire.')}</Label>
+                          <Select value={formData.business_type_sought} onValueChange={(v) => handleChange('business_type_sought', v)}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue placeholder={language === 'fr' ? 'Sélectionner un type' : 'Select type'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {BUSINESS_TYPES.map(bt => (
+                                <SelectItem key={bt} value={bt}>
+                                  {bt === 'entreprise' ? (language === 'fr' ? 'Entreprise' : 'Company') :
+                                   bt === 'fond_de_commerce' ? (language === 'fr' ? 'Fond de Commerce' : 'Business Fund') :
+                                   (language === 'fr' ? 'Franchise' : 'Franchise')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-        {/* Buyer Profile */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">
-              {language === 'fr' ? 'Profil d\'acheteur' : 'Buyer Profile'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Type de profil' : 'Profile Type'}</>, language === 'fr' ? 'Votre posture d’acquéreur.' : 'Your acquisition profile.')}</Label>
-              <Select value={formData.buyer_profile_type} onValueChange={(v) => handleChange('buyer_profile_type', v)}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder={language === 'fr' ? 'Sélectionner' : 'Select'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="individual">{language === 'fr' ? 'Reprise personnelle' : 'Individual Buyout'}</SelectItem>
-                  <SelectItem value="investor">{language === 'fr' ? 'Investisseur' : 'Investor'}</SelectItem>
-                  <SelectItem value="pe_fund">{language === 'fr' ? 'Fonds de capital-investissement' : 'PE Fund'}</SelectItem>
-                  <SelectItem value="company">{language === 'fr' ? 'Entreprise' : 'Company'}</SelectItem>
-                  <SelectItem value="other">{language === 'fr' ? 'Autre' : 'Other'}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div>
+                            <Label>{withTooltip(language === 'fr' ? 'CA minimum (€)' : 'Minimum Revenue (€)', language === 'fr' ? "Seuil minimal de chiffre d'affaires recherché." : 'Minimum revenue threshold desired.')}</Label>
+                            <Input
+                              type="number"
+                              value={formData.buyer_revenue_min}
+                              onChange={(e) => handleChange('buyer_revenue_min', e.target.value)}
+                              placeholder="500000"
+                              className="mt-2 font-mono"
+                            />
+                          </div>
+                          <div>
+                            <Label>{withTooltip(language === 'fr' ? 'CA maximum (€)' : 'Maximum Revenue (€)', language === 'fr' ? "Seuil maximal de chiffre d'affaires recherché." : 'Maximum revenue threshold desired.')}</Label>
+                            <Input
+                              type="number"
+                              value={formData.buyer_revenue_max}
+                              onChange={(e) => handleChange('buyer_revenue_max', e.target.value)}
+                              placeholder="5000000"
+                              className="mt-2 font-mono"
+                            />
+                          </div>
+                          <div>
+                            <Label>{withTooltip(language === 'fr' ? "Nombre d'employés min" : 'Minimum Employees', language === 'fr' ? "Taille d'équipe minimale." : 'Minimum team size.')}</Label>
+                            <Input
+                              type="number"
+                              value={formData.buyer_employees_min}
+                              onChange={(e) => handleChange('buyer_employees_min', e.target.value)}
+                              placeholder="5"
+                              className="mt-2 font-mono"
+                            />
+                          </div>
+                          <div>
+                            <Label>{withTooltip(language === 'fr' ? "Nombre d'employés max" : 'Maximum Employees', language === 'fr' ? "Taille d'équipe maximale." : 'Maximum team size.')}</Label>
+                            <Input
+                              type="number"
+                              value={formData.buyer_employees_max}
+                              onChange={(e) => handleChange('buyer_employees_max', e.target.value)}
+                              placeholder="50"
+                              className="mt-2 font-mono"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-            <div className="relative">
-              <Label>{withTooltip(<><span className="text-red-500">*</span> {language === 'fr' ? 'Lieux d\'intérêt' : 'Interested Locations'}</>, language === 'fr' ? 'Zones géographiques cibles.' : 'Target geographic areas.')}</Label>
-              <Input
-                value={locationInput}
-                onChange={(e) => setLocationInput(e.target.value)}
-                onFocus={() => setShowLocationDropdown(true)}
-                placeholder={language === 'fr' ? 'Tapez un département ou un pays (ex: 75, Paris, France)' : 'Type a department or country (ex: 75, Paris, France)'}
-                className="mt-2"
-              />
-              
-              {/* Autocomplete Dropdown */}
-              {showLocationDropdown && locationInput.trim() && filteredLocations.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
-                  {filteredLocations.map((item, idx) => (
-                    <button
-                      key={`${item.value}-${idx}`}
-                      onClick={() => addLocation(item.value)}
-                      className="w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-b-0"
-                    >
-                      <span className="text-sm text-gray-900">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {/* Display selected locations */}
-              {formData.buyer_locations && formData.buyer_locations.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {formData.buyer_locations.map(loc => (
-                    <div
-                      key={loc}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
-                    >
-                      {getLocationLabel(loc)}
-                      <button
-                        onClick={() => removeLocation(loc)}
-                        className="ml-1 hover:text-primary/60"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    {/* Locations */}
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="font-display">
+                          <span className="text-red-500">*</span> {language === 'fr' ? "Lieux d'intérêt" : 'Interested Locations'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="relative">
+                          <Label>{withTooltip(language === 'fr' ? 'Rechercher un lieu' : 'Search location', language === 'fr' ? 'Zones géographiques cibles.' : 'Target geographic areas.')}</Label>
+                          <Input
+                            value={locationInput}
+                            onChange={(e) => setLocationInput(e.target.value)}
+                            onFocus={() => setShowLocationDropdown(true)}
+                            placeholder={language === 'fr' ? 'Tapez un département ou un pays (ex: 75, Paris, France)' : 'Type a department or country (ex: 75, Paris, France)'}
+                            className="mt-2"
+                          />
 
-            <div>
-              <Label>{withTooltip(language === 'fr' ? 'Notes et critères additionnels' : 'Additional Notes & Criteria', language === 'fr' ? 'Ajoutez vos préférences fines pour améliorer le matching.' : 'Add detailed preferences to improve matching.')}</Label>
-              <Textarea
-                value={formData.buyer_notes}
-                onChange={(e) => handleChange('buyer_notes', e.target.value)}
-                placeholder={language === 'fr' ? 'Décrivez vos préférences d\'acquisition, points d\'importance...' : 'Describe your acquisition preferences, important points...'}
-                className="mt-2 min-h-32"
-              />
-            </div>
-          </CardContent>
-        </Card>
+                          {showLocationDropdown && locationInput.trim() && filteredLocations.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                              {filteredLocations.map((item, idx) => (
+                                <button
+                                  key={`${item.value}-${idx}`}
+                                  onClick={() => addLocation(item.value)}
+                                  className="w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-b-0"
+                                >
+                                  <span className="text-sm text-gray-900">{item.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
 
-        {/* Photo Upload - Single Photo */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">
-              {language === 'fr' ? 'Photo de Profil' : 'Profile Photo'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ImageGallery
-              images={formData.buyer_image || []}
-              onImagesChange={(images) => handleChange('buyer_image', images)}
-              maxPhotos={1}
-              defaultImage={formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0 ? getDefaultImageForSector(formData.buyer_sectors_interested[0]) : ''}
-              sectorLabel={formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0 ? formData.buyer_sectors_interested[0] : ''}
-              userEmail={user?.email}
-              language={language}
-            />
-          </CardContent>
-        </Card>
+                          {formData.buyer_locations && formData.buyer_locations.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {formData.buyer_locations.map(loc => (
+                                <div
+                                  key={loc}
+                                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
+                                >
+                                  {getLocationLabel(loc)}
+                                  <button
+                                    onClick={() => removeLocation(loc)}
+                                    className="ml-1 hover:text-primary/60"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
 
-        {/* Document Upload */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">
-              {language === 'fr' ? 'Document (CV ou autre)' : 'Document (CV or other)'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {formData.buyer_document_url ? (
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
-                <a
-                  href={formData.buyer_document_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-primary hover:underline"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    {formData.buyer_document_name || (language === 'fr' ? 'Document joint' : 'Attached document')}
-                  </span>
-                </a>
+                {/* ============ STEP 2: Finalisation ============ */}
+                {currentStep === 2 && (
+                  <>
+                    {/* Profile Photo */}
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="font-display flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-primary" />
+                          {language === 'fr' ? 'Photo de Profil' : 'Profile Photo'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ImageGallery
+                          images={formData.buyer_image || []}
+                          onImagesChange={(images) => handleChange('buyer_image', images)}
+                          maxPhotos={1}
+                          defaultImage={formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0 ? getDefaultImageForSector(formData.buyer_sectors_interested[0]) : ''}
+                          sectorLabel={formData.buyer_sectors_interested && formData.buyer_sectors_interested.length > 0 ? formData.buyer_sectors_interested[0] : ''}
+                          userEmail={user?.email}
+                          language={language}
+                        />
+                      </CardContent>
+                    </Card>
+
+                    {/* Document Upload */}
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="font-display">
+                          {language === 'fr' ? 'Document (CV ou autre)' : 'Document (CV or other)'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {formData.buyer_document_url ? (
+                          <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
+                            <a
+                              href={formData.buyer_document_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-primary hover:underline"
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span className="text-sm font-medium">
+                                {formData.buyer_document_name || (language === 'fr' ? 'Document joint' : 'Attached document')}
+                              </span>
+                            </a>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={removeDocument}
+                              className="text-red-500 hover:text-red-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center gap-2 text-primary hover:text-primary/80 cursor-pointer">
+                            {uploadingDocument ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Upload className="w-4 h-4" />
+                            )}
+                            <span>{language === 'fr' ? 'Uploader un document' : 'Upload a document'}</span>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx"
+                              onChange={handleDocumentUpload}
+                              disabled={uploadingDocument}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                        <p className="text-xs text-gray-500">
+                          {language === 'fr'
+                            ? 'Formats acceptés : PDF, DOC, DOCX.'
+                            : 'Accepted formats: PDF, DOC, DOCX.'}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Additional Notes */}
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="font-display">
+                          {language === 'fr' ? 'Notes complémentaires' : 'Additional Notes'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Label>{withTooltip(language === 'fr' ? 'Notes et critères additionnels' : 'Additional Notes & Criteria', language === 'fr' ? 'Ajoutez vos préférences fines pour améliorer le matching.' : 'Add detailed preferences to improve matching.')}</Label>
+                        <Textarea
+                          value={formData.buyer_notes}
+                          onChange={(e) => handleChange('buyer_notes', e.target.value)}
+                          placeholder={language === 'fr' ? "Décrivez vos préférences d'acquisition, points d'importance..." : 'Describe your acquisition preferences, important points...'}
+                          className="mt-2 min-h-32"
+                        />
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Step Navigation */}
+            <div className="flex justify-between items-center pt-2">
+              <Button
+                type="button"
+                onClick={() => onStepChange(Math.max(0, currentStep - 1))}
+                variant="ghost"
+                disabled={currentStep === 0}
+                className="gap-2"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                {language === 'fr' ? 'Précédent' : 'Previous'}
+              </Button>
+              <span className="text-sm text-gray-400 font-medium">
+                {currentStep + 1} / {TOTAL_STEPS}
+              </span>
+              {currentStep < TOTAL_STEPS - 1 ? (
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={removeDocument}
-                  className="text-red-500 hover:text-red-600"
+                  onClick={() => onStepChange(currentStep + 1)}
+                  className="gap-2 bg-[#FF6B4A] text-white hover:bg-[#FF6B4A]/90"
                 >
-                  <X className="w-4 h-4" />
+                  {language === 'fr' ? 'Suivant' : 'Next'}
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
-              </div>
-            ) : (
-              <label className="flex items-center gap-2 text-primary hover:text-primary/80 cursor-pointer">
-                {uploadingDocument ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
-                <span>{language === 'fr' ? 'Uploader un document' : 'Upload a document'}</span>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleDocumentUpload}
-                  disabled={uploadingDocument}
-                  className="hidden"
-                />
-              </label>
-            )}
-            <p className="text-xs text-gray-500">
-              {language === 'fr'
-                ? 'Formats acceptés : PDF, DOC, DOCX.'
-                : 'Accepted formats: PDF, DOC, DOCX.'}
-            </p>
-          </CardContent>
-        </Card>
+              ) : (
+                <div className="w-24" />
+              )}
+            </div>
 
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2 pb-4">
               <Button
                 onClick={() => onSubmit('draft')}
                 variant="outline"
@@ -770,9 +809,7 @@ export default function BuyerForm({
               </Button>
               <Button
                 onClick={() => {
-                  if (typeof onPreviewPublish === 'function') {
-                    onPreviewPublish();
-                  }
+                  if (typeof onPreviewPublish === 'function') onPreviewPublish();
                 }}
                 variant="outline"
                 disabled={saving}
@@ -800,7 +837,6 @@ export default function BuyerForm({
                 )}
                 {t('publish')}
               </Button>
-            </div>
             </div>
           </div>
         </div>
