@@ -216,23 +216,27 @@ export default function SellerForm({
     </div>
   );
 
-  // Scroll to top of form when step changes
+  // Scroll to top of page when step changes
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
+
+  // Track window scroll for focus indicator
+  useEffect(() => {
+    const onScroll = () => handleFormScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <TooltipProvider delayDuration={120}>
-      <div className="w-full flex flex-col h-full overflow-hidden">
+      <div className="w-full flex flex-col">
         <div
           ref={scrollAreaRef}
           onFocusCapture={handleFormFocusCapture}
           onClickCapture={handleFormClickCapture}
           onBlurCapture={handleFormBlurCapture}
-          onScroll={handleFormScroll}
-          className="relative flex-1 overflow-y-auto pr-4 scrollbar-hide"
+          className="relative pr-4"
         >
           {focusIndicator && (
             <div

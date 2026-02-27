@@ -495,8 +495,8 @@ export default function CreateBusiness() {
   }
 
   return (
-    <div className="h-screen flex flex-col py-3 sm:py-6 md:py-8">
-      <div className="w-full px-2 sm:px-4 md:px-8 lg:px-12 flex-1 flex flex-col overflow-hidden">
+    <div className="min-h-screen flex flex-col py-3 sm:py-6 md:py-8">
+      <div className="w-full px-2 sm:px-4 md:px-8 lg:px-12 flex flex-col">
         {/* Header */}
         <div className="mb-4 flex-shrink-0">
           <button
