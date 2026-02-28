@@ -56,6 +56,9 @@ export const businessService = {
         if (filters.status) {
           query = query.eq('status', filters.status);
         }
+        if (filters.type) {
+          query = query.eq('type', filters.type);
+        }
         if (filters.minPrice && filters.maxPrice) {
           query = query.gte('asking_price', filters.minPrice)
             .lte('asking_price', filters.maxPrice);

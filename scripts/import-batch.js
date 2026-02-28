@@ -73,14 +73,50 @@ function generateReference() {
   return `RVQ-${num}`;
 }
 
+// Champs numériques dans la table businesses
+const NUMERIC_COLUMNS = new Set([
+  'asking_price', 'annual_revenue', 'ebitda', 'employees', 'year_founded'
+]);
+
 function transformListing(raw, sellerId) {
   const listing = {};
 
   // Copier les champs valides
   for (const [key, value] of Object.entries(raw)) {
     if (VALID_COLUMNS.has(key) && !FIELDS_TO_REMOVE.has(key)) {
-      listing[key] = value;
+      // Nettoyer les champs numériques : "" → null, string → number
+      if (NUMERIC_COLUMNS.has(key)) {
+        if (value === '' || value === null || value === undefined) {
+          listing[key] = null;
+        } else {
+          const parsed = Number(value);
+          listing[key] = isNaN(parsed) ? null : parsed;
+        }
+      } else {
+        listing[key] = value;
+      }
     }
+  }
+
+  // url → external_url (le JSON utilise "url", la DB utilise "external_url")
+  if (raw.url && !listing.external_url) {
+    listing.external_url = raw.url;
+  }
+
+  // asking_price_normalized → asking_price (fallback si asking_price est vide)
+  if (!listing.asking_price && raw.asking_price_normalized) {
+    listing.asking_price = Number(raw.asking_price_normalized) || null;
+  }
+  if (!listing.annual_revenue && raw.annual_revenue_normalized) {
+    listing.annual_revenue = Number(raw.annual_revenue_normalized) || null;
+  }
+  if (!listing.ebitda && raw.ebitda_normalized) {
+    listing.ebitda = Number(raw.ebitda_normalized) || null;
+  }
+
+  // financial_years_data → financial_years
+  if (raw.financial_years_data && !listing.financial_years) {
+    listing.financial_years = raw.financial_years_data;
   }
 
   // brand_name → injecter dans description
@@ -186,7 +222,7 @@ async function main() {
   const listings = [];
   for (let i = 0; i < raw.length; i++) {
     const item = raw[i];
-    const sellerId = await getSellerIdForListing(item.external_url);
+    const sellerId = await getSellerIdForListing(item.external_url || item.url);
     const listing = transformListing(item, sellerId);
 
     // S'assurer que le reference_number est unique

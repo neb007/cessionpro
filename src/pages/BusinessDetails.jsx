@@ -382,7 +382,7 @@ export default function BusinessDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-8 lg:py-12">
+      <div className="py-8 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="animate-pulse space-y-8">
             <div className="h-96 bg-gray-200 rounded-3xl" />
@@ -403,7 +403,7 @@ export default function BusinessDetails() {
   if (!business) return null;
 
   return (
-    <div className="min-h-screen py-8 lg:py-12">
+    <div className="py-8 lg:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button
@@ -948,7 +948,7 @@ export default function BusinessDetails() {
 
       {/* Similar Listings - horizontal scroll */}
       {similarListings.length > 0 && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 pb-12">
           <h2 className="text-2xl font-bold text-[#3B4759] mb-6">
             {language === 'fr' ? 'Annonces similaires' : 'Similar listings'}
           </h2>

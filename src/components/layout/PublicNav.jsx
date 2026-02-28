@@ -31,7 +31,7 @@ export default function PublicNav() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <Logo size="sm" showText={false} />
+            <Logo size="sm" />
           </Link>
 
           {/* Nav links desktop */}

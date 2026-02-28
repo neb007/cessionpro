@@ -136,8 +136,15 @@ export default function Businesses() {
     }
 
     try {
+      const filters = { status: 'active' };
+      if (listingType !== 'all') {
+        filters.type = listingType;
+      }
+      if (debouncedQuery) {
+        filters.searchText = debouncedQuery;
+      }
       const fetched = await businessService.filterBusinesses(
-        { status: 'active' },
+        filters,
         'created_at',
         {
           columns: 'id,title,description,location,country,department,region,sector,type,asking_price,annual_revenue,buyer_budget_min,buyer_budget_max,buyer_investment_available,buyer_sectors_interested,buyer_locations,buyer_profile_type,business_type_sought,seller_business_type,financial_years,views_count,reference_number,hide_location,is_certified,seller_id,created_at,images,external_url',
@@ -167,7 +174,7 @@ export default function Businesses() {
 
   useEffect(() => {
     fetchBusinessesPage(0, true);
-  }, []);
+  }, [listingType, debouncedQuery]);
 
   // Load favorites on mount
   useEffect(() => {
@@ -486,7 +493,7 @@ export default function Businesses() {
   }, [smartMatchingCriteria, hasSmartMatching, filteredBusinesses, language]);
 
   return (
-    <div className="min-h-screen py-6 lg:py-8 bg-background">
+    <div className="py-6 lg:py-8 bg-background">
       <div className="w-full px-5">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -594,7 +601,7 @@ export default function Businesses() {
               <div key={i} className="bg-muted rounded-2xl h-80 animate-pulse" />
             ))}
           </div>
-        ) : sortedBusinesses.length === 0 ? (
+        ) : prioritizedBusinesses.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-6">
               <Search className="w-10 h-10 text-muted-foreground" />
@@ -639,11 +646,13 @@ export default function Businesses() {
             </AnimatePresence>
           </motion.div>
         )}
-        <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
-          {loadingMore && (
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          )}
-        </div>
+        {hasMore && prioritizedBusinesses.length > 0 && (
+          <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
+            {loadingMore && (
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

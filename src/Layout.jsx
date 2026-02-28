@@ -104,7 +104,7 @@ function LayoutContent({ children, currentPageName }) {
       `}</style>
 
       {/* Main Content */}
-      <div className="min-h-screen overflow-x-hidden">
+      <div className="overflow-x-hidden">
         {shouldRenderSidebar && <Sidebar user={user} />}
 
         {shouldRenderSidebar && !isMobileOpen ? (
@@ -126,13 +126,13 @@ function LayoutContent({ children, currentPageName }) {
 
           {/* Footer */}
           {!isMessagesPage && (
-          <footer className="bg-[#1F2735] text-[#B7C2D4] pt-16 pb-8 w-full mt-20">
+          <footer className="bg-[#1F2735] text-[#B7C2D4] pt-16 pb-8 w-full mt-auto">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
                 <div className="lg:col-span-1">
                   <div className="flex items-center gap-3 mb-4">
                     <img src="/riviqo-favicon.svg" alt="Riviqo" className="w-9 h-9 rounded-xl" />
-                    <span className="font-display font-bold text-lg text-white">Riviqo</span>
+                    <span className="font-heading font-bold text-lg text-white">Riviqo</span>
                   </div>
                   <p className="text-sm text-[#9EABC1] leading-relaxed">
                     {language === 'fr'
