@@ -40,7 +40,6 @@ function LayoutContent({ children, currentPageName }) {
   const shouldRenderSidebar =
     isAuthenticated &&
     !hideSidebarPages.includes(currentPageName);
-  const isMessagesPage = currentPageName === 'Messages';
   // Pages that manage their own nav or don't need a public nav
   const noPublicNavPages = ['Home', 'Login', 'Register', 'AccountCreation',
     'AuthCallback', 'PasswordReset'];
@@ -49,7 +48,7 @@ function LayoutContent({ children, currentPageName }) {
     && !noPublicNavPages.includes(currentPageName);
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7]">
+    <div className="bg-[#FAF9F7]">
       <FontLoader />
       <style>{`
         :root {
@@ -104,29 +103,27 @@ function LayoutContent({ children, currentPageName }) {
       `}</style>
 
       {/* Main Content */}
-      <div className="overflow-x-hidden">
-        {shouldRenderSidebar && <Sidebar user={user} />}
+      {shouldRenderSidebar && <Sidebar user={user} />}
 
-        {shouldRenderSidebar && !isMobileOpen ? (
-          <button
-            type="button"
-            onClick={toggleMobile}
-            className="md:hidden fixed left-3 top-3 z-[60] inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-[#3B4759] shadow-sm backdrop-blur"
-            aria-label="Ouvrir le menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        ) : null}
+      {shouldRenderSidebar && !isMobileOpen ? (
+        <button
+          type="button"
+          onClick={toggleMobile}
+          className="md:hidden fixed left-3 top-3 z-[60] inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-[#3B4759] shadow-sm backdrop-blur"
+          aria-label="Ouvrir le menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      ) : null}
 
-        <div className={`${shouldRenderSidebar ? 'md:ml-56 md:w-[calc(100%-14rem)]' : 'w-full'} ${isMessagesPage ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
-          {showPublicNav && <PublicNav />}
-          <main className={`min-w-0 w-full flex-1 px-0 sm:px-0 md:px-0 lg:px-0 ml-0 ${shouldRenderSidebar ? 'pt-12 md:pt-0' : ''} ${isMessagesPage ? 'h-full overflow-hidden' : ''}`}>
-            {children}
-          </main>
+      <div className={`${shouldRenderSidebar ? 'md:ml-56 md:w-[calc(100%-14rem)]' : 'w-full'} min-h-screen flex flex-col`}>
+        {showPublicNav && <PublicNav />}
+        <main className={`min-w-0 w-full flex-1 px-0 sm:px-0 md:px-0 lg:px-0 ml-0 ${shouldRenderSidebar ? 'pt-12 md:pt-0' : ''}`}>
+          {children}
+        </main>
 
-          {/* Footer */}
-          {!isMessagesPage && (
-          <footer className="bg-[#1F2735] text-[#B7C2D4] pt-16 pb-8 w-full mt-auto">
+        {/* Footer */}
+        <footer className="bg-[#1F2735] text-[#B7C2D4] pt-16 pb-8 w-full mt-auto">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
                 <div className="lg:col-span-1">
@@ -202,9 +199,7 @@ function LayoutContent({ children, currentPageName }) {
               </div>
             </div>
           </footer>
-          )}
         </div>
-      </div>
     </div>
   );
 }

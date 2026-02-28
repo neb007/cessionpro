@@ -54,15 +54,12 @@ export default function Profile() {
   const [profileData, setProfileData] = useState(null);
   const [smartMatchingAlerts, setSmartMatchingAlerts] = useState(DEFAULT_SMART_MATCHING_ALERTS);
   
-  // Signed URL for logo display (private bucket)
-  const { signedUrl: displayLogoUrl } = useSignedUrl('Cession', formData.logo_url || formData.avatar_url, null);
-
   // Logo processing states
   const [logoPreview, setLogoPreview] = useState(null);
   const [showLogoModal, setShowLogoModal] = useState(false);
   const [logoError, setLogoError] = useState(null);
   const [processingLogo, setProcessingLogo] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     email: '',
     first_name: '',
@@ -80,6 +77,9 @@ export default function Profile() {
     is_seller: false,
     user_type: 'buyer'
   });
+
+  // Signed URL for logo display (private bucket)
+  const { signedUrl: displayLogoUrl } = useSignedUrl('Cession', formData.logo_url || formData.avatar_url, null);
 
   useEffect(() => {
     loadUser();

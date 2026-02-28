@@ -449,9 +449,11 @@ class BillingService {
   }
 
   async getMyActiveServices(limitUsage = 30) {
+    const { data: { user } } = await supabase.auth.getUser();
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('photos_remaining_balance, contact_credits_balance')
+      .eq('id', user?.id)
       .single();
 
     const balances = this._isSchemaGapError(profileError)
