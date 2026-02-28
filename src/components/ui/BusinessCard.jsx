@@ -11,8 +11,11 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+import { getSignedUrl, isSupabaseStorageUrl } from '@/services/storageService';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { getPrimaryImageUrl } from '@/utils/imageHelpers';
+import { getDefaultImageForSector } from '@/constants/defaultImages';
 import { calculateGrowthPercentage } from '@/utils/growthCalculator';
 import LogoCard from '@/components/ui/LogoCard';
 import { getPartnerLogoUrl } from '@/constants/partners';
@@ -45,7 +48,7 @@ export default function BusinessCard({
   showSmartMatchBadge = false,
 }) {
   const { t, language } = useLanguage();
-  const { user: authUser } = useAuth();
+  const { user: authUser, isAuthenticated } = useAuth();
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -67,6 +70,13 @@ export default function BusinessCard({
   }, [authUser]);
 
   const loadBusinessLogo = async () => {
+    // Helper to resolve a logo URL (sign if Supabase, pass-through otherwise)
+    const resolveLogoUrl = async (url) => {
+      if (!url) return null;
+      if (!isAuthenticated || !isSupabaseStorageUrl(url)) return url;
+      return await getSignedUrl('Cession', url);
+    };
+
     // 1) Try business_logos table
     try {
       if (business?.id) {
@@ -77,7 +87,8 @@ export default function BusinessCard({
           .maybeSingle();
 
         if (data?.logo_url) {
-          setSellerProfile(data);
+          const signed = await resolveLogoUrl(data.logo_url);
+          setSellerProfile({ logo_url: signed });
           return;
         }
       }
@@ -94,8 +105,10 @@ export default function BusinessCard({
           .eq('id', business.seller_id)
           .maybeSingle();
 
-        if (profileData?.logo_url || profileData?.avatar_url) {
-          setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url);
+        const rawLogo = profileData?.logo_url || profileData?.avatar_url;
+        if (rawLogo) {
+          const signed = await resolveLogoUrl(rawLogo);
+          setSellerFallbackLogo(signed);
           return;
         }
       }
@@ -120,7 +133,9 @@ export default function BusinessCard({
   };
 
   const isCession = business.type === 'cession';
-  const imageUrl = getPrimaryImageUrl(business);
+  const rawImageUrl = getPrimaryImageUrl(business);
+  const sectorDefault = getDefaultImageForSector(business?.sector);
+  const { signedUrl: imageUrl } = useSignedUrl('Cession', rawImageUrl, sectorDefault);
   const referenceLabel = business.reference_number || (language === 'fr' ? 'Référence à venir' : 'Reference pending');
   const announcementLabel = isCession
     ? (language === 'fr' ? 'Cession' : 'Sale')

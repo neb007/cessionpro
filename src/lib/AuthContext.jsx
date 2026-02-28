@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/api/supabaseClient';
+import { clearSignedUrlCache } from '@/services/storageService';
 
 const AuthContext = createContext(null);
 const APP_URL = (import.meta.env.VITE_APP_URL || 'https://riviqo.com').replace(/\/$/, '');
@@ -306,10 +307,11 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async (shouldRedirect = true) => {
     try {
+      clearSignedUrlCache();
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) throw error;
-      
+
       setUser(null);
       setIsAuthenticated(false);
       setAuthError(null);

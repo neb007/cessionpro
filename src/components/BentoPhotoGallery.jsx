@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Image as ImageIcon, Grid3x3 } from 'lucide-react';
 import { getBusinessImageList } from '@/utils/imageHelpers';
+import { getDefaultImageForSector } from '@/constants/defaultImages';
+import { useSignedImageList } from '@/hooks/useSignedImageList';
 import PhotoLightbox from './PhotoLightbox';
 
 /**
@@ -19,8 +21,10 @@ export default function BentoPhotoGallery({ business, language = 'fr' }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxStartIndex, setLightboxStartIndex] = useState(0);
 
-  // Get all images
-  const images = getBusinessImageList(business);
+  // Get all images and resolve signed URLs
+  const rawImages = getBusinessImageList(business);
+  const sectorDefault = getDefaultImageForSector(business?.sector);
+  const { signedImages: images, loading: imagesLoading } = useSignedImageList(rawImages, sectorDefault);
   const photoCount = images.length;
 
   // Determine layout based on photo count

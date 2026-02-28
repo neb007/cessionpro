@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { getProfile, updateProfile, updateBuyerProfile, updateSellerProfile } from '@/services/profileService';
 import {
   DEFAULT_SMART_MATCHING_ALERTS,
@@ -53,6 +54,9 @@ export default function Profile() {
   const [profileData, setProfileData] = useState(null);
   const [smartMatchingAlerts, setSmartMatchingAlerts] = useState(DEFAULT_SMART_MATCHING_ALERTS);
   
+  // Signed URL for logo display (private bucket)
+  const { signedUrl: displayLogoUrl } = useSignedUrl('Cession', formData.logo_url || formData.avatar_url, null);
+
   // Logo processing states
   const [logoPreview, setLogoPreview] = useState(null);
   const [showLogoModal, setShowLogoModal] = useState(false);
@@ -226,10 +230,7 @@ export default function Profile() {
         .from('Cession')
         .upload(fileName, file);
       if (error) throw error;
-      const { data: publicUrl } = supabase.storage
-        .from('Cession')
-        .getPublicUrl(data.path);
-      const fileUrl = publicUrl.publicUrl;
+      const fileUrl = data.path; // Store path only (private bucket)
 
       handleChange('avatar_url', fileUrl);
       handleChange('logo_url', fileUrl);
@@ -387,9 +388,9 @@ export default function Profile() {
             <CardContent className="p-6">
               <div className="flex items-start gap-6 mb-6">
                 <div className="relative">
-                  {formData.avatar_url ? (
-                    <img 
-                      src={formData.logo_url || formData.avatar_url}
+                  {(formData.avatar_url || formData.logo_url) ? (
+                    <img
+                      src={displayLogoUrl || ''}
                       alt="Logo"
                       className="w-24 h-24 rounded-xl object-cover shadow-md bg-muted"
                     />

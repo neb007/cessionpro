@@ -5,6 +5,7 @@ import { createPageUrl, extractReferenceFromListingSlug } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
+import { getSignedUrl, isSupabaseStorageUrl } from '@/services/storageService';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { recordPageView, getUniqueViewCount } from '@/services/pageViewService';
 import { sponsorshipService } from '@/services/sponsorshipService';
@@ -65,7 +66,7 @@ const getLocationLabel = (value, language) => {
 export default function BusinessDetails() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
+  const { user: authUser, isAuthenticated } = useAuth();
   
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +80,7 @@ export default function BusinessDetails() {
   const [viewCount, setViewCount] = useState(0);
   const [businessLogo, setBusinessLogo] = useState(null);
   const [sellerFallbackLogo, setSellerFallbackLogo] = useState(null);
+  const [buyerDocSignedUrl, setBuyerDocSignedUrl] = useState(null);
   const [featuredLabel, setFeaturedLabel] = useState(language === 'fr' ? 'À la une' : 'Featured');
   const [isFeatured, setIsFeatured] = useState(false);
   const shouldShowLogo = Boolean(businessLogo?.logo_url || sellerFallbackLogo);
@@ -163,6 +165,13 @@ export default function BusinessDetails() {
   }, [authUser]);
 
   const loadBusinessLogo = async () => {
+    // Helper to resolve a logo URL (sign if Supabase, pass-through otherwise)
+    const resolveLogoUrl = async (url) => {
+      if (!url) return null;
+      if (!isAuthenticated || !isSupabaseStorageUrl(url)) return url;
+      return await getSignedUrl('Cession', url);
+    };
+
     // 1) Try business_logos table
     try {
       const { data } = await supabase
@@ -172,7 +181,8 @@ export default function BusinessDetails() {
         .maybeSingle();
 
       if (data?.logo_url) {
-        setBusinessLogo(data);
+        const signed = await resolveLogoUrl(data.logo_url);
+        setBusinessLogo({ logo_url: signed });
         return;
       }
     } catch {
@@ -188,8 +198,10 @@ export default function BusinessDetails() {
           .eq('id', business.seller_id)
           .maybeSingle();
 
-        if (profileData?.logo_url || profileData?.avatar_url) {
-          setSellerFallbackLogo(profileData.logo_url || profileData.avatar_url);
+        const rawLogo = profileData?.logo_url || profileData?.avatar_url;
+        if (rawLogo) {
+          const signed = await resolveLogoUrl(rawLogo);
+          setSellerFallbackLogo(signed);
           return;
         }
       }
@@ -239,7 +251,14 @@ export default function BusinessDetails() {
       }
 
       setBusiness(resolvedBusiness);
-      
+
+      // Resolve buyer document signed URL if present
+      if (resolvedBusiness.buyer_document_url && isSupabaseStorageUrl(resolvedBusiness.buyer_document_url) && isAuthenticated) {
+        getSignedUrl('Cession', resolvedBusiness.buyer_document_url).then(setBuyerDocSignedUrl);
+      } else {
+        setBuyerDocSignedUrl(resolvedBusiness.buyer_document_url || null);
+      }
+
       // Record page view and get unique count
       await recordPageView(resolvedBusiness.id, null, resolvedBusiness.seller_email);
       const uniqueViews = await getUniqueViewCount(resolvedBusiness.id);
@@ -844,7 +863,7 @@ export default function BusinessDetails() {
                         <div>
                           <p className="text-sm text-gray-500 mb-3">{language === 'fr' ? 'Document joint' : 'Attached Document'}</p>
                           <a
-                            href={business.buyer_document_url}
+                            href={buyerDocSignedUrl || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-primary hover:underline"

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
-import { 
-  getBuyerProfile, 
-  updateBuyerProfile, 
-  uploadProfileDocument, 
-  deleteProfileDocument 
+import { getSignedUrl, isSupabaseStorageUrl } from '@/services/storageService';
+import {
+  getBuyerProfile,
+  updateBuyerProfile,
+  uploadProfileDocument,
+  deleteProfileDocument
 } from '@/services/profileService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,8 @@ export default function BuyerProfile() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploading, setUploading] = useState({});
+  const [cvSignedUrl, setCvSignedUrl] = useState(null);
+  const [financingSignedUrl, setFinancingSignedUrl] = useState(null);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -68,6 +71,17 @@ export default function BuyerProfile() {
         linkedinUrl: data.linkedin_url || '',
         aideVendeurDescription: data.aide_vendeur_description || ''
       });
+      // Resolve signed URLs for private bucket documents
+      if (data.cv_document_url && isSupabaseStorageUrl(data.cv_document_url)) {
+        getSignedUrl('profile', data.cv_document_url).then(setCvSignedUrl);
+      } else {
+        setCvSignedUrl(data.cv_document_url || null);
+      }
+      if (data.financing_document_url && isSupabaseStorageUrl(data.financing_document_url)) {
+        getSignedUrl('profile', data.financing_document_url).then(setFinancingSignedUrl);
+      } else {
+        setFinancingSignedUrl(data.financing_document_url || null);
+      }
     } catch (err) {
       setError('Erreur lors du chargement du profil');
       console.error(err);
@@ -383,7 +397,7 @@ export default function BuyerProfile() {
           {profile?.cv_document_url ? (
             <div className="mt-2 flex items-center justify-between">
               <a
-                href={profile.cv_document_url}
+                href={cvSignedUrl || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-primary hover:underline"
@@ -425,7 +439,7 @@ export default function BuyerProfile() {
           {profile?.financing_document_url ? (
             <div className="mt-2 flex items-center justify-between">
               <a
-                href={profile.financing_document_url}
+                href={financingSignedUrl || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-primary hover:underline"

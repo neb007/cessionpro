@@ -1,4 +1,5 @@
 import { supabase } from '@/api/supabaseClient';
+import { extractStoragePath } from './storageService';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -75,11 +76,7 @@ export const uploadBusinessImage = async (file, businessId, userEmail, isAdditio
       throw uploadError;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from('Cession')
-      .getPublicUrl(uploadData.path);
-
-    const file_url = publicUrlData?.publicUrl;
+    const file_url = uploadData.path; // Store path only (private bucket)
 
     // Deduct photo credit if it's additional
     if (isAdditionalPhoto) {
@@ -176,10 +173,8 @@ export const deleteBusinessImage = async (imageUrl) => {
   try {
     if (!imageUrl) return true;
 
-    const marker = '/Cession/';
-    const index = imageUrl.indexOf(marker);
-    if (index === -1) return true;
-    const path = imageUrl.substring(index + marker.length);
+    const path = extractStoragePath(imageUrl, 'Cession');
+    if (!path) return true;
 
     await supabase.storage
       .from('Cession')

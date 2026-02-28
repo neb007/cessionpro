@@ -646,12 +646,8 @@ const base44 = {
 
           if (error) throw error;
 
-          const { data: publicUrl } = supabase.storage
-            .from('Cession')
-            .getPublicUrl(data.path);
-
           return {
-            file_url: publicUrl.publicUrl
+            file_url: data.path // Store path only (private bucket)
           };
         } catch (error) {
           console.error('Error uploading file:', error);

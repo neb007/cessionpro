@@ -1,4 +1,5 @@
 import { supabase } from '@/api/supabaseClient';
+import { extractStoragePath, getSignedUrl } from './storageService';
 
 // ============================================
 // PROFILE RETRIEVAL & UPDATE
@@ -96,10 +97,8 @@ export const uploadProfileDocument = async (userId, documentType, file) => {
 
     if (uploadError) throw uploadError;
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(filePath);
+    // Store path only (private bucket)
+    const publicUrl = filePath;
 
     // Update profile with document URL and metadata
     const updateData = {
@@ -136,14 +135,11 @@ export const deleteProfileDocument = async (userId, documentType) => {
       throw new Error('Aucun document à supprimer');
     }
 
-    // Extract file path from URL
-    // URL format: https://.../{bucket}/object/public/{userId}/{documentType}/{filename}
-    const urlParts = docUrl.split(`/${BUCKET_NAME}/object/public/`);
-    if (urlParts.length !== 2) {
+    // Extract file path from URL or bare path (handles legacy URLs and new paths)
+    const filePath = extractStoragePath(docUrl, BUCKET_NAME);
+    if (!filePath) {
       throw new Error('URL du document invalide');
     }
-
-    const filePath = urlParts[1];
 
     // Delete from storage
     const { error: deleteError } = await supabase.storage
@@ -180,7 +176,9 @@ export const getDocumentDownloadUrl = async (userId, documentType) => {
       return null;
     }
 
-    return docUrl;
+    // Generate a signed URL for download (private bucket)
+    const signedUrl = await getSignedUrl(BUCKET_NAME, docUrl);
+    return signedUrl;
   } catch (error) {
     console.error('Error getting document URL:', error);
     throw error;
