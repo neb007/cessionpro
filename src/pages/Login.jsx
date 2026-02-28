@@ -135,14 +135,14 @@ export default function Login() {
   const t = translations[language] || translations.en;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-charcoal via-charcoal-light to-charcoal">
+    <div className="bg-gradient-to-br from-charcoal via-charcoal-light to-charcoal">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/30 rounded-full filter blur-3xl" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/20 rounded-full filter blur-3xl" />
       </div>
 
-      <div className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

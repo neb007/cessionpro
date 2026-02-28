@@ -190,7 +190,7 @@ export default function FAQ() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7]">
+    <div className="bg-[#FAF9F7]">
       <SEO pageName="FAQ" faqItems={faqItems} />
       {/* Hero */}
       <section className="pt-20 pb-14 px-4 text-center">

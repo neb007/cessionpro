@@ -207,7 +207,7 @@ export default function Targeting() {
 
   return (
     <TooltipProvider delayDuration={120}>
-      <div className="min-h-screen bg-white">
+      <div className="bg-white">
         <SEO pageName="Targeting" />
         {/* HERO */}
         <section className="bg-[#FAF9F7] py-16 sm:py-20">

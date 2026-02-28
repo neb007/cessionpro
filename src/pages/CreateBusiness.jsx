@@ -506,7 +506,7 @@ export default function CreateBusiness() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -514,7 +514,7 @@ export default function CreateBusiness() {
 
   if (limitReached && !editingId) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="flex flex-col items-center justify-center px-4">
         <div className="max-w-md w-full text-center space-y-6">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-[#FF6B4A]/10 flex items-center justify-center">
             <ArrowLeft className="w-8 h-8 text-[#FF6B4A]" />
@@ -547,7 +547,7 @@ export default function CreateBusiness() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col py-3 sm:py-6 md:py-8">
+    <div className="flex flex-col py-3 sm:py-6 md:py-8">
       <div className="w-full px-2 sm:px-4 md:px-8 lg:px-12 flex flex-col">
         {/* Header */}
         <div className="mb-4 flex-shrink-0">

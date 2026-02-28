@@ -65,7 +65,7 @@ export default function AuthCallback() {
   const t = translations[language] || translations.en;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-charcoal via-charcoal-light to-charcoal flex items-center justify-center px-4">
+    <div className="bg-gradient-to-br from-charcoal via-charcoal-light to-charcoal flex items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}

@@ -167,7 +167,7 @@ export default function AccountCreation() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-charcoal via-charcoal-light to-charcoal">
+    <div className="bg-gradient-to-br from-charcoal via-charcoal-light to-charcoal">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 left-0 w-96 h-96 bg-primary/30 rounded-full filter blur-3xl" />
@@ -175,7 +175,7 @@ export default function AccountCreation() {
       </div>
 
       {/* Main Container */}
-      <div className="relative min-h-screen flex items-center justify-center px-3 py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
+      <div className="relative flex items-center justify-center px-3 py-4 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

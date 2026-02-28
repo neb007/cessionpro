@@ -1519,7 +1519,7 @@ export default function Messages() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -1539,7 +1539,7 @@ export default function Messages() {
 
   if (isConversationView && getOtherParticipantId(selectedConversation) === HIDDEN_CONTACT_ID) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           {language === 'fr' ? 'Conversation indisponible.' : 'Conversation unavailable.'}
         </div>

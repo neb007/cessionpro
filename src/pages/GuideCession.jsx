@@ -253,7 +253,7 @@ export default function GuideCession() {
   const isFr = language === 'fr';
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7]">
+    <div className="bg-[#FAF9F7]">
       <SEO pageName="GuideCession" />
       {/* Hero */}
       <section className="bg-[#FAF9F7] pt-20 pb-16 px-4">

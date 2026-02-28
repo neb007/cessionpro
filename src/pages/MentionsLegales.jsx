@@ -143,7 +143,7 @@ export default function MentionsLegales() {
   const sections = isFr ? SECTIONS_FR : SECTIONS_EN;
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7]">
+    <div className="bg-[#FAF9F7]">
       <SEO pageName="MentionsLegales" />
       <div className="max-w-3xl mx-auto px-4 py-16 sm:py-20">
         <h1 className="font-display text-3xl sm:text-4xl font-bold text-[#3B4759] mb-4">

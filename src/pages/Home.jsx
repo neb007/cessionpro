@@ -214,7 +214,7 @@ export default function Home() {
 
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7]">
+    <div className="bg-[#FAF9F7]">
       <SEO pageName="Home" />
       <style>{`
         @keyframes marquee {

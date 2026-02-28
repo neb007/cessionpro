@@ -81,7 +81,7 @@ export default function Expert() {
   const isFr = language === 'fr';
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7]">
+    <div className="bg-[#FAF9F7]">
       <SEO pageName="Expert" />
       {/* Hero */}
       <section className="bg-[#FAF9F7] pt-20 pb-24 px-4">

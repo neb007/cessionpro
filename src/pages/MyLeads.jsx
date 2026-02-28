@@ -87,14 +87,14 @@ export default function MyLeads() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-8 lg:py-12 bg-gray-50">
+    <div className="py-8 lg:py-12 bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-2">

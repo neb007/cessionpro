@@ -95,7 +95,7 @@ export default function AdminDashboard() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F7] p-8">
+      <div className="flex items-center justify-center bg-[#FAF9F7] p-8">
         <Card className="p-6 max-w-lg text-center">
           <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900">Accès refusé</h2>
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7] px-6 py-8">
+    <div className="bg-[#FAF9F7] px-6 py-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
