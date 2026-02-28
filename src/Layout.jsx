@@ -122,7 +122,7 @@ function LayoutContent({ children, currentPageName }) {
               <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
                 <div className="lg:col-span-1">
                   <div className="flex items-center gap-3 mb-4">
-                    <img src="/riviqo-favicon.svg" alt="Riviqo" className="w-9 h-9 rounded-xl" />
+                    <img src="/riviqo-favicon.svg" alt="Riviqo" className="w-9 h-9 rounded-full" />
                     <span className="font-heading font-bold text-lg text-white">Riviqo</span>
                   </div>
                   <p className="text-sm text-[#9EABC1] leading-relaxed">

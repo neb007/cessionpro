@@ -165,7 +165,7 @@ export default function Blog() {
               </Button>
             </Link>
             <Link to={createPageUrl('Contact')}>
-              <Button variant="outline" className="rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
+              <Button variant="outline" className="bg-transparent rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
                 {isFr ? 'Parler à un expert' : 'Talk to an expert'}
               </Button>
             </Link>

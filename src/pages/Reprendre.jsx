@@ -6,7 +6,7 @@ import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight, CheckCircle2, TrendingUp, Search, Calculator,
-  Landmark, Handshake, ChevronDown, BarChart2, ShieldCheck, Lightbulb
+  Landmark, Handshake, ChevronDown, BarChart2, Lightbulb
 } from 'lucide-react';
 import SEO from '@/components/SEO';
 
@@ -316,12 +316,12 @@ export default function Reprendre() {
               </Button>
             </Link>
             <Link to={createPageUrl('Contact')}>
-              <Button variant="outline" className="rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
+              <Button variant="outline" className="bg-transparent rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
                 {isFr ? 'Parler à un expert M&A' : 'Talk to an M&A expert'}
               </Button>
             </Link>
             <Link to={createPageUrl('GuideRepreneur')}>
-              <Button variant="outline" className="rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
+              <Button variant="outline" className="bg-transparent rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
                 {isFr ? 'Lire le guide du repreneur' : 'Read the buyer guide'}
               </Button>
             </Link>

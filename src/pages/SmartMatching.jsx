@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart3,
@@ -7,14 +7,12 @@ import {
   Lock,
   MapPin,
   Search,
-  Send,
   ShoppingCart,
   SlidersHorizontal,
   Sparkles,
   Store,
   TrendingUp,
   Users,
-  X,
   Zap,
   CheckCircle2,
   ExternalLink,
@@ -35,8 +33,6 @@ import BusinessCard from '@/components/ui/BusinessCard';
 import { toast } from '@/components/ui/use-toast';
 import { createBusinessDetailsUrl, createPageUrl } from '@/utils';
 import {
-  SMART_MATCHING_SECTORS as SECTORS,
-  SMART_MATCHING_LOCATIONS as LOCATIONS,
   DEFAULT_SMART_MATCHING_CRITERIA as DEFAULT_CRITERIA,
   SMART_MATCHING_MIN_SCORE,
   getScoreTone,

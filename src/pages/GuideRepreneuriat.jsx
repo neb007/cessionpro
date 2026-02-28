@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, ChevronRight, Landmark, Rocket } from 'lucide-react';
+import { ArrowRight, ChevronRight, Landmark, Rocket } from 'lucide-react';
 import SEO from '@/components/SEO';
 
 const CHAPTERS = [

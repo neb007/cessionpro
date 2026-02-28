@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, Calculator, ChevronRight, Landmark } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronRight, Landmark } from 'lucide-react';
 import SEO from '@/components/SEO';
 
 const CHAPTERS = [
@@ -421,12 +421,12 @@ export default function GuideRepreneur() {
               </Button>
             </Link>
             <Link to={createPageUrl('Annonces')}>
-              <Button variant="outline" className="rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
+              <Button variant="outline" className="bg-transparent rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
                 {isFr ? 'Voir les annonces' : 'View listings'}
               </Button>
             </Link>
             <Link to={createPageUrl('Contact')}>
-              <Button variant="outline" className="rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
+              <Button variant="outline" className="bg-transparent rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
                 {isFr ? 'Être accompagné par un expert M&A' : 'Get M&A expert support'}
               </Button>
             </Link>

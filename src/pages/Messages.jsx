@@ -2150,7 +2150,7 @@ export default function Messages() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1 bg-background min-w-0 min-h-0">
+        <ScrollArea className="flex-1 bg-background min-w-0 min-h-0 pb-96">
           {filteredConversations.length === 0 ? (
             <div className="p-10 text-center max-w-md mx-auto">
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">

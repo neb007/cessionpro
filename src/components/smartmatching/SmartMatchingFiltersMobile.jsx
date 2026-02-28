@@ -7,10 +7,6 @@ import {
 } from '@/components/ui/sheet';
 import {
   Search,
-  Users,
-  Calendar,
-  BarChart3,
-  TrendingUp,
   Send,
   X,
   ChevronRight,

@@ -4,7 +4,6 @@ import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Search, ArrowRight, Sparkles, Brain, MessageCircle,
   FolderLock, Users, Calculator, Landmark, Banknote,
@@ -486,7 +485,7 @@ export default function Home() {
             </Link>
             <Link to={createPageUrl('Annonces')}>
               <Button variant="outline"
-                className="border-[#EDE6E0] bg-white text-[#3B4759] hover:border-[#FF6B4A] hover:text-[#FF6B4A] rounded-full px-8 py-5 text-base font-display font-semibold">
+                className="border-[#EDE6E0] bg-transparent text-[#3B4759] hover:border-[#FF6B4A] hover:text-[#FF6B4A] rounded-full px-8 py-5 text-base font-display font-semibold">
                 {isFr ? 'Voir les annonces de cession' : 'Browse business listings'}
               </Button>
             </Link>
@@ -810,7 +809,7 @@ export default function Home() {
                   ))}
                 </ul>
                 <Link to={createPageUrl('AccountCreation')}>
-                  <Button className="bg-white hover:bg-white/90 rounded-full px-6 font-display font-semibold"
+                  <Button className="bg-transparent hover:bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 rounded-full px-6 font-display font-semibold"
                     style={{ color: '#FF6B4A' }}>
                     {isFr ? 'Déposer mon annonce' : 'Post my listing'}
                     <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -1227,7 +1226,7 @@ export default function Home() {
                   ))}
                 </ul>
                 <Link to={createPageUrl('AccountCreation')}>
-                  <Button className="bg-white hover:bg-white/90 rounded-full px-5 font-display font-semibold text-sm"
+                  <Button className="bg-transparent hover:bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 rounded-full px-5 font-display font-semibold text-sm"
                     style={{ color: '#FF6B4A' }}>
                     {isFr ? 'Céder mon entreprise' : 'Sell my business'} <ArrowRight className="w-4 h-4 ml-1.5" />
                   </Button>
@@ -1405,7 +1404,7 @@ export default function Home() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to={createPageUrl('AccountCreation')}>
-                  <Button className="bg-white hover:bg-white/90 px-8 py-6 text-base font-semibold rounded-full shadow-xl font-display"
+                  <Button className="bg-transparent hover:bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 px-8 py-6 text-base font-semibold rounded-full font-display"
                     style={{ color: '#FF6B4A' }}>
                     {isFr ? 'Créer un compte gratuit' : 'Create a free account'}
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -1413,7 +1412,7 @@ export default function Home() {
                 </Link>
                 <Link to={createPageUrl('Annonces')}>
                   <Button variant="outline"
-                    className="border-white/40 text-white hover:bg-white/10 px-8 py-6 text-base rounded-full font-display">
+                    className="bg-transparent border-white/40 text-white hover:bg-white/10 px-8 py-6 text-base rounded-full font-display">
                     {isFr ? 'Voir les annonces' : 'Browse listings'}
                   </Button>
                 </Link>

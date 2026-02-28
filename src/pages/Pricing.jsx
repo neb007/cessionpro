@@ -380,7 +380,7 @@ export default function Pricing() {
                   <Button className={`w-full rounded-full font-display font-semibold text-sm ${
                     plan.popular
                       ? 'bg-[#FF6B4A] hover:bg-[#FF5733] text-white'
-                      : 'bg-white hover:bg-[#FFF0ED] text-[#FF6B4A] border border-[#FF6B4A]/30'
+                      : 'bg-transparent hover:bg-[#FF6B4A]/10 text-[#FF6B4A] border border-[#FF6B4A]/30'
                   }`}>
                     {language === 'fr' ? 'Nous contacter' : 'Contact us'}
                     <ArrowRight className="w-3.5 h-3.5 ml-1.5" />

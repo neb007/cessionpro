@@ -6,7 +6,7 @@ import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight, CheckCircle2, TrendingUp, Shield, Users, FileText,
-  Handshake, ChevronDown, BarChart2, Clock, Star
+  Handshake, ChevronDown, BarChart2, Star
 } from 'lucide-react';
 import SEO from '@/components/SEO';
 
@@ -298,12 +298,12 @@ export default function Ceder() {
               </Button>
             </Link>
             <Link to={createPageUrl('Contact')}>
-              <Button variant="outline" className="rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
+              <Button variant="outline" className="bg-transparent rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
                 {isFr ? 'Parler à un expert M&A' : 'Talk to an M&A expert'}
               </Button>
             </Link>
             <Link to={createPageUrl('GuideCession')}>
-              <Button variant="outline" className="rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
+              <Button variant="outline" className="bg-transparent rounded-full px-8 py-6 text-base font-display font-semibold border-white/30 text-white hover:bg-white/10">
                 {isFr ? 'Lire le guide de cession' : 'Read the sale guide'}
               </Button>
             </Link>

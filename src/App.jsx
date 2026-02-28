@@ -34,7 +34,6 @@ const PUBLIC_PAGES = [
   'PasswordReset',
   'AuthCallback',
   'Checkout',
-  'Annonces',
   'BusinessDetails',
   'Valuations',
   'Financing',

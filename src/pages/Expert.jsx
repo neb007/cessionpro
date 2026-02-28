@@ -6,7 +6,7 @@ import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight, Briefcase, Calculator, FileText, MessageSquare,
-  Shield, Users, CheckCircle2, ChevronRight, Star, Building2
+  Shield, Users, CheckCircle2, Star, Building2
 } from 'lucide-react';
 import SEO from '@/components/SEO';
 
