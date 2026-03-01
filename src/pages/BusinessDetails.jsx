@@ -7,6 +7,8 @@ import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { getSignedUrl, isSupabaseStorageUrl } from '@/services/storageService';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
+import { useUserCredits } from '@/hooks/useUserCredits';
+import PricingModal from '@/components/PricingModal';
 import { recordPageView, getUniqueViewCount } from '@/services/pageViewService';
 import { sponsorshipService } from '@/services/sponsorshipService';
 import { useLanguage } from '@/components/i18n/LanguageContext';
@@ -67,11 +69,13 @@ export default function BusinessDetails() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated } = useAuth();
-  
+  const { hasContactCredits, deductContactCredit } = useUserCredits();
+
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
   const [message, setMessage] = useState('');
@@ -189,7 +193,14 @@ export default function BusinessDetails() {
       // Table might not exist — continue to fallback
     }
 
-    // 2) Fallback: profiles table
+    // 2) Partner logo from external_url (priority for imported listings)
+    const partnerLogo = getPartnerLogoUrl(business?.external_url);
+    if (partnerLogo) {
+      setSellerFallbackLogo(partnerLogo);
+      return;
+    }
+
+    // 3) Fallback: profiles table
     try {
       if (business?.seller_id) {
         const { data: profileData } = await supabase
@@ -207,12 +218,6 @@ export default function BusinessDetails() {
       }
     } catch {
       // Silently fail
-    }
-
-    // 3) Fallback: static partner logo from external_url
-    const partnerLogo = getPartnerLogoUrl(business?.external_url);
-    if (partnerLogo) {
-      setSellerFallbackLogo(partnerLogo);
     }
   };
 
@@ -326,6 +331,20 @@ export default function BusinessDetails() {
     if (!user) {
       setUser(currentUser);
     }
+
+    // Check if conversation already exists (follow-up = free)
+    const { data: existingConv } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('business_id', business.id)
+      .or(`participant_1_id.eq.${currentUser.id},participant_2_id.eq.${currentUser.id}`)
+      .maybeSingle();
+
+    if (!existingConv && !hasContactCredits()) {
+      setShowPricingModal(true);
+      return;
+    }
+
     setShowContactModal(true);
   };
 
@@ -341,12 +360,16 @@ export default function BusinessDetails() {
     }
     setSending(true);
     try {
-      await sendBusinessMessage({
+      const result = await sendBusinessMessage({
         business,
         buyerEmail: currentUser.email,
         buyerName: currentUser.user_metadata?.full_name || currentUser.email,
         message,
       });
+
+      if (result.isNewConversation) {
+        await deductContactCredit(1);
+      }
 
       setMessageSent(true);
       setMessage('');
@@ -1029,6 +1052,16 @@ export default function BusinessDetails() {
           )}
         </DialogContent>
       </Dialog>
+      <PricingModal
+        open={showPricingModal}
+        onOpenChange={setShowPricingModal}
+        type="contacts"
+        language={language}
+        onPurchase={() => {
+          setShowPricingModal(false);
+          window.location.href = '/Abonnement';
+        }}
+      />
     </div>
   );
 }

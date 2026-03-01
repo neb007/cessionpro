@@ -415,6 +415,14 @@ export default function MyListings() {
                 <p className="text-xs text-[#B5472F]/80 mt-3">
                   {language === 'fr' ? 'Jours disponibles' : 'Available days'}
                 </p>
+                {availableFeaturedSlots <= 0 && (
+                  <button
+                    onClick={() => navigate('/Abonnement')}
+                    className="text-xs font-semibold text-[#B5472F] underline hover:no-underline mt-2"
+                  >
+                    {language === 'fr' ? 'Acheter des jours' : 'Buy days'}
+                  </button>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -739,17 +747,32 @@ export default function MyListings() {
                               size="sm"
                               variant={isFeatured ? 'secondary' : 'outline'}
                               className="h-8"
-                              onClick={() => (isFeatured ? handleDeactivateFeatured(listing) : handleActivateFeatured(listing))}
+                              onClick={() => {
+                                if (!isFeatured && availableFeaturedSlots <= 0) {
+                                  toast({
+                                    title: language === 'fr' ? 'Aucun jour sponsorisé disponible' : 'No sponsored days available',
+                                    description: language === 'fr'
+                                      ? 'Achetez des jours sponsorisés pour mettre votre annonce à la une.'
+                                      : 'Purchase sponsored days to feature your listing.',
+                                    action: (
+                                      <Button size="sm" variant="outline" onClick={() => navigate('/Abonnement')}>
+                                        {language === 'fr' ? 'Acheter' : 'Buy'}
+                                      </Button>
+                                    ),
+                                  });
+                                  return;
+                                }
+                                isFeatured ? handleDeactivateFeatured(listing) : handleActivateFeatured(listing);
+                              }}
                               disabled={
                                 updating[listing.id] ||
-                                listing.status !== 'active' ||
-                                (!isFeatured && availableFeaturedSlots <= 0)
+                                listing.status !== 'active'
                               }
                               title={
                                 isFeatured
                                   ? (language === 'fr' ? 'Désactiver À la une' : 'Disable featured')
                                   : availableFeaturedSlots <= 0
-                                    ? (language === 'fr' ? 'Aucun jour sponsorisé disponible' : 'No sponsored days available')
+                                    ? (language === 'fr' ? 'Acheter des jours sponsorisés' : 'Buy sponsored days')
                                     : (language === 'fr' ? 'Activer À la une' : 'Activate featured')
                               }
                             >

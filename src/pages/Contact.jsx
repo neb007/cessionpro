@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  ArrowRight, CheckCircle2, Clock, Mail, Phone, Star,
+  ArrowRight, CheckCircle2, Clock, Loader2, Mail, Phone, Star,
   TrendingDown, TrendingUp, UserRound, Users
 } from 'lucide-react';
 import SEO from '@/components/SEO';
+import { supabase } from '@/api/supabaseClient';
+
+const CONTACT_AUDIENCE_ID = '3e8c329d-92fb-4f78-b349-bb04d4fd6160';
 
 const REASONS = [
   {
@@ -42,10 +45,48 @@ export default function Contact() {
   const isFr = language === 'fr';
   const [selectedReason, setSelectedReason] = useState('');
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [message, setMessage] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSent(true);
+    setError(null);
+    setSubmitting(true);
+
+    const parts = name.trim().split(/\s+/);
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+
+    try {
+      const { error: fnError } = await supabase.functions.invoke('tool-lead-subscribe', {
+        body: {
+          audienceId: CONTACT_AUDIENCE_ID,
+          firstName,
+          lastName,
+          email: email.trim().toLowerCase(),
+          consent: true,
+          tool: selectedReason || 'contact',
+          language: language === 'en' ? 'en' : 'fr',
+          simulationInput: {
+            phone: phone.trim(),
+            message: message.trim(),
+            reason: selectedReason,
+          },
+        },
+      });
+
+      if (fnError) throw fnError;
+      setSent(true);
+    } catch (err) {
+      console.error('Contact form error:', err);
+      setError(isFr ? "Une erreur est survenue. Veuillez réessayer." : "An error occurred. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -173,14 +214,27 @@ export default function Contact() {
                     <label className="block text-xs font-medium text-[#6B7A94] mb-1.5">{isFr ? "Prénom & Nom" : "First & Last name"}</label>
                     <div className="relative">
                       <UserRound className="w-4 h-4 text-[#9EABC1] absolute left-3 top-2.5" />
-                      <Input required className="pl-9 border-[#EADFD8] focus:border-[#FF6B4A] text-sm" placeholder={isFr ? "Jean Dupont" : "John Smith"} />
+                      <Input
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="pl-9 border-[#EADFD8] focus:border-[#FF6B4A] text-sm"
+                        placeholder={isFr ? "Jean Dupont" : "John Smith"}
+                      />
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#6B7A94] mb-1.5">Email</label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-[#9EABC1] absolute left-3 top-2.5" />
-                      <Input required type="email" className="pl-9 border-[#EADFD8] focus:border-[#FF6B4A] text-sm" placeholder="jean@company.fr" />
+                      <Input
+                        required
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-9 border-[#EADFD8] focus:border-[#FF6B4A] text-sm"
+                        placeholder="jean@company.fr"
+                      />
                     </div>
                   </div>
                 </div>
@@ -189,7 +243,12 @@ export default function Contact() {
                   <label className="block text-xs font-medium text-[#6B7A94] mb-1.5">{isFr ? "Téléphone (optionnel)" : "Phone (optional)"}</label>
                   <div className="relative">
                     <Phone className="w-4 h-4 text-[#9EABC1] absolute left-3 top-2.5" />
-                    <Input className="pl-9 border-[#EADFD8] focus:border-[#FF6B4A] text-sm" placeholder="+33 6 00 00 00 00" />
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="pl-9 border-[#EADFD8] focus:border-[#FF6B4A] text-sm"
+                      placeholder="+33 6 00 00 00 00"
+                    />
                   </div>
                 </div>
 
@@ -197,6 +256,8 @@ export default function Contact() {
                   <label className="block text-xs font-medium text-[#6B7A94] mb-1.5">{isFr ? "Votre message" : "Your message"}</label>
                   <Textarea
                     required
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
                     className="border-[#EADFD8] min-h-[120px] focus:border-[#FF6B4A] text-sm"
                     placeholder={
                       isFr
@@ -215,9 +276,26 @@ export default function Contact() {
                   </label>
                 </div>
 
-                <Button type="submit" className="w-full bg-[#FF6B4A] hover:bg-[#FF5733] text-white rounded-full py-5 font-display font-semibold">
-                  {isFr ? "Envoyer ma demande" : "Send my request"}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                {error && (
+                  <p className="text-sm text-red-600">{error}</p>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-[#FF6B4A] hover:bg-[#FF5733] text-white rounded-full py-5 font-display font-semibold"
+                >
+                  {submitting ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {isFr ? "Envoi..." : "Sending..."}
+                    </span>
+                  ) : (
+                    <>
+                      {isFr ? "Envoyer ma demande" : "Send my request"}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
                 </Button>
               </form>
             )}

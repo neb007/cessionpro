@@ -19,6 +19,8 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import ScoreRing from '@/components/smartmatching/ScoreRing';
 import SmartMatchingFilterBar from '@/components/smartmatching/SmartMatchingFilterBar';
@@ -244,6 +246,7 @@ export default function SmartMatching() {
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [sortBy, setSortBy] = useState('score');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [smartMatchingMode, setSmartMatchingMode] = useState(
     user?.user_metadata?.role === 'seller' ? 'seller' : 'buyer'
@@ -511,12 +514,7 @@ export default function SmartMatching() {
       if (accessStatus === 'inactive') {
         results = results.slice(0, 5);
         if (notifyIfLimited) {
-          toast({
-            title: language === 'fr' ? 'Mode découverte actif' : 'Preview mode enabled',
-            description: language === 'fr'
-              ? 'Seuls les 5 meilleurs résultats sont visibles. Activez Smart Matching pour tout débloquer.'
-              : 'Only top 5 results are visible. Enable Smart Matching to unlock all matches.',
-          });
+          setShowUpgradeModal(true);
         }
       }
 
@@ -991,6 +989,60 @@ export default function SmartMatching() {
         saving={searching}
         smartMatchingMode={smartMatchingMode}
       />
+
+      {/* Smart Matching Upgrade Modal */}
+      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              {language === 'fr' ? 'Activer Smart Matching' : 'Activate Smart Matching'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-primary-light rounded-xl border border-primary/20">
+              <p className="text-sm font-semibold text-primary mb-1">
+                {language === 'fr' ? 'Mode découverte actif' : 'Preview mode active'}
+              </p>
+              <p className="text-sm text-foreground">
+                {language === 'fr'
+                  ? 'Seuls les 5 meilleurs résultats sont affichés. Activez Smart Matching pour débloquer tous les matchs et les alertes automatiques.'
+                  : 'Only the top 5 results are shown. Activate Smart Matching to unlock all matches and automatic alerts.'}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl">
+              <p className="text-lg font-bold text-foreground">39,99 €</p>
+              <p className="text-sm text-muted-foreground">
+                {language === 'fr' ? 'Paiement unique' : 'One-time payment'}
+              </p>
+              <ul className="mt-3 space-y-1.5 text-sm text-foreground">
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-600" />{language === 'fr' ? 'Résultats illimités' : 'Unlimited results'}</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-600" />{language === 'fr' ? 'Alertes de compatibilité' : 'Compatibility alerts'}</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-600" />{language === 'fr' ? 'Score de compatibilité détaillé' : 'Detailed compatibility score'}</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-600" />{language === 'fr' ? 'Suggestions personnalisées' : 'Personalized suggestions'}</li>
+              </ul>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowUpgradeModal(false)}
+                className="flex-1"
+              >
+                {language === 'fr' ? 'Continuer en découverte' : 'Continue preview'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowUpgradeModal(false);
+                  window.location.href = '/Abonnement';
+                }}
+                className="flex-1 bg-gradient-to-r from-primary to-blue-600"
+              >
+                {language === 'fr' ? 'Activer' : 'Activate'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

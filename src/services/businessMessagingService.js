@@ -117,6 +117,7 @@ export async function sendBusinessMessage({ business, buyerEmail, buyerName, mes
   }
 
   let conversationRecord = null;
+  let isNewConversation = false;
   if (sellerId) {
     const { data: existingConversation, error: conversationError } = await supabase
       .from('conversations')
@@ -157,6 +158,7 @@ export async function sendBusinessMessage({ business, buyerEmail, buyerName, mes
         console.warn('Failed to create conversation:', conversationInsertError.message);
       }
       conversationRecord = newConversation || null;
+      isNewConversation = true;
     } else {
       const normalizedUnread = { ...(existingConversation.unread_count || {}) };
       const updatedUnread = {
@@ -219,6 +221,7 @@ export async function sendBusinessMessage({ business, buyerEmail, buyerName, mes
 
   return {
     conversationId: conversationRecord?.id || null,
+    isNewConversation,
   };
 }
 
