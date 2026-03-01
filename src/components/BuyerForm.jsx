@@ -18,7 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip';
-import { Save, Send, Loader2, Search, X, Upload, FileText, Eye, Info, ChevronLeft, ChevronRight, User, Filter, CheckCircle2 } from 'lucide-react';
+import { Save, Send, Loader2, X, Upload, FileText, Eye, Info, ChevronLeft, ChevronRight, User, Filter, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageGallery from '@/components/ImageGallery';
 import { getDefaultImageForSector } from '@/constants/defaultImages';

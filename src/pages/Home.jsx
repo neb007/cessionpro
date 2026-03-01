@@ -699,7 +699,7 @@ export default function Home() {
                     </h3>
                     <p className="flex items-center gap-1 text-xs text-[#6B7A94] mb-4"
                       style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                      <MapPin className="w-3.5 h-3.5" />{listing.location}
+                      <MapPin className="w-3.5 h-3.5" /><span className="blur-sm select-none">{listing.location}</span>
                     </p>
                     {/* Métriques */}
                     <div className="grid grid-cols-3 gap-2 py-3 mb-4"
@@ -707,7 +707,7 @@ export default function Home() {
                       <div>
                         <p className="text-[9px] uppercase tracking-wider text-[#6B7A94] mb-0.5"
                           style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>CA annuel</p>
-                        <p className="font-mono text-[13px] font-semibold text-[#3B4759]">{listing.annualRevenue}</p>
+                        <p className="font-mono text-[13px] font-semibold text-[#3B4759] blur-sm select-none">{listing.annualRevenue}</p>
                       </div>
                       <div>
                         <p className="text-[9px] uppercase tracking-wider text-[#6B7A94] mb-0.5"
@@ -730,7 +730,7 @@ export default function Home() {
                           style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                           {isFr ? 'Prix demandé' : 'Asking price'}
                         </p>
-                        <p className="font-mono text-[1.35rem] font-bold leading-none text-[#FF6B4A]">
+                        <p className="font-mono text-[1.35rem] font-bold leading-none text-[#FF6B4A] blur-sm select-none">
                           {listing.askingPrice}
                         </p>
                       </div>
