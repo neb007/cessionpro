@@ -596,7 +596,7 @@ export default function Businesses() {
 
         {/* Results */}
         {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="bg-muted rounded-2xl h-80 animate-pulse" />
             ))}
@@ -619,7 +619,7 @@ export default function Businesses() {
         ) : (
           <motion.div
             layout
-            className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6 max-w-sm mx-auto md:max-w-none"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6"
           >
             <AnimatePresence mode="popLayout">
               {prioritizedBusinesses.map((business) => (
@@ -629,7 +629,7 @@ export default function Businesses() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="relative"
+                  className="relative mx-auto w-full max-w-[85%] md:max-w-none"
                 >
                   <BusinessCard
                     business={business}

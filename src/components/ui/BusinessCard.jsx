@@ -156,7 +156,7 @@ export default function BusinessCard({
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -3 }}
       transition={{ duration: 0.3 }}
-      className="h-full"
+      className="h-full overflow-hidden"
     >
       <Card
         className={`group overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full flex flex-col rounded-2xl ${
@@ -267,11 +267,11 @@ export default function BusinessCard({
           )}
         </div>
         
-        <CardContent className="p-4 flex flex-col flex-grow">
+        <CardContent className="p-4 flex flex-col flex-grow overflow-hidden">
           {/* Titre */}
           <div className="mb-2">
             <Link to={cardDetailsUrl} className="flex-1 min-w-0">
-              <h3 style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: '16px' }} className="text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2 leading-tight">
+              <h3 style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: '16px' }} className="text-[#3B4759] group-hover:text-[#FF6B4A] transition-colors line-clamp-2 leading-tight break-words">
                 {business.title}
               </h3>
             </Link>
