@@ -72,25 +72,32 @@ export default function Sidebar({ user }) {
     if (!user?.id) return;
 
     try {
+      // Get conversations where user is a participant
       const { data: conversations, error } = await supabase
         .from('conversations')
-        .select('*')
-        .or(`participant_1_id.eq.${user.id},participant_2_id.eq.${user.id}`)
-        .order('updated_at', { ascending: false });
+        .select('id')
+        .or(`participant_1_id.eq.${user.id},participant_2_id.eq.${user.id}`);
 
-      if (error) {
-        throw error;
+      if (error) throw error;
+
+      const convIds = (conversations || []).map(c => c.id);
+      if (convIds.length === 0) {
+        setUnreadCount(0);
+        localStorage.setItem(`unread_messages_${user.id}`, '0');
+        return;
       }
 
-      const myConvs = conversations || [];
+      // Count actual unread messages (not sent by current user and not read)
+      const { count, error: msgError } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .in('conversation_id', convIds)
+        .neq('sender_id', user.id)
+        .eq('read', false);
 
-      // Calculate total unread (robust numeric parsing)
-      const total = myConvs.reduce((sum, conv) => {
-        const rawUnread = conv?.unread_count?.[user.id];
-        const unread = Number(rawUnread ?? 0);
-        return sum + (Number.isFinite(unread) ? unread : 0);
-      }, 0);
+      if (msgError) throw msgError;
 
+      const total = count || 0;
       setUnreadCount(total);
       localStorage.setItem(`unread_messages_${user.id}`, total.toString());
     } catch (error) {

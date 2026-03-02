@@ -241,7 +241,7 @@ export default function BusinessCard({
                   console.error('Failed to open message modal:', error);
                 }
               }}
-              className="absolute bottom-3 left-3 p-2 rounded-full bg-black/50 text-white hover:bg-primary transition-colors z-50"
+              className="absolute bottom-3 left-3 p-2 rounded-full bg-black/50 text-white hover:bg-primary transition-colors z-10"
               aria-label={language === 'fr' ? 'Envoyer un message' : 'Send message'}
               title={language === 'fr' ? 'Envoyer un message' : 'Send message'}
             >
@@ -256,7 +256,7 @@ export default function BusinessCard({
                 e.preventDefault();
                 onToggleFavorite(business.id);
               }}
-              className={`absolute bottom-3 right-3 p-2 rounded-full transition-all duration-300 z-50 ${
+              className={`absolute bottom-3 right-3 p-2 rounded-full transition-all duration-300 z-10 ${
                 isFavorite 
                   ? 'bg-rose-500 text-white' 
                   : 'bg-black/50 text-white hover:bg-rose-500'

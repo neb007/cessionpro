@@ -29,8 +29,23 @@ export default function PublicNav() {
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-[#F0ECE6]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          {/* Left: hamburger (mobile) + Logo (desktop) */}
+          <div className="flex items-center gap-2 flex-1 md:flex-none">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden p-2 text-[#3B4759] hover:text-[#FF6B4A] transition-colors"
+              aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <Link to="/" className="hidden md:flex items-center gap-2">
+              <Logo size="sm" />
+            </Link>
+          </div>
+
+          {/* Logo centré (mobile only) */}
+          <Link to="/" className="flex md:hidden items-center gap-2">
             <Logo size="sm" />
           </Link>
 
@@ -84,8 +99,8 @@ export default function PublicNav() {
             </Link>
           </div>
 
-          {/* Auth buttons + hamburger */}
-          <div className="flex items-center gap-3">
+          {/* Right: lang + auth buttons */}
+          <div className="flex items-center gap-3 flex-1 justify-end md:flex-none">
             <button
               type="button"
               onClick={() => changeLanguage(language === 'fr' ? 'en' : 'fr')}
@@ -104,14 +119,6 @@ export default function PublicNav() {
                 {isFr ? 'Commencer gratuitement' : 'Start for free'}
               </Button>
             </Link>
-            <button
-              type="button"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 text-[#3B4759] hover:text-[#FF6B4A] transition-colors"
-              aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-            >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
       </div>
