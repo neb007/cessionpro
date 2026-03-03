@@ -306,7 +306,7 @@ class BillingService {
     };
   }
 
-  async createCheckoutSession({ items, language = 'fr' }) {
+  async createCheckoutSession({ items, language = 'fr', vatNumber }) {
     const accessToken = await this._getAccessTokenOrThrow();
 
     const { data, error } = await this._invokeWithTimeout('stripe-checkout', {
@@ -316,7 +316,8 @@ class BillingService {
       body: {
         items,
         language,
-        returnOrigin: this._getCheckoutReturnOrigin()
+        returnOrigin: this._getCheckoutReturnOrigin(),
+        vatNumber: vatNumber || undefined
       }
     }, 15000, 'RETRY');
 
@@ -340,7 +341,7 @@ class BillingService {
     return data;
   }
 
-  async createElementsSession({ items, language = 'fr' }) {
+  async createElementsSession({ items, language = 'fr', vatNumber }) {
     const accessToken = await this._getAccessTokenOrThrow();
 
     const invokeOptions = {
@@ -351,7 +352,8 @@ class BillingService {
         items,
         language,
         checkoutType: 'elements',
-        returnOrigin: this._getCheckoutReturnOrigin()
+        returnOrigin: this._getCheckoutReturnOrigin(),
+        vatNumber: vatNumber || undefined
       }
     };
 

@@ -12,6 +12,7 @@ type CheckoutBody = {
   language?: 'fr' | 'en';
   checkoutType?: 'hosted' | 'elements';
   returnOrigin?: string;
+  vatNumber?: string;
 };
 
 const FORCED_ONE_SHOT_CODES = new Set(['smart_matching', 'sponsored_listing', 'data_room']);
@@ -317,33 +318,9 @@ Deno.serve(async (req) => {
     }
 
     const companyName = String(profileData?.company_name || user.user_metadata?.company_name || '').trim();
-    const vatNumber = normalizeVatNumber(profileData?.vat_number || user.user_metadata?.vat_number);
-
-    if (companyName && !vatNumber) {
-      await logSecurityEvent({
-        supabase,
-        userId: user.id,
-        eventType: 'checkout_vat_missing',
-        req,
-        details: {
-          has_company_name: true,
-          has_vat_number: false
-        }
-      });
-
-      return jsonResponse(
-        400,
-        checkoutError({
-          code: 'VAT_NUMBER_REQUIRED',
-          message:
-            language === 'fr'
-              ? 'Le numéro de TVA est obligatoire quand la société est renseignée.'
-              : 'VAT number is required when company name is provided.',
-          retryable: false,
-          action: 'UPDATE_PROFILE'
-        })
-      );
-    }
+    const vatNumber = normalizeVatNumber(
+      payload.vatNumber || profileData?.vat_number || user.user_metadata?.vat_number
+    );
 
     await logSecurityEvent({
       supabase,
@@ -398,21 +375,26 @@ Deno.serve(async (req) => {
     const customerDisplayName = companyName || user.user_metadata?.full_name || undefined;
 
     const ensureCustomerVatId = async (customerId: string, vatValue: string) => {
-      const existingTaxIds = await stripe.customers.listTaxIds(customerId, { limit: 100 });
-      const existingEuVat = existingTaxIds.data.find((taxId) => taxId.type === 'eu_vat');
+      try {
+        const existingTaxIds = await stripe.customers.listTaxIds(customerId, { limit: 100 });
+        const existingEuVat = existingTaxIds.data.find((taxId) => taxId.type === 'eu_vat');
 
-      if (existingEuVat?.value === vatValue) {
-        return;
+        if (existingEuVat?.value === vatValue) {
+          return;
+        }
+
+        if (existingEuVat?.id) {
+          await stripe.customers.deleteTaxId(customerId, existingEuVat.id);
+        }
+
+        await stripe.customers.createTaxId(customerId, {
+          type: 'eu_vat',
+          value: vatValue
+        });
+      } catch (vatError) {
+        // Ne pas bloquer le checkout si le numéro de TVA est invalide
+        console.warn('[stripe-checkout] VAT ID error (non-blocking):', (vatError as Error)?.message);
       }
-
-      if (existingEuVat?.id) {
-        await stripe.customers.deleteTaxId(customerId, existingEuVat.id);
-      }
-
-      await stripe.customers.createTaxId(customerId, {
-        type: 'eu_vat',
-        value: vatValue
-      });
     };
 
     await logSecurityEvent({

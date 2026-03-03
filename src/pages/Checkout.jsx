@@ -290,7 +290,11 @@ export default function Checkout() {
         actionRetry: 'Réessayez dans quelques secondes.',
         actionReauth: 'Reconnectez-vous puis relancez le paiement.',
         actionHostedFallback: 'Nous lançons automatiquement le checkout hébergé Stripe.',
-        actionRefreshCart: 'Retournez sur Abonnement et recomposez votre panier.'
+        actionRefreshCart: 'Retournez sur Abonnement et recomposez votre panier.',
+        vatLabel: 'N° de TVA (optionnel)',
+        vatPlaceholder: 'FR12345678901',
+        vatHelper: 'Format européen : FRXXXXXXXXXXX',
+        vatApply: 'Appliquer'
       },
       en: {
         title: 'Secure payment',
@@ -325,7 +329,11 @@ export default function Checkout() {
         actionRetry: 'Please retry in a few seconds.',
         actionReauth: 'Please sign in again before retrying payment.',
         actionHostedFallback: 'We are automatically switching to Stripe hosted checkout.',
-        actionRefreshCart: 'Please return to Subscription and rebuild your cart.'
+        actionRefreshCart: 'Please return to Subscription and rebuild your cart.',
+        vatLabel: 'VAT Number (optional)',
+        vatPlaceholder: 'FR12345678901',
+        vatHelper: 'European format: FRXXXXXXXXXXX',
+        vatApply: 'Apply'
       }
     }),
     []
@@ -333,6 +341,7 @@ export default function Checkout() {
 
   const [state, dispatch] = useReducer(checkoutReducer, initialCheckoutState);
   const { isLoading, errorMessage, checkoutData, checkoutPayload, isHostedFallbackLoading, elementsLoadError, errorActionHint } = state;
+  const [vatInput, setVatInput] = useState('');
 
   const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
   const stripePromise = useMemo(() => (stripeKey ? loadStripe(stripeKey) : null), [stripeKey]);
@@ -357,7 +366,8 @@ export default function Checkout() {
       dispatch({ type: 'HOSTED_FALLBACK_START' });
       const data = await billingService.createCheckoutSession({
         items: effectivePayload.items,
-        language
+        language,
+        vatNumber: vatInput.trim() || undefined
       });
 
       if (!data?.url) {
@@ -445,7 +455,8 @@ export default function Checkout() {
 
       const data = await billingService.createElementsSession({
         items: payload.items,
-        language
+        language,
+        vatNumber: vatInput.trim() || undefined
       });
 
       if (isCheckoutDebugEnabled()) {
@@ -608,6 +619,33 @@ export default function Checkout() {
               <p className="text-sm text-muted-foreground">{t.paySectionSubtitle}</p>
             </CardHeader>
             <CardContent aria-live="polite">
+              <div className="mb-4 rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+                <label htmlFor="vat-input" className="text-sm font-medium text-foreground">
+                  {t.vatLabel}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="vat-input"
+                    type="text"
+                    value={vatInput}
+                    onChange={(e) => setVatInput(e.target.value.toUpperCase())}
+                    placeholder={t.vatPlaceholder}
+                    className="flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  {vatInput.trim() && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-lg text-sm"
+                      onClick={bootstrapCheckout}
+                    >
+                      {t.vatApply}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{t.vatHelper}</p>
+              </div>
+
               {!stripePromise ? (
                 <div role="status" className="rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
                   {t.missingStripeKey}
