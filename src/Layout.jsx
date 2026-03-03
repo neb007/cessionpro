@@ -141,6 +141,7 @@ function LayoutContent({ children, currentPageName }) {
                     <li><Link to={createPageUrl('Reprendre')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Reprendre' : 'Buy'}</Link></li>
                     <li><Link to={createPageUrl('SmartMatchingFeatures')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">SmartMatching</Link></li>
                     <li><Link to={createPageUrl('Pricing')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Prix' : 'Pricing'}</Link></li>
+                    <li><Link to={createPageUrl('Partners')} className="text-sm text-[#9EABC1] hover:text-[#FF6B4A] transition-colors">{language === 'fr' ? 'Partenaires' : 'Partners'}</Link></li>
                   </ul>
                 </div>
 

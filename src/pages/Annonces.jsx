@@ -373,22 +373,41 @@ export default function Businesses() {
     t
   ]);
 
-  // Sort
-  const sortedBusinesses = useMemo(() => [...filteredBusinesses].sort((a, b) => {
-    switch (filtersState.sortBy) {
-      case '-created_date': {
-      const dateA = new Date(b.created_at || 0).getTime();
-      const dateB = new Date(a.created_at || 0).getTime();
-        return dateA - dateB;
+  // Sort: user listings by date/price, imported listings shuffled randomly, then interleaved
+  const sortedBusinesses = useMemo(() => {
+    const userListings = filteredBusinesses.filter(b => !b.external_url);
+    const importedListings = filteredBusinesses.filter(b => b.external_url);
+
+    // Sort user listings by chosen criteria
+    userListings.sort((a, b) => {
+      switch (filtersState.sortBy) {
+        case '-created_date': {
+          const dateA = new Date(b.created_at || 0).getTime();
+          const dateB = new Date(a.created_at || 0).getTime();
+          return dateA - dateB;
+        }
+        case 'price_asc':
+          return (a.asking_price || 0) - (b.asking_price || 0);
+        case 'price_desc':
+          return (b.asking_price || 0) - (a.asking_price || 0);
+        default:
+          return 0;
       }
-      case 'price_asc':
-        return (a.asking_price || 0) - (b.asking_price || 0);
-      case 'price_desc':
-        return (b.asking_price || 0) - (a.asking_price || 0);
-      default:
-        return 0;
+    });
+
+    // Shuffle imported listings (Fisher-Yates) then insert at random positions
+    for (let i = importedListings.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [importedListings[i], importedListings[j]] = [importedListings[j], importedListings[i]];
     }
-  }), [filteredBusinesses, filtersState.sortBy]);
+    const result = [...userListings];
+    for (const item of importedListings) {
+      const pos = Math.floor(Math.random() * (result.length + 1));
+      result.splice(pos, 0, item);
+    }
+
+    return result;
+  }, [filteredBusinesses, filtersState.sortBy]);
 
   const hasActiveFilters =
     filtersState.query ||

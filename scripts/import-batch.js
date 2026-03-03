@@ -68,8 +68,53 @@ const FIELDS_TO_REMOVE = new Set([
   'contract_type'
 ]);
 
+// Régions françaises (souvent mises dans "sector" par erreur dans les données partenaires)
+const KNOWN_REGIONS = new Set([
+  'Ile-de-France', 'Rhône-Alpes', 'Pays-de-la-Loire', "Provence-Alpes-Côte d'Azur",
+  'Nord-Pas-de-Calais', 'Languedoc-Roussillon', 'Bretagne', 'Aquitaine',
+  'Midi-Pyrénées', 'Centre', 'Alsace', 'Picardie', 'Haute-Normandie',
+  'Bourgogne', 'Lorraine', 'Franche-Comté', 'Champagne-Ardenne',
+  'Basse-Normandie', 'Poitou-Charentes', 'Auvergne', 'Limousin', 'Corse',
+  'DOM-TOM', 'France entière', 'Etranger',
+]);
+
+// Mapping mots-clés du titre → secteur (pour inférer quand sector = région)
+const TITLE_SECTOR_HINTS = {
+  'menuiserie': 'construction', 'bâtiment': 'construction', 'btp': 'construction',
+  'plomberie': 'construction', 'électricité': 'construction', 'maçonnerie': 'construction',
+  'charpente': 'construction', 'couverture': 'construction', 'carrelage': 'construction',
+  'peinture': 'construction', 'isolation': 'construction', 'étanchéité': 'construction',
+  'terrassement': 'construction', 'démolition': 'construction', 'serrurerie': 'construction',
+  'restaurant': 'hospitality', 'hôtel': 'hospitality', 'brasserie': 'hospitality',
+  'crêperie': 'hospitality', 'pizzeria': 'hospitality', 'bar': 'hospitality',
+  'tabac': 'hospitality', 'café': 'hospitality',
+  'transport': 'transport', 'logistique': 'logistics',
+  'informatique': 'technology', 'logiciel': 'technology', 'web': 'technology',
+  'digital': 'technology', 'esn': 'technology',
+  'garage': 'automotive', 'automobile': 'automotive', 'carrosserie': 'automotive',
+  'comptable': 'consulting', 'conseil': 'consulting', 'audit': 'consulting',
+  'ingénierie': 'consulting',
+  'nettoyage': 'services', 'sécurité': 'services', 'gardiennage': 'services',
+  'entretien': 'services', 'pressing': 'services',
+  'formation': 'education', 'école': 'education',
+  'pharmacie': 'pharma', 'santé': 'healthcare', 'médical': 'healthcare',
+  'optique': 'healthcare', 'laboratoire': 'healthcare',
+  'immobilier': 'real_estate',
+  'agriculture': 'agriculture', 'viticole': 'agriculture', 'viticulture': 'agriculture',
+  'industrie': 'manufacturing', 'usinage': 'manufacturing', 'mécanique': 'manufacturing',
+  'fabrication': 'manufacturing',
+  'boulangerie': 'retail', 'boucherie': 'retail', 'commerce': 'retail',
+  'magasin': 'retail', 'boutique': 'retail',
+  'assurance': 'finance', 'courtage': 'finance',
+  'énergie': 'energy', 'solaire': 'energy', 'photovoltaïque': 'energy',
+  'sport': 'sports_fitness', 'fitness': 'sports_fitness',
+  'tourisme': 'tourism', 'camping': 'hospitality',
+  'coiffure': 'beauty', 'esthétique': 'beauty',
+  'imprimerie': 'media', 'édition': 'media',
+};
+
 function generateReference() {
-  const num = Math.floor(1000 + Math.random() * 9000);
+  const num = Math.floor(10000 + Math.random() * 90000);
   return `RVQ-${num}`;
 }
 
@@ -137,6 +182,18 @@ function transformListing(raw, sellerId) {
   // concurrence → colonne dédiée
   if (raw.concurrence) {
     listing.concurrence = raw.concurrence;
+  }
+
+  // Si le sector est en fait une région française, corriger
+  if (listing.sector && KNOWN_REGIONS.has(listing.sector)) {
+    if (!listing.region) listing.region = listing.sector;
+    // Tenter d'inférer le vrai secteur depuis le titre
+    const titleLower = (raw.title || '').toLowerCase();
+    let inferred = null;
+    for (const [keyword, sec] of Object.entries(TITLE_SECTOR_HINTS)) {
+      if (titleLower.includes(keyword)) { inferred = sec; break; }
+    }
+    listing.sector = inferred || 'other';
   }
 
   // Champs système
@@ -213,11 +270,22 @@ async function main() {
   console.log(`   ${raw.length} annonces trouvées\n`);
 
   // Vérifier les reference_number existants pour éviter les doublons
-  const { data: existing } = await supabase
-    .from('businesses')
-    .select('reference_number')
-    .like('reference_number', 'RVQ-%');
-  const existingRefs = new Set((existing || []).map(b => b.reference_number));
+  // (paginer pour dépasser la limite par défaut de 1000 lignes)
+  const existingRefs = new Set();
+  let from = 0;
+  const PAGE_SIZE = 1000;
+  while (true) {
+    const { data: page } = await supabase
+      .from('businesses')
+      .select('reference_number')
+      .like('reference_number', 'RVQ-%')
+      .range(from, from + PAGE_SIZE - 1);
+    if (!page || page.length === 0) break;
+    page.forEach(b => existingRefs.add(b.reference_number));
+    if (page.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  console.log(`   ${existingRefs.size} références RVQ existantes en base\n`);
 
   const listings = [];
   for (let i = 0; i < raw.length; i++) {

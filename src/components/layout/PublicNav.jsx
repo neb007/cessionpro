@@ -97,6 +97,10 @@ export default function PublicNav() {
               className="text-[#3B4759] hover:text-[#FF6B4A] transition-colors font-display font-medium text-sm">
               {isFr ? 'Experts' : 'Experts'}
             </Link>
+            <Link to={createPageUrl('Partners')}
+              className="text-[#3B4759] hover:text-[#FF6B4A] transition-colors font-display font-medium text-sm">
+              {isFr ? 'Partenaires' : 'Partners'}
+            </Link>
           </div>
 
           {/* Right: lang + auth buttons */}
@@ -167,6 +171,10 @@ export default function PublicNav() {
             <Link to={createPageUrl('Expert')} onClick={closeMobile}
               className="block px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors">
               {isFr ? 'Experts' : 'Experts'}
+            </Link>
+            <Link to={createPageUrl('Partners')} onClick={closeMobile}
+              className="block px-3 py-2.5 rounded-lg text-[#3B4759] hover:bg-[#FFF0ED] hover:text-[#FF6B4A] font-display font-medium text-sm transition-colors">
+              {isFr ? 'Partenaires' : 'Partners'}
             </Link>
 
             <div className="pt-3 border-t border-[#F0ECE6] space-y-2 sm:hidden">

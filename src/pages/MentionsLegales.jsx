@@ -10,24 +10,22 @@ const SECTIONS_FR = [
     title: '1. Éditeur du site',
     content: [
       'Le site Riviqo est édité par :',
-      '• Raison sociale : [À COMPLÉTER]',
-      '• Forme juridique : [À COMPLÉTER]',
-      '• Capital social : [À COMPLÉTER]',
-      '• Siège social : [À COMPLÉTER]',
-      '• SIRET : [À COMPLÉTER]',
-      '• RCS : [À COMPLÉTER]',
-      '• Numéro de TVA intracommunautaire : [À COMPLÉTER]',
-      '• Directeur de la publication : [À COMPLÉTER]',
-      '• Email de contact : [À COMPLÉTER]',
+      '• Raison sociale : OPTINOC',
+      '• Forme juridique : SASU',
+      '• Siège social : 1 Allée des Peupliers, 94310 Orly',
+      '• SIRET : 850 573 932 00025',
+      '• Numéro de TVA intracommunautaire : FR38850573932',
+      '• Directeur de la publication : Nabil Jerbi',
+      '• Email de contact : contact@riviqo.com',
     ],
   },
   {
     title: '2. Hébergeur',
     content: [
       "Le site est hébergé par :",
-      '• Nom : [À COMPLÉTER]',
-      '• Adresse : [À COMPLÉTER]',
-      '• Téléphone : [À COMPLÉTER]',
+      '• Nom : Vercel Inc.',
+      '• Adresse : 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis',
+      '• Site web : vercel.com',
     ],
   },
   {
@@ -76,24 +74,22 @@ const SECTIONS_EN = [
     title: '1. Site publisher',
     content: [
       'The Riviqo website is published by:',
-      '• Company name: [TO BE COMPLETED]',
-      '• Legal form: [TO BE COMPLETED]',
-      '• Share capital: [TO BE COMPLETED]',
-      '• Registered office: [TO BE COMPLETED]',
-      '• SIRET: [TO BE COMPLETED]',
-      '• RCS: [TO BE COMPLETED]',
-      '• EU VAT number: [TO BE COMPLETED]',
-      '• Publication director: [TO BE COMPLETED]',
-      '• Contact email: [TO BE COMPLETED]',
+      '• Company name: OPTINOC',
+      '• Legal form: SASU (Simplified Joint-Stock Company)',
+      '• Registered office: 1 Allée des Peupliers, 94310 Orly, France',
+      '• SIRET: 850 573 932 00025',
+      '• EU VAT number: FR38850573932',
+      '• Publication director: Nabil Jerbi',
+      '• Contact email: contact@riviqo.com',
     ],
   },
   {
     title: '2. Hosting provider',
     content: [
       'The website is hosted by:',
-      '• Name: [TO BE COMPLETED]',
-      '• Address: [TO BE COMPLETED]',
-      '• Phone: [TO BE COMPLETED]',
+      '• Name: Vercel Inc.',
+      '• Address: 340 S Lemon Ave #4133, Walnut, CA 91789, USA',
+      '• Website: vercel.com',
     ],
   },
   {
@@ -150,7 +146,7 @@ export default function MentionsLegales() {
           {isFr ? 'Mentions légales' : 'Legal notice'}
         </h1>
         <p className="text-sm text-[#6B7A94] mb-12">
-          {isFr ? 'Dernière mise à jour : février 2025' : 'Last updated: February 2025'}
+          {isFr ? 'Dernière mise à jour : mars 2026' : 'Last updated: March 2026'}
         </p>
 
         <div className="space-y-10">

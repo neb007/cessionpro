@@ -222,6 +222,16 @@ export const SEO_PAGES = {
       description: 'Riviqo privacy policy and personal data protection. GDPR compliant.',
     },
   },
+  Partners: {
+    fr: {
+      title: 'Partenaires — Cabinets M&A, avocats, investisseurs | Riviqo',
+      description: 'Rejoignez le réseau de partenaires Riviqo : cabinets M&A, avocats d\'affaires, investisseurs, experts-comptables et banques. Accédez aux opportunités de transmission d\'entreprise.',
+    },
+    en: {
+      title: 'Partners — M&A firms, lawyers, investors | Riviqo',
+      description: 'Join the Riviqo partner network: M&A firms, business lawyers, investors, accountants and banks. Access business transfer opportunities.',
+    },
+  },
 };
 
 export const NOINDEX_PAGES = [

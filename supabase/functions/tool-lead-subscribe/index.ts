@@ -10,6 +10,8 @@ type ToolLeadBody = {
   language?: 'fr' | 'en';
   simulationInput?: Record<string, unknown>;
   simulationResult?: Record<string, unknown>;
+  notifyEmail?: string;
+  notifySubject?: string;
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
@@ -84,6 +86,58 @@ const subscribeContact = async (params: {
   throw new Error(`Resend subscribe failed: ${response.status} ${message}`);
 };
 
+const sendNotificationEmail = async (params: {
+  to: string;
+  subject: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  tool?: string;
+  simulationInput?: Record<string, unknown>;
+}) => {
+  if (!RESEND_API_KEY) return;
+
+  const details = params.simulationInput || {};
+  const rows = [
+    `<tr><td style="padding:6px 12px;font-weight:600;color:#3B4759">Email</td><td style="padding:6px 12px;color:#6B7A94">${params.email}</td></tr>`,
+    `<tr><td style="padding:6px 12px;font-weight:600;color:#3B4759">Nom</td><td style="padding:6px 12px;color:#6B7A94">${params.firstName || ''} ${params.lastName || ''}</td></tr>`,
+  ];
+
+  for (const [key, value] of Object.entries(details)) {
+    if (value) {
+      rows.push(`<tr><td style="padding:6px 12px;font-weight:600;color:#3B4759">${key}</td><td style="padding:6px 12px;color:#6B7A94">${String(value)}</td></tr>`);
+    }
+  }
+
+  const html = `
+    <div style="font-family:'Sora',sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:#FF6B4A;padding:20px 24px;border-radius:12px 12px 0 0">
+        <h1 style="color:#fff;font-size:18px;margin:0">${params.subject}</h1>
+      </div>
+      <div style="background:#FAF9F7;padding:24px;border:1px solid #F0ECE6;border-top:none;border-radius:0 0 12px 12px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          ${rows.join('')}
+        </table>
+        <p style="margin-top:20px;font-size:12px;color:#9EABC1">Source : ${params.tool || 'formulaire'}</p>
+      </div>
+    </div>
+  `;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Riviqo <noreply@riviqo.com>',
+      to: [params.to],
+      subject: params.subject,
+      html,
+    }),
+  });
+};
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -118,6 +172,21 @@ serve(async (req: Request) => {
       firstName: sanitize(body.firstName) || undefined,
       lastName: sanitize(body.lastName) || undefined
     });
+
+    const notifyTo = sanitize(body.notifyEmail);
+    if (notifyTo) {
+      await sendNotificationEmail({
+        to: notifyTo,
+        subject: sanitize(body.notifySubject) || `Nouveau contact — ${sanitize(body.tool) || 'formulaire'}`,
+        email,
+        firstName: sanitize(body.firstName) || undefined,
+        lastName: sanitize(body.lastName) || undefined,
+        tool: sanitize(body.tool) || undefined,
+        simulationInput: body.simulationInput,
+      }).catch((err) => {
+        console.error('Notification email failed:', err);
+      });
+    }
 
     return jsonResponse(200, {
       ok: true,

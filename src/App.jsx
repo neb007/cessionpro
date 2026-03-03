@@ -54,6 +54,7 @@ const PUBLIC_PAGES = [
   'MentionsLegales',
   'CGU',
   'PolitiqueConfidentialite',
+  'Partners',
 ];
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?

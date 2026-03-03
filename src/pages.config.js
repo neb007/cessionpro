@@ -88,6 +88,7 @@ import MentionsLegales from './pages/MentionsLegales';
 import CGU from './pages/CGU';
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
 import Blog from './pages/Blog';
+import Partners from './pages/Partners';
 import __Layout from './Layout.jsx';
 
 
@@ -133,6 +134,7 @@ export const PAGES = {
     "CGU": CGU,
     "PolitiqueConfidentialite": PolitiqueConfidentialite,
     "Blog": Blog,
+    "Partners": Partners,
 }
 
 export const pagesConfig = {
