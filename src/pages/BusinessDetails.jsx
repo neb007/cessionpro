@@ -9,7 +9,7 @@ import { getSignedUrl, isSupabaseStorageUrl } from '@/services/storageService';
 import { sendBusinessMessage } from '@/services/businessMessagingService';
 import { useUserCredits } from '@/hooks/useUserCredits';
 import PricingModal from '@/components/PricingModal';
-import { recordPageView, getUniqueViewCount } from '@/services/pageViewService';
+import { businessService } from '@/services/businessService';
 import { sponsorshipService } from '@/services/sponsorshipService';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -81,7 +81,6 @@ export default function BusinessDetails() {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [messageSent, setMessageSent] = useState(false);
-  const [viewCount, setViewCount] = useState(0);
   const [businessLogo, setBusinessLogo] = useState(null);
   const [sellerFallbackLogo, setSellerFallbackLogo] = useState(null);
   const [buyerDocSignedUrl, setBuyerDocSignedUrl] = useState(null);
@@ -264,10 +263,15 @@ export default function BusinessDetails() {
         setBuyerDocSignedUrl(resolvedBusiness.buyer_document_url || null);
       }
 
-      // Record page view and get unique count
-      await recordPageView(resolvedBusiness.id, null, resolvedBusiness.seller_email);
-      const uniqueViews = await getUniqueViewCount(resolvedBusiness.id);
-      setViewCount(uniqueViews);
+      // Increment view count (skip if viewer is the seller)
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!currentUser || currentUser.email !== resolvedBusiness.seller_email) {
+          await businessService.incrementViews(resolvedBusiness.id);
+        }
+      } catch (e) {
+        // Non-blocking: view count increment failure should not break the page
+      }
 
       try {
         const { data: authData } = await supabase.auth.getUser();

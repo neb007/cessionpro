@@ -98,8 +98,8 @@ const SECTIONS_FR = [
     title: '11. Contact',
     content: [
       'Pour toute question relative aux présentes CGU, vous pouvez nous contacter :',
-      '• Email : [À COMPLÉTER]',
-      '• Adresse : [À COMPLÉTER]',
+      '• Email : contact@riviqo.com',
+      '• Adresse : OPTINOC SASU, 1 Allée des Peupliers, 94310 Orly',
     ],
   },
 ];

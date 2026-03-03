@@ -8,9 +8,9 @@ const SECTIONS_FR = [
     title: '1. Responsable du traitement',
     content: [
       'Le responsable du traitement des données personnelles collectées sur le site Riviqo est :',
-      '• Raison sociale : [À COMPLÉTER]',
-      '• Adresse : [À COMPLÉTER]',
-      '• Email du DPO / responsable données : [À COMPLÉTER]',
+      '• Raison sociale : OPTINOC (SASU)',
+      '• Adresse : 1 Allée des Peupliers, 94310 Orly',
+      '• Email du DPO / responsable données : contact@riviqo.com',
     ],
   },
   {
@@ -85,7 +85,7 @@ const SECTIONS_FR = [
       "• Droit à la portabilité : recevoir vos données dans un format structuré et couramment utilisé.",
       "• Droit d'opposition : vous opposer au traitement de vos données pour des raisons légitimes.",
       "• Droit à la limitation : demander la limitation du traitement dans certains cas.",
-      "Pour exercer ces droits, contactez-nous à : [À COMPLÉTER]",
+      "Pour exercer ces droits, contactez-nous à : contact@riviqo.com",
       "Vous disposez également du droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr).",
     ],
   },
@@ -127,8 +127,8 @@ const SECTIONS_FR = [
     title: '11. Contact',
     content: [
       "Pour toute question relative à la protection de vos données personnelles :",
-      "• Email : [À COMPLÉTER]",
-      "• Adresse : [À COMPLÉTER]",
+      "• Email : contact@riviqo.com",
+      "• Adresse : 1 Allée des Peupliers, 94310 Orly",
     ],
   },
 ];

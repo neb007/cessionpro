@@ -31,7 +31,9 @@ import {
   Pin,
   PinOff,
   WifiOff,
-  Wifi
+  Wifi,
+  Ban,
+  CircleCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -1774,9 +1776,13 @@ export default function Messages() {
                               isOwn
                                 ? 'bg-primary text-white rounded-br-md'
                                 : 'bg-card text-foreground shadow-sm rounded-bl-md'
-                            }`}
+                            } ${!isConversationAccepted && !isOwn && selectedConversation?.participant_2_id === user?.id ? 'select-none blur-sm' : ''}`}
                           >
-                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            <p className="whitespace-pre-wrap">
+                              {!isConversationAccepted && !isOwn && selectedConversation?.participant_2_id === user?.id
+                                ? '••••••••••••••••'
+                                : msg.content}
+                            </p>
                           </motion.div>
                           {isOwn && (
                             <button
@@ -2220,7 +2226,10 @@ export default function Messages() {
                   : '';
                 const replied = unread === 0 && Boolean(conv.last_message);
                 const hasDraft = !!localStorage.getItem(`draft_${conv.id}`);
-                const subjectPreview = conv.last_message || (language === 'fr' ? 'Nouveau message' : 'New message');
+                const isPendingForMe = conv.contact_status !== 'accepted' && conv.participant_2_id === user?.id;
+                const subjectPreview = isPendingForMe
+                  ? (language === 'fr' ? 'Nouvelle demande de contact' : 'New contact request')
+                  : (conv.last_message || (language === 'fr' ? 'Nouveau message' : 'New message'));
                 const businessTitle = conv.business_title || conv.subject || (language === 'fr' ? 'Annonce' : 'Listing');
                 const typeLabel = conv.business_type === 'acquisition'
                   ? (language === 'fr' ? 'Acquisition' : 'Acquisition')
@@ -2230,10 +2239,13 @@ export default function Messages() {
                 const nextStepLabel = getNextStepLabel(conv);
                 
                 return (
-                  <button
+                  <div
                     key={conv.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => openConversation(conv)}
-                    className={`w-full text-left transition-colors group ${
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openConversation(conv); } }}
+                    className={`w-full text-left transition-colors group cursor-pointer ${
                       isActive ? 'bg-primary/10' : 'hover:bg-muted/40'
                     }`}
                   >
@@ -2285,6 +2297,28 @@ export default function Messages() {
                             {pinnedConversationIds.includes(conv.id)
                               ? <PinOff className="w-3.5 h-3.5 text-primary" />
                               : <Pin className="w-3.5 h-3.5 text-muted-foreground" />}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={blockingConversationId === conv.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              isConversationBlockedByCurrentUser(conv)
+                                ? handleUnblockConversation(conv)
+                                : handleBlockConversation(conv);
+                            }}
+                            className={`p-1 rounded transition-colors ${
+                              isConversationBlockedByCurrentUser(conv)
+                                ? 'text-green-600 hover:bg-green-50'
+                                : 'text-muted-foreground hover:bg-red-50 hover:text-red-600'
+                            }`}
+                            title={isConversationBlockedByCurrentUser(conv)
+                              ? (language === 'fr' ? 'Débloquer' : 'Unblock')
+                              : (language === 'fr' ? 'Bloquer' : 'Block')}
+                          >
+                            {isConversationBlockedByCurrentUser(conv)
+                              ? <CircleCheck className="w-3.5 h-3.5" />
+                              : <Ban className="w-3.5 h-3.5" />}
                           </button>
                           {conversationFilter === 'archived' && (
                             <Button
@@ -2364,6 +2398,28 @@ export default function Messages() {
                               ? <PinOff className="w-3.5 h-3.5" />
                               : <Pin className="w-3.5 h-3.5" />}
                           </button>
+                          <button
+                            type="button"
+                            disabled={blockingConversationId === conv.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              isConversationBlockedByCurrentUser(conv)
+                                ? handleUnblockConversation(conv)
+                                : handleBlockConversation(conv);
+                            }}
+                            className={`p-1.5 rounded-md transition-colors ${
+                              isConversationBlockedByCurrentUser(conv)
+                                ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                                : 'text-muted-foreground hover:bg-red-50 hover:text-red-600'
+                            }`}
+                            title={isConversationBlockedByCurrentUser(conv)
+                              ? (language === 'fr' ? 'Débloquer' : 'Unblock')
+                              : (language === 'fr' ? 'Bloquer' : 'Block')}
+                          >
+                            {isConversationBlockedByCurrentUser(conv)
+                              ? <CircleCheck className="w-3.5 h-3.5" />
+                              : <Ban className="w-3.5 h-3.5" />}
+                          </button>
                           {conversationFilter === 'archived' ? (
                             <Button
                               type="button"
@@ -2394,7 +2450,7 @@ export default function Messages() {
                         </div>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>

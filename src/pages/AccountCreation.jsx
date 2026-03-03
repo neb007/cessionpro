@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/api/supabaseClient';
 import ProgressBar from './accountCreation/ProgressBar';
 import Step1Objective from './accountCreation/Step1Objective';
 import Step2ProfileType from './accountCreation/Step2ProfileType';
@@ -51,14 +52,17 @@ export default function AccountCreation() {
     setCurrentStep(2);
   };
 
-  // Handle Email/LinkedIn signup
-  const handleEmailSignup = (method) => {
-    // Este se puede expandir para LinkedIn OAuth en el futuro
+  // Handle Email/Google signup
+  const handleEmailSignup = async (method) => {
     if (method === 'email') {
       setCurrentStep(2);
-    } else if (method === 'linkedin') {
-      // TODO: Implement LinkedIn OAuth
-      console.log('LinkedIn signup not yet implemented');
+    } else if (method === 'google') {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/AuthCallback',
+        },
+      });
     }
   };
 
