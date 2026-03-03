@@ -55,6 +55,36 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  // Refresh silencieux de session quand l'onglet redevient visible après inactivité
+  useEffect(() => {
+    let hiddenAt = Date.now();
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+      } else {
+        const idleDuration = Date.now() - hiddenAt;
+        // Si inactif > 2 minutes, relancer la vérification de session sans spinner
+        if (idleDuration > 2 * 60 * 1000) {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+              setUser(session.user);
+              setIsAuthenticated(true);
+            } else {
+              setUser(null);
+              setIsAuthenticated(false);
+            }
+          }).catch(() => {
+            // Ne pas bloquer si le refresh échoue
+          });
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   const checkAppState = async () => {
     try {
       setIsLoadingAuth(true);

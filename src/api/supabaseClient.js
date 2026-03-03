@@ -17,11 +17,18 @@ const storageKey = `riviqo-auth-${getProjectRefFromUrl(supabaseUrl || '')}`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const authLocks = new Map();
+const AUTH_LOCK_MAX_HOLD_MS = 15000;
 
 const localAuthLock = async (name, acquireTimeout, fn) => {
   const startedAt = Date.now();
 
-  while (authLocks.get(name)) {
+  while (authLocks.has(name)) {
+    // Force-release si le lock est tenu trop longtemps (recovery après tab freeze)
+    const lockInfo = authLocks.get(name);
+    if (lockInfo && Date.now() - lockInfo.acquiredAt > AUTH_LOCK_MAX_HOLD_MS) {
+      authLocks.delete(name);
+      break;
+    }
     if (acquireTimeout >= 0 && Date.now() - startedAt >= acquireTimeout) {
       const timeoutError = Object.assign(new Error('Lock acquire timeout'), {
         isAcquireTimeout: true
@@ -31,7 +38,7 @@ const localAuthLock = async (name, acquireTimeout, fn) => {
     await sleep(20);
   }
 
-  authLocks.set(name, true);
+  authLocks.set(name, { held: true, acquiredAt: Date.now() });
   try {
     return await fn();
   } finally {
@@ -54,20 +61,29 @@ const resilientFetch = async (input, init = {}) => {
   // We intentionally ignore incoming signal to avoid systemic false-aborts in prod.
   const { signal: _ignoredSignal, ...safeInit } = init || {};
 
-  let lastError;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    try {
-      return await fetch(input, safeInit);
-    } catch (error) {
-      lastError = error;
-      if (!isAbortLikeError(error) || attempt === 2) {
-        throw error;
-      }
-      await sleep(200 * (attempt + 1));
-    }
-  }
+  // Timeout global pour éviter les requêtes pendantes indéfiniment
+  // (ex: après mise en veille de l'onglet par le navigateur)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  safeInit.signal = controller.signal;
 
-  throw lastError;
+  let lastError;
+  try {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await fetch(input, safeInit);
+      } catch (error) {
+        lastError = error;
+        if (!isAbortLikeError(error) || attempt === 2) {
+          throw error;
+        }
+        await sleep(200 * (attempt + 1));
+      }
+    }
+    throw lastError;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 if (!supabaseUrl || !supabaseAnonKey) {

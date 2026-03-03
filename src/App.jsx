@@ -1,4 +1,4 @@
-import { Fragment, useEffect } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { HelmetProvider } from 'react-helmet-async'
@@ -64,7 +64,19 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || '').toLowerCase();
 
 const ProtectedRoute = ({ page, path, isAuthenticated, isLoadingAuth, requireAdmin = false, user = null }) => {
-  if (isLoadingAuth) {
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      setTimedOut(false);
+      return;
+    }
+    // Si le spinner reste affiché > 8s (ex: fetch pendu après tab freeze), forcer la suite
+    const timer = setTimeout(() => setTimedOut(true), 8000);
+    return () => clearTimeout(timer);
+  }, [isLoadingAuth]);
+
+  if (isLoadingAuth && !timedOut) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
