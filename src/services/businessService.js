@@ -230,28 +230,15 @@ export const businessService = {
     }
   },
 
-  // Increment business views
+  // Increment business views (uses RPC to bypass RLS)
   async incrementViews(id) {
     try {
-      const { data: currentBusiness } = await supabase
-        .from('businesses')
-        .select('views_count')
-        .eq('id', id)
-        .single();
-
-      const newViewsCount = (currentBusiness?.views_count || 0) + 1;
-
-      const { data, error } = await supabase
-        .from('businesses')
-        .update({ views_count: newViewsCount })
-        .eq('id', id)
-        .select();
-
-      if (error) throw error;
-      return data?.[0];
+      const { error } = await supabase.rpc('increment_business_views', {
+        p_business_id: id
+      });
+      if (error) alert('VIEWS_DEBUG: ' + error.message + ' | code=' + error.code);
     } catch (error) {
-      console.error('Error incrementing views:', error);
-      throw error;
+      alert('VIEWS_DEBUG exception: ' + error.message);
     }
   }
 };

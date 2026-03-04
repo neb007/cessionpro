@@ -264,13 +264,10 @@ export default function BusinessDetails() {
       }
 
       // Increment view count (skip if viewer is the seller)
-      try {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (!currentUser || currentUser.email !== resolvedBusiness.seller_email) {
-          await businessService.incrementViews(resolvedBusiness.id);
-        }
-      } catch (e) {
-        // Non-blocking: view count increment failure should not break the page
+      const isSeller = authUser && authUser.email === resolvedBusiness.seller_email;
+      if (!isSeller) {
+        alert('VIEWS_DEBUG calling incrementViews for id=' + resolvedBusiness.id);
+        businessService.incrementViews(resolvedBusiness.id);
       }
 
       try {

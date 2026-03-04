@@ -287,10 +287,36 @@ async function main() {
   }
   console.log(`   ${existingRefs.size} références RVQ existantes en base\n`);
 
+  // Vérifier les external_url existantes pour éviter les doublons
+  const existingUrls = new Set();
+  from = 0;
+  while (true) {
+    const { data: page } = await supabase
+      .from('businesses')
+      .select('external_url')
+      .not('external_url', 'is', null)
+      .range(from, from + PAGE_SIZE - 1);
+    if (!page || page.length === 0) break;
+    page.forEach(b => { if (b.external_url) existingUrls.add(b.external_url); });
+    if (page.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  console.log(`   ${existingUrls.size} external_url existantes en base\n`);
+
   const listings = [];
+  let skipped = 0;
   for (let i = 0; i < raw.length; i++) {
     const item = raw[i];
-    const sellerId = await getSellerIdForListing(item.external_url || item.url);
+    const url = item.external_url || item.url;
+
+    // Skip si cette URL existe déjà en base
+    if (url && existingUrls.has(url)) {
+      console.log(`  [${i + 1}] ⏭️  DOUBLON — ${item.title?.substring(0, 50)}...`);
+      skipped++;
+      continue;
+    }
+
+    const sellerId = await getSellerIdForListing(url);
     const listing = transformListing(item, sellerId);
 
     // S'assurer que le reference_number est unique
@@ -298,9 +324,19 @@ async function main() {
       listing.reference_number = generateReference();
     }
     existingRefs.add(listing.reference_number);
+    if (url) existingUrls.add(url);
 
     console.log(`  [${i + 1}] ${listing.reference_number} — ${listing.title?.substring(0, 50)}...`);
     listings.push(listing);
+  }
+
+  if (skipped > 0) {
+    console.log(`\n⏭️  ${skipped} annonces ignorées (déjà importées)`);
+  }
+
+  if (listings.length === 0) {
+    console.log('\n✅ Aucune nouvelle annonce à importer.');
+    return;
   }
 
   console.log(`\n📤 Insertion de ${listings.length} annonces...`);
