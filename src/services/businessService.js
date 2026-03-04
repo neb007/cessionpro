@@ -236,9 +236,9 @@ export const businessService = {
       const { error } = await supabase.rpc('increment_business_views', {
         p_business_id: id
       });
-      if (error) alert('VIEWS_DEBUG: ' + error.message + ' | code=' + error.code);
+      if (error) throw error;
     } catch (error) {
-      alert('VIEWS_DEBUG exception: ' + error.message);
+      console.error('Error incrementing views:', error);
     }
   }
 };

@@ -266,7 +266,6 @@ export default function BusinessDetails() {
       // Increment view count (skip if viewer is the seller)
       const isSeller = authUser && authUser.email === resolvedBusiness.seller_email;
       if (!isSeller) {
-        alert('VIEWS_DEBUG calling incrementViews for id=' + resolvedBusiness.id);
         businessService.incrementViews(resolvedBusiness.id);
       }
 
