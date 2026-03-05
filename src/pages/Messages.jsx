@@ -32,8 +32,10 @@ import {
   PinOff,
   WifiOff,
   Wifi,
-  Ban,
-  CircleCheck
+  X,
+  CircleCheck,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -1711,7 +1713,7 @@ export default function Messages() {
           {/* Messages */}
           <div data-messages-conversation-row className="flex-1 min-h-0 flex overflow-hidden">
             <div className="flex-1 min-h-0 min-w-0 flex flex-col bg-background">
-            <ScrollArea className="flex-1 min-h-0 px-4 py-4 sm:p-4 bg-background">
+            <ScrollArea className="flex-1 min-h-0 px-4 pt-4 pb-8 sm:p-4 bg-background">
               <div className="max-w-5xl w-full mx-auto space-y-4 sm:space-y-5">
               {hasMoreMessages && (
                 <div className="flex justify-center">
@@ -2318,7 +2320,7 @@ export default function Messages() {
                           >
                             {isConversationBlockedByCurrentUser(conv)
                               ? <CircleCheck className="w-3.5 h-3.5" />
-                              : <Ban className="w-3.5 h-3.5" />}
+                              : <X className="w-3.5 h-3.5" />}
                           </button>
                           {conversationFilter === 'archived' && (
                             <Button
@@ -2332,6 +2334,7 @@ export default function Messages() {
                               }}
                               className="h-7 px-2 text-[11px]"
                             >
+                              <ArchiveRestore className="w-3 h-3 mr-1" />
                               {language === 'fr' ? 'Désarchiver' : 'Unarchive'}
                             </Button>
                           )}
@@ -2418,7 +2421,7 @@ export default function Messages() {
                           >
                             {isConversationBlockedByCurrentUser(conv)
                               ? <CircleCheck className="w-3.5 h-3.5" />
-                              : <Ban className="w-3.5 h-3.5" />}
+                              : <X className="w-3.5 h-3.5" />}
                           </button>
                           {conversationFilter === 'archived' ? (
                             <Button
@@ -2431,6 +2434,7 @@ export default function Messages() {
                                 handleUnarchiveConversation(conv);
                               }}
                             >
+                              <ArchiveRestore className="w-3.5 h-3.5 mr-1" />
                               {language === 'fr' ? 'Désarchiver' : 'Unarchive'}
                             </Button>
                           ) : (
@@ -2444,6 +2448,7 @@ export default function Messages() {
                                 handleArchiveConversation(conv);
                               }}
                             >
+                              <Archive className="w-3.5 h-3.5 mr-1" />
                               {language === 'fr' ? 'Archiver' : 'Archive'}
                             </Button>
                           )}
