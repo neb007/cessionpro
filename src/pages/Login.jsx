@@ -77,7 +77,10 @@ export default function Login() {
         : '/Annonces';
       navigate(destination);
     } catch (error) {
-      // Error is already handled by AuthContext
+      const msg = error?.message || '';
+      if (msg.includes('Invalid login credentials')) {
+        setLocalError(t.invalidCredentials);
+      }
     } finally {
       setIsLoading(false);
     }

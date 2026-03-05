@@ -378,14 +378,14 @@ export default function MyListings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Card className="border border-primary/10 bg-card shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
+              <CardContent className="p-3">
+                <div className="flex items-start justify-between mb-2">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {language === 'fr' ? 'Mes annonces' : 'My listings'}
                   </p>
                   <LayoutList className="w-4 h-4 text-primary" />
                 </div>
-                <p className="text-2xl font-bold text-foreground leading-none">
+                <p className="text-xl font-bold text-foreground leading-none">
                   {myListings.length}
                   <span className="text-sm font-normal text-muted-foreground ml-1">/ {PRICING.free.freeListings} {language === 'fr' ? 'gratuites' : 'free'}</span>
                 </p>
@@ -397,22 +397,22 @@ export default function MyListings() {
                     </button>
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground mt-3">
+                <p className="text-xs text-muted-foreground mt-2">
                   {activeListings} {language === 'fr' ? 'actif(s)' : 'active'} • {totalViews} {language === 'fr' ? 'vues' : 'views'}
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border border-[#FFD8CC] bg-[#FFF9F7] shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
+              <CardContent className="p-3">
+                <div className="flex items-start justify-between mb-2">
                   <p className="text-xs font-medium uppercase tracking-wide text-[#B5472F]">
                     {language === 'fr' ? 'À la une' : 'Featured days'}
                   </p>
                   <CalendarDays className="w-4 h-4 text-[#B5472F]" />
                 </div>
-                <p className="text-2xl font-bold text-[#B5472F] leading-none">{availableFeaturedSlots}</p>
-                <p className="text-xs text-[#B5472F]/80 mt-3">
+                <p className="text-xl font-bold text-[#B5472F] leading-none">{availableFeaturedSlots}</p>
+                <p className="text-xs text-[#B5472F]/80 mt-2">
                   {language === 'fr' ? 'Jours disponibles' : 'Available days'}
                 </p>
                 {availableFeaturedSlots <= 0 && (
@@ -540,7 +540,7 @@ export default function MyListings() {
                     <Card className="group overflow-hidden border border-border shadow-sm hover:shadow-md transition-all duration-300 rounded-xl">
                       <div className="flex flex-col lg:flex-row">
                         {/* Image */}
-                        <div className="relative h-40 sm:h-44 lg:h-auto lg:w-56 shrink-0 overflow-hidden bg-gradient-to-br from-muted to-muted/50">
+                        <div className="relative h-32 sm:h-36 lg:h-auto lg:w-48 shrink-0 overflow-hidden bg-gradient-to-br from-muted to-muted/50">
                           <img
                             src={getPrimaryImageUrl(listing)}
                             alt={listing.title}
@@ -568,8 +568,8 @@ export default function MyListings() {
                         </div>
 
                         {/* Content + price */}
-                        <CardContent className="p-3 sm:p-4 lg:p-4 flex-1">
-                          <div className="flex flex-col h-full gap-3">
+                        <CardContent className="p-3 flex-1">
+                          <div className="flex flex-col h-full gap-2">
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
@@ -621,7 +621,7 @@ export default function MyListings() {
                                     <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
                                       {language === 'fr' ? 'Prix' : 'Price'}
                                     </p>
-                                    <p className="font-mono text-3xl font-bold text-primary leading-none">
+                                    <p className="font-mono text-2xl font-bold text-primary leading-none">
                                       {listing.asking_price ? formatCurrency(listing.asking_price, language) : '—'}
                                     </p>
                                   </>
@@ -630,7 +630,7 @@ export default function MyListings() {
                             </div>
 
                             {/* Metadata grid - adapted for acquisition vs cession */}
-                            <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 pt-3 border-t border-border">
+                            <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 pt-2 border-t border-border">
                               {isAcquisition ? (
                                 <>
                                   <div>
@@ -651,7 +651,7 @@ export default function MyListings() {
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">{language === 'fr' ? 'Investissement' : 'Investment'}</p>
-                                    <p className="font-mono text-lg font-semibold text-foreground leading-none">
+                                    <p className="font-mono text-base font-semibold text-foreground leading-none">
                                       {listing.buyer_investment_available
                                         ? formatCurrency(listing.buyer_investment_available, language)
                                         : '—'}
@@ -659,7 +659,7 @@ export default function MyListings() {
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">{language === 'fr' ? 'Vues' : 'Views'}</p>
-                                    <p className="font-mono text-lg font-semibold text-foreground leading-none inline-flex items-center gap-1">
+                                    <p className="font-mono text-base font-semibold text-foreground leading-none inline-flex items-center gap-1">
                                       <Eye className="w-4 h-4" />
                                       {listing.views_count || 0}
                                     </p>
@@ -669,25 +669,25 @@ export default function MyListings() {
                                 <>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">{language === 'fr' ? 'CA annuel' : 'Annual revenue'}</p>
-                                    <p className="font-mono text-lg font-semibold text-foreground leading-none">
+                                    <p className="font-mono text-base font-semibold text-foreground leading-none">
                                       {listing.annual_revenue ? formatCurrency(listing.annual_revenue, language) : '—'}
                                     </p>
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">{language === 'fr' ? 'Employés' : 'Employees'}</p>
-                                    <p className="font-mono text-lg font-semibold text-foreground leading-none">
+                                    <p className="font-mono text-base font-semibold text-foreground leading-none">
                                       {listing.employees ?? '—'}
                                     </p>
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">{language === 'fr' ? 'Certif.' : 'Certified'}</p>
-                                    <p className="text-lg font-semibold leading-none text-foreground">
+                                    <p className="text-base font-semibold leading-none text-foreground">
                                       {listing.is_certified ? '✓' : '—'}
                                     </p>
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">{language === 'fr' ? 'Vues' : 'Views'}</p>
-                                    <p className="font-mono text-lg font-semibold text-foreground leading-none inline-flex items-center gap-1">
+                                    <p className="font-mono text-base font-semibold text-foreground leading-none inline-flex items-center gap-1">
                                       <Eye className="w-4 h-4" />
                                       {listing.views_count || 0}
                                     </p>
@@ -697,7 +697,7 @@ export default function MyListings() {
                             </div>
 
                             {/* Completion score */}
-                            <div className="pt-3 border-t border-border">
+                            <div className="pt-2 border-t border-border">
                               <div className="flex items-center gap-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between mb-1.5">
