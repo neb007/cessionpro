@@ -637,18 +637,16 @@ export default function Businesses() {
           </div>
         ) : (
           <motion.div
-            layout
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6"
           >
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence mode="sync">
               {prioritizedBusinesses.map((business, index) => (
                 <motion.div
                   key={`listing-${business.id}`}
-                  layout
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.4, delay: (index % PAGE_SIZE) * 0.08 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
                   className="relative mx-auto w-full max-w-[85%] md:max-w-none"
                 >
                   <BusinessCard
