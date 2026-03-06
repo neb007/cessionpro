@@ -29,7 +29,7 @@ export default function Login() {
       const destination = user?.email?.toLowerCase() === adminEmail.toLowerCase()
         ? '/admin/dashboard'
         : '/Annonces';
-      navigate(destination);
+      navigate(destination, { replace: true });
     }
   }, [isAuthenticated, navigate, user, adminEmail]);
 
@@ -71,11 +71,6 @@ export default function Login() {
       } else {
         localStorage.removeItem('rememberEmail');
       }
-      
-      const destination = email.trim().toLowerCase() === adminEmail.toLowerCase()
-        ? '/admin/dashboard'
-        : '/Annonces';
-      navigate(destination);
     } catch (error) {
       const msg = error?.message || '';
       if (msg.includes('Invalid login credentials')) {
