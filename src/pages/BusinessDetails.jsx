@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl, extractReferenceFromListingSlug } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
@@ -68,6 +68,7 @@ const getLocationLabel = (value, language) => {
 export default function BusinessDetails() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: authUser, isAuthenticated } = useAuth();
   const { hasContactCredits, deductContactCredit } = useUserCredits();
 
@@ -92,7 +93,7 @@ export default function BusinessDetails() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (business?.id) {

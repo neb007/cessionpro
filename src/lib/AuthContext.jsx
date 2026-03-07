@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
-import { supabase } from '@/api/supabaseClient';
+import { supabase, storageKey } from '@/api/supabaseClient';
 import { clearSignedUrlCache } from '@/services/storageService';
 
 const AuthContext = createContext(null);
@@ -66,16 +66,26 @@ export const AuthProvider = ({ children }) => {
         const idleDuration = Date.now() - hiddenAt;
         // Si inactif > 2 minutes, relancer la vérification de session sans spinner
         if (idleDuration > 2 * 60 * 1000) {
-          supabase.auth.getSession().then(({ data: { session } }) => {
+          supabase.auth.getSession().then(async ({ data: { session } }) => {
             if (session?.user) {
               setUser(session.user);
               setIsAuthenticated(true);
             } else {
-              setUser(null);
-              setIsAuthenticated(false);
+              // Token expiré — tenter un refresh silencieux
+              try {
+                const { data: refreshData } = await supabase.auth.refreshSession();
+                if (refreshData?.session?.user) {
+                  setUser(refreshData.session.user);
+                  setIsAuthenticated(true);
+                }
+                // Si refresh échoue → ne pas forcer logout ici
+                // L'utilisateur sera redirigé à la prochaine action nécessitant l'auth
+              } catch {
+                // Erreur réseau post-wake → ne rien changer
+              }
             }
           }).catch(() => {
-            // Ne pas bloquer si le refresh échoue
+            // Erreur réseau post-wake → garder l'état actuel
           });
         }
       }
@@ -87,10 +97,22 @@ export const AuthProvider = ({ children }) => {
 
   const checkAppState = async () => {
     try {
-      setIsLoadingAuth(true);
       setAuthError(null);
-      
-      // Try to get the current session from Supabase
+
+      // Optimistic: si une session est en cache localStorage, ne pas afficher le spinner
+      try {
+        const cached = localStorage.getItem(storageKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.user) {
+            setUser(parsed.user);
+            setIsAuthenticated(true);
+            setIsLoadingAuth(false);
+          }
+        }
+      } catch { /* ignore parse error */ }
+
+      // Validation réelle (en background si optimiste — pas de spinner)
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {

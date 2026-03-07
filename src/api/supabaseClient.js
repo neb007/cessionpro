@@ -12,7 +12,7 @@ const getProjectRefFromUrl = (url) => {
   }
 };
 
-const storageKey = `riviqo-auth-${getProjectRefFromUrl(supabaseUrl || '')}`;
+export const storageKey = `riviqo-auth-${getProjectRefFromUrl(supabaseUrl || '')}`;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

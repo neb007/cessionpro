@@ -251,7 +251,7 @@ export default function Sidebar({ user }) {
             </Link>
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 overflow-y-auto">
           {/* EXPLORER Section */}
           <div className="mb-6">
             <h3 className="flex items-center gap-2 px-4 pt-2 pb-3">
@@ -402,6 +402,7 @@ export default function Sidebar({ user }) {
               />
             </div>
           </div>
+          </div>
 
           <div className="px-4 pt-2 pb-6 mt-auto">
             <div className="h-px bg-gray-200 mb-3" />
@@ -442,7 +443,6 @@ export default function Sidebar({ user }) {
               <LogOut className="w-4 h-4" />
               {language === 'fr' ? 'Déconnexion' : 'Logout'}
             </button>
-          </div>
           </div>
         </div>
       </aside>
