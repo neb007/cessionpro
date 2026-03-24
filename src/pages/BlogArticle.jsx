@@ -4,7 +4,6 @@ import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Clock, Calendar, ArrowLeft } from 'lucide-react';
-import SEO from '@/components/SEO';
 import BreadcrumbNav from '@/components/blog/BreadcrumbNav';
 import TableOfContents from '@/components/blog/TableOfContents';
 import ArticleRenderer from '@/components/blog/ArticleRenderer';

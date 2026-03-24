@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, FileText, TrendingUp, Landmark, Calculator, Rocket, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, BookOpen, FileText, Landmark, Rocket, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import SEO from '@/components/SEO';
 import { BLOG_ARTICLES, CLUSTERS } from '@/data/blog/articles';
 
