@@ -51,6 +51,7 @@ const PUBLIC_PAGES = [
   'Pricing',
   'Outils',
   'Blog',
+  'BlogArticle',
   'MentionsLegales',
   'CGU',
   'PolitiqueConfidentialite',
@@ -180,6 +181,13 @@ const AuthenticatedApp = () => {
                   element={element}
                 />
               </>
+            ) : null}
+            {path === 'BlogArticle' ? (
+              <Route
+                key={`${path}-blog-slug`}
+                path="/blog/:slug"
+                element={element}
+              />
             ) : null}
             {needsLowerAlias ? (
               <Route

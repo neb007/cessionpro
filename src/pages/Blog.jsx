@@ -1,94 +1,81 @@
 // @ts-nocheck
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/components/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, FileText, TrendingUp, Landmark, Calculator, Rocket } from 'lucide-react';
+import { ArrowRight, BookOpen, FileText, TrendingUp, Landmark, Calculator, Rocket, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import SEO from '@/components/SEO';
+import { BLOG_ARTICLES, CLUSTERS } from '@/data/blog/articles';
 
-const ARTICLES = [
+// Legacy featured articles (existing guides/tools)
+const FEATURED_ARTICLES = [
   {
     slug: 'GuideCession',
     icon: FileText,
     titleFr: 'Guide complet de la cession d\'entreprise',
     titleEn: 'Complete guide to selling a business',
-    descFr: 'Tout savoir pour vendre votre entreprise : préparation, valorisation, timing, négociation et fiscalité. Un guide pas-à-pas pour maximiser la valeur de votre cession.',
-    descEn: 'Everything you need to know to sell your business: preparation, valuation, timing, negotiation and taxation. A step-by-step guide to maximize the value of your sale.',
+    descFr: 'Tout savoir pour vendre votre entreprise : préparation, valorisation, timing, négociation et fiscalité.',
+    descEn: 'Everything you need to know to sell your business: preparation, valuation, timing, negotiation and taxation.',
     categoryFr: 'Guide',
     categoryEn: 'Guide',
     readTimeFr: '25 min de lecture',
     readTimeEn: '25 min read',
+    isLegacy: true,
   },
   {
     slug: 'GuideRepreneur',
     icon: Landmark,
     titleFr: 'Guide complet de la reprise d\'entreprise',
     titleEn: 'Complete guide to buying a business',
-    descFr: 'Du projet au closing : sourcing, due diligence, financement et négociation. Le guide indispensable pour réussir votre première acquisition.',
-    descEn: 'From project to closing: sourcing, due diligence, financing and negotiation. The essential guide to succeeding in your first acquisition.',
+    descFr: 'Du projet au closing : sourcing, due diligence, financement et négociation.',
+    descEn: 'From project to closing: sourcing, due diligence, financing and negotiation.',
     categoryFr: 'Guide',
     categoryEn: 'Guide',
     readTimeFr: '30 min de lecture',
     readTimeEn: '30 min read',
+    isLegacy: true,
   },
   {
     slug: 'GuideRepreneuriat',
     icon: Rocket,
-    titleFr: 'Le repreneuriat : devenir entrepreneur par la reprise d\'entreprise',
-    titleEn: 'Entrepreneurship through acquisition: become a business owner',
-    descFr: 'Qu\'est-ce que le repreneuriat ? Avantages vs création, profil du repreneur, étapes clés, financement et erreurs à éviter. Le guide complet.',
-    descEn: 'What is entrepreneurship through acquisition? Advantages vs startup, buyer profile, key steps, financing and mistakes to avoid. The complete guide.',
+    titleFr: 'Le repreneuriat : devenir entrepreneur par la reprise',
+    titleEn: 'Entrepreneurship through acquisition',
+    descFr: 'Avantages vs création, profil du repreneur, étapes clés, financement et erreurs à éviter.',
+    descEn: 'Advantages vs startup, buyer profile, key steps, financing and mistakes to avoid.',
     categoryFr: 'Guide',
     categoryEn: 'Guide',
     readTimeFr: '20 min de lecture',
     readTimeEn: '20 min read',
-  },
-  {
-    slug: 'Valuations',
-    icon: Calculator,
-    titleFr: 'Comment valoriser une entreprise : les 3 méthodes essentielles',
-    titleEn: 'How to value a business: 3 essential methods',
-    descFr: 'Découvrez les méthodes de valorisation (multiples, DCF, patrimoniale) et estimez la valeur de votre entreprise avec notre simulateur gratuit.',
-    descEn: 'Discover valuation methods (multiples, DCF, asset-based) and estimate your business value with our free simulator.',
-    categoryFr: 'Outil',
-    categoryEn: 'Tool',
-    readTimeFr: '10 min de lecture',
-    readTimeEn: '10 min read',
-  },
-  {
-    slug: 'Financing',
-    icon: TrendingUp,
-    titleFr: 'Financer une reprise d\'entreprise : le guide du montage financier',
-    titleEn: 'Financing a business acquisition: the financial structuring guide',
-    descFr: 'Capacité d\'emprunt, DSCR, apport personnel, dette senior — tout comprendre pour monter un plan de financement solide. Simulateur inclus.',
-    descEn: 'Borrowing capacity, DSCR, personal contribution, senior debt — understand everything to build a solid financing plan. Simulator included.',
-    categoryFr: 'Outil',
-    categoryEn: 'Tool',
-    readTimeFr: '12 min de lecture',
-    readTimeEn: '12 min read',
-  },
-  {
-    slug: 'Targeting',
-    icon: BookOpen,
-    titleFr: 'Fiscalité de la cession : calculer son produit net',
-    titleEn: 'Sale taxation: calculating your net proceeds',
-    descFr: 'PFU vs barème progressif, abattements pour durée de détention, plus-values — calculez précisément ce que vous toucherez après impôts.',
-    descEn: 'Flat tax vs progressive scale, holding period allowances, capital gains — precisely calculate what you will receive after taxes.',
-    categoryFr: 'Outil',
-    categoryEn: 'Tool',
-    readTimeFr: '8 min de lecture',
-    readTimeEn: '8 min read',
+    isLegacy: true,
   },
 ];
+
+const ARTICLES_PER_PAGE = 12;
 
 export default function Blog() {
   const { language } = useLanguage();
   const isFr = language === 'fr';
+  const [activeCluster, setActiveCluster] = useState('all');
+  const [page, setPage] = useState(1);
+
+  const filteredArticles = useMemo(() => {
+    if (activeCluster === 'all') return BLOG_ARTICLES;
+    return BLOG_ARTICLES.filter(a => a.cluster === activeCluster);
+  }, [activeCluster]);
+
+  const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE);
+  const paginatedArticles = filteredArticles.slice((page - 1) * ARTICLES_PER_PAGE, page * ARTICLES_PER_PAGE);
+
+  const handleClusterChange = (cluster) => {
+    setActiveCluster(cluster);
+    setPage(1);
+  };
 
   return (
     <div className="bg-[#FAF9F7]">
       <SEO pageName="Blog" />
+
       {/* Hero */}
       <section className="bg-[#FAF9F7] pt-20 pb-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
@@ -107,42 +94,152 @@ export default function Blog() {
         </div>
       </section>
 
-      {/* Articles Grid */}
-      <section className="pb-20 px-4">
+      {/* Featured Guides */}
+      <section className="pb-12 px-4">
         <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-6">
-            {ARTICLES.map((article) => (
+          <h2 className="font-display text-xl font-bold text-[#3B4759] mb-5">
+            {isFr ? 'Guides essentiels' : 'Essential guides'}
+          </h2>
+          <div className="grid md:grid-cols-3 gap-5">
+            {FEATURED_ARTICLES.map((article) => (
               <Link
                 key={article.slug}
                 to={createPageUrl(article.slug)}
-                className="group bg-white rounded-2xl border border-[#F0ECE6] p-7 hover:border-[#FF6B4A]/30 hover:shadow-lg transition-all duration-300"
+                className="group bg-white rounded-2xl border border-[#F0ECE6] p-6 hover:border-[#FF6B4A]/30 hover:shadow-lg transition-all duration-300"
               >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF0ED] flex items-center justify-center">
-                    <article.icon className="w-5 h-5 text-[#FF6B4A]" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#FFF0ED] flex items-center justify-center">
+                    <article.icon className="w-4 h-4 text-[#FF6B4A]" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#FF6B4A] font-display">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#FF6B4A]">
                     {isFr ? article.categoryFr : article.categoryEn}
                   </span>
                 </div>
-                <h2 className="font-display font-semibold text-lg text-[#3B4759] mb-3 group-hover:text-[#FF6B4A] transition-colors">
+                <h3 className="font-display font-semibold text-base text-[#3B4759] mb-2 group-hover:text-[#FF6B4A] transition-colors">
                   {isFr ? article.titleFr : article.titleEn}
-                </h2>
-                <p className="text-sm text-[#6B7A94] leading-relaxed mb-4">
+                </h3>
+                <p className="text-sm text-[#6B7A94] leading-relaxed mb-3 line-clamp-2">
                   {isFr ? article.descFr : article.descEn}
                 </p>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#9EABC1]">
-                    {isFr ? article.readTimeFr : article.readTimeEn}
-                  </span>
+                  <span className="text-xs text-[#9EABC1]">{isFr ? article.readTimeFr : article.readTimeEn}</span>
                   <span className="text-sm font-medium text-[#FF6B4A] flex items-center gap-1 group-hover:gap-2 transition-all">
-                    {isFr ? 'Lire' : 'Read'}
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    {isFr ? 'Lire' : 'Read'} <ArrowRight className="w-3.5 h-3.5" />
                   </span>
                 </div>
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Cluster filter tabs */}
+      <section className="px-4 pb-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleClusterChange('all')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                activeCluster === 'all'
+                  ? 'bg-[#3B4759] text-white'
+                  : 'bg-white text-[#6B7A94] border border-[#F0ECE6] hover:border-[#3B4759]'
+              }`}
+            >
+              {isFr ? 'Tous les articles' : 'All articles'} ({BLOG_ARTICLES.length})
+            </button>
+            {Object.entries(CLUSTERS).map(([key, cluster]) => {
+              const count = BLOG_ARTICLES.filter(a => a.cluster === key).length;
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleClusterChange(key)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    activeCluster === key
+                      ? 'text-white'
+                      : 'bg-white text-[#6B7A94] border border-[#F0ECE6] hover:border-[#3B4759]'
+                  }`}
+                  style={activeCluster === key ? { backgroundColor: cluster.color } : {}}
+                >
+                  {isFr ? cluster.labelFr : cluster.labelEn} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Articles Grid */}
+      <section className="pb-12 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {paginatedArticles.map((article) => {
+              const cluster = CLUSTERS[article.cluster];
+              return (
+                <Link
+                  key={article.slug}
+                  to={`/blog/${article.slug}`}
+                  className="group bg-white rounded-2xl border border-[#F0ECE6] p-6 hover:border-[#FF6B4A]/30 hover:shadow-lg transition-all duration-300"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <span
+                      className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                      style={{ color: cluster?.color, backgroundColor: `${cluster?.color}15` }}
+                    >
+                      {isFr ? cluster?.labelFr : cluster?.labelEn}
+                    </span>
+                  </div>
+                  <h3 className="font-display font-semibold text-base text-[#3B4759] mb-2 group-hover:text-[#FF6B4A] transition-colors line-clamp-2">
+                    {isFr ? article.titleFr : article.titleEn}
+                  </h3>
+                  <p className="text-sm text-[#6B7A94] leading-relaxed mb-4 line-clamp-3">
+                    {isFr ? article.descFr : article.descEn}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[#9EABC1] flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {article.readTime} min
+                    </span>
+                    <span className="text-sm font-medium text-[#FF6B4A] flex items-center gap-1 group-hover:gap-2 transition-all">
+                      {isFr ? 'Lire' : 'Read'} <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-10">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 rounded-lg border border-[#F0ECE6] disabled:opacity-30 hover:bg-white transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 text-[#3B4759]" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                    page === p
+                      ? 'bg-[#FF6B4A] text-white'
+                      : 'border border-[#F0ECE6] text-[#6B7A94] hover:bg-white'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-2 rounded-lg border border-[#F0ECE6] disabled:opacity-30 hover:bg-white transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-[#3B4759]" />
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
