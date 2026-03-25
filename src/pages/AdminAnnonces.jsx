@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { announcementService } from '@/services/announcementService';
@@ -10,9 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertTriangle, Check, ChevronLeft, ChevronRight, Eye, RefreshCcw, ShieldCheck, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, Eye, RefreshCcw, RotateCcw, ShieldCheck, XCircle } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
@@ -25,7 +24,17 @@ const STATUS_LABELS = {
   flagged: { label: 'Signalée', className: 'bg-violet-100 text-violet-700' }
 };
 
-const SOURCE_FILTERS = [
+const STATUS_OPTIONS = [
+  { value: 'ALL', label: 'Tous' },
+  { value: 'pending', label: 'En attente' },
+  { value: 'active', label: 'Actives' },
+  { value: 'draft', label: 'Brouillon' },
+  { value: 'withdrawn', label: 'Désactivées' },
+  { value: 'rejected', label: 'Refusées' },
+  { value: 'flagged', label: 'Signalées' },
+];
+
+const SOURCE_OPTIONS = [
   { value: 'ALL', label: 'Toutes' },
   { value: 'NATIVE', label: 'Natives' },
   { value: 'SCRAPED', label: 'Importées' }
@@ -69,7 +78,6 @@ export default function AdminAnnonces() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState('');
-  const [searchDebounced, setSearchDebounced] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [sourceFilter, setSourceFilter] = useState('ALL');
   const [page, setPage] = useState(0);
@@ -81,102 +89,109 @@ export default function AdminAnnonces() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [counts, setCounts] = useState({ pending: 0, active: 0, flagged: 0 });
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  // Debounce search text
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchDebounced(searchText.trim());
-      setPage(0);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchText]);
+  const searchTimer = useRef(null);
 
+  // ── Core data loader (called explicitly, NOT via useEffect) ──
+  const loadData = async (status, source, search, pg) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const filters = {};
+      if (status !== 'ALL') filters.status = status;
+      if (source !== 'ALL') filters.sourceType = source;
+      if (search) filters.searchText = search;
+
+      const { data, totalCount: count } = await announcementService.listAdminAnnouncementsPaginated(filters, pg, PAGE_SIZE);
+      setAnnouncements(data);
+      setTotalCount(count);
+
+      const sellerIds = Array.from(new Set((data || []).map((a) => a.seller_id).filter(Boolean)));
+      if (sellerIds.length) {
+        const response = await announcementService.fetchSellerProfiles(sellerIds);
+        if (response?.data) {
+          setSellerProfiles(response.data.reduce((acc, p) => { acc[p.id] = p; return acc; }, {}));
+        }
+      } else {
+        setSellerProfiles({});
+      }
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Erreur chargement annonces:', err);
+      setError('Impossible de charger les annonces.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCounts = async () => {
+    const c = await announcementService.getAdminCounts();
+    setCounts(c);
+  };
+
+  // ── Admin check ──
   useEffect(() => {
     if (!user?.id) return;
-    const loadAdminFlag = async () => {
+    (async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
         .maybeSingle();
-      if (!error) {
-        setIsAdmin(!!data?.is_admin);
-      }
+      if (!error) setIsAdmin(!!data?.is_admin);
       setIsCheckingAdmin(false);
-    };
-    loadAdminFlag();
+    })();
   }, [user?.id]);
 
-  // Single effect: load counts once admin is confirmed
+  // ── Initial load when admin confirmed ──
   useEffect(() => {
     if (!isAdmin) return;
-    announcementService.getAdminCounts().then(setCounts);
-  }, [isAdmin, refreshKey]);
+    loadData('ALL', 'ALL', '', 0);
+    loadCounts();
+  }, [isAdmin]);
 
-  // Single effect: load page data when any filter/page/refresh changes
-  useEffect(() => {
-    if (!isAdmin) return;
-    let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const filters = {};
-        if (statusFilter !== 'ALL') filters.status = statusFilter;
-        if (sourceFilter !== 'ALL') filters.sourceType = sourceFilter;
-        if (searchDebounced) filters.searchText = searchDebounced;
-
-        const { data, totalCount: count } = await announcementService.listAdminAnnouncementsPaginated(filters, page, PAGE_SIZE);
-        if (cancelled) return;
-        setAnnouncements(data);
-        setTotalCount(count);
-
-        // Load seller profiles for this page
-        const sellerIds = Array.from(new Set((data || []).map((a) => a.seller_id).filter(Boolean)));
-        if (sellerIds.length) {
-          const response = await announcementService.fetchSellerProfiles(sellerIds);
-          if (!cancelled && response?.data) {
-            const map = response.data.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
-            setSellerProfiles(map);
-          }
-        } else if (!cancelled) {
-          setSellerProfiles({});
-        }
-
-        if (!cancelled) setLastUpdated(new Date());
-      } catch (err) {
-        if (!cancelled) {
-          console.error('Erreur lors du chargement des annonces admin:', err);
-          setError('Impossible de charger les annonces.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-    return () => { cancelled = true; };
-  }, [isAdmin, statusFilter, sourceFilter, searchDebounced, page, refreshKey]);
-
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-
-  // Filter handlers — reset page to 0 in the same batch
+  // ── Filter handlers (explicit calls, no useEffect chain) ──
   const handleStatusFilter = (val) => {
     setStatusFilter(val);
     setPage(0);
+    loadData(val, sourceFilter, searchText.trim(), 0);
   };
 
   const handleSourceFilter = (val) => {
     setSourceFilter(val);
     setPage(0);
+    loadData(statusFilter, val, searchText.trim(), 0);
+  };
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchText(val);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setPage(0);
+      loadData(statusFilter, sourceFilter, val.trim(), 0);
+    }, 400);
+  };
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    loadData(statusFilter, sourceFilter, searchText.trim(), newPage);
   };
 
   const handleRefresh = () => {
-    setRefreshKey((k) => k + 1);
+    loadData(statusFilter, sourceFilter, searchText.trim(), page);
+    loadCounts();
   };
 
+  const handleResetFilters = () => {
+    setStatusFilter('ALL');
+    setSourceFilter('ALL');
+    setSearchText('');
+    setPage(0);
+    loadData('ALL', 'ALL', '', 0);
+  };
+
+  // ── Actions ──
   const handleApprove = async (announcement) => {
     setActionLoading(announcement.id);
     setError(null);
@@ -194,7 +209,11 @@ export default function AdminAnnonces() {
         });
       }
       handleRefresh();
-    } finally { setActionLoading(null); }
+    } catch (err) {
+      setError(err?.message || 'Erreur lors de l\'approbation.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleDisable = async (announcement) => {
@@ -204,7 +223,11 @@ export default function AdminAnnonces() {
       const response = await announcementService.disableAnnouncement(announcement.id);
       if (response?.error) throw response.error;
       handleRefresh();
-    } finally { setActionLoading(null); }
+    } catch (err) {
+      setError(err?.message || 'Erreur lors de la désactivation.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleToggleCertified = async (announcement) => {
@@ -214,7 +237,17 @@ export default function AdminAnnonces() {
       const response = await announcementService.toggleCertification(announcement.id, !announcement.is_certified);
       if (response?.error) throw response.error;
       handleRefresh();
-    } finally { setActionLoading(null); }
+    } catch (err) {
+      setError(err?.message || 'Erreur lors de la certification.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const openRejectDialog = (announcement) => {
+    setSelectedAnnouncement(announcement);
+    setRejectReason('');
+    setShowRejectDialog(true);
   };
 
   const handleRejectSubmit = async () => {
@@ -228,9 +261,14 @@ export default function AdminAnnonces() {
       setRejectReason('');
       setSelectedAnnouncement(null);
       handleRefresh();
-    } finally { setActionLoading(null); }
+    } catch (err) {
+      setError(err?.message || 'Erreur lors du refus.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
+  // ── Render ──
   if (isLoadingAuth) return <div className="p-8">Chargement...</div>;
   if (isCheckingAdmin) return <div className="p-8">Vérification des droits...</div>;
 
@@ -245,6 +283,9 @@ export default function AdminAnnonces() {
       </div>
     );
   }
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const hasActiveFilters = statusFilter !== 'ALL' || sourceFilter !== 'ALL' || searchText.trim() !== '';
 
   return (
     <div className="bg-[#FAF9F7] px-6 py-8">
@@ -268,6 +309,7 @@ export default function AdminAnnonces() {
             </div>
           </header>
 
+          {/* Stat cards */}
           <div className="grid gap-4 md:grid-cols-3 mb-6">
             <button type="button" onClick={() => handleStatusFilter(statusFilter === 'pending' ? 'ALL' : 'pending')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'pending' ? 'ring-2 ring-orange-400 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'} border border-orange-100`}>
               <p className="text-xs text-gray-500">En attente</p>
@@ -283,175 +325,140 @@ export default function AdminAnnonces() {
             </button>
           </div>
 
+          {/* Filters — native <select> for maximum reliability */}
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Input
                 value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
+                onChange={handleSearchChange}
                 placeholder="Rechercher par titre"
                 className="w-full sm:w-64"
               />
-              <Select value={statusFilter} onValueChange={handleStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Tous</SelectItem>
-                  <SelectItem value="pending">En attente</SelectItem>
-                  <SelectItem value="active">Actives</SelectItem>
-                  <SelectItem value="draft">Brouillon</SelectItem>
-                  <SelectItem value="withdrawn">Désactivées</SelectItem>
-                  <SelectItem value="rejected">Refusées</SelectItem>
-                  <SelectItem value="flagged">Signalées</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sourceFilter} onValueChange={handleSourceFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Source" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SOURCE_FILTERS.map((source) => (
-                    <SelectItem key={source.value} value={source.value}>
-                      {source.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={statusFilter}
+                onChange={(e) => handleStatusFilter(e.target.value)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <select
+                value={sourceFilter}
+                onChange={(e) => handleSourceFilter(e.target.value)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                {SOURCE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={handleResetFilters}>
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Réinitialiser
+                </Button>
+              )}
             </div>
             <span className="text-sm text-gray-500">
               {totalCount} annonce{totalCount > 1 ? 's' : ''}
             </span>
           </div>
 
-          {error && <div className="p-4 text-sm text-red-600">{error}</div>}
+          {error && <div className="p-4 text-sm text-red-600 bg-red-50 rounded-lg mb-4">{error}</div>}
+
           <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Aperçu</TableHead>
-                <TableHead>Titre & Catégorie</TableHead>
-                <TableHead>Vendeur/Source</TableHead>
-                <TableHead>Complétion</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-gray-500">
-                    Chargement...
-                  </TableCell>
+                  <TableHead>Aperçu</TableHead>
+                  <TableHead>Titre & Catégorie</TableHead>
+                  <TableHead>Vendeur/Source</TableHead>
+                  <TableHead>Complétion</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : announcements.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-gray-500">
-                    Aucune annonce trouvée.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                announcements.map((announcement) => {
-                  const status = STATUS_LABELS[announcement.status] || {
-                    label: announcement.status || 'Inconnu',
-                    className: 'bg-slate-100 text-slate-700'
-                  };
-                  const profile = announcement.seller_id ? sellerProfiles[announcement.seller_id] : null;
-                  const sellerDisplay =
-                    profile?.company_name ||
-                    profile?.full_name ||
-                    [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() ||
-                    announcement.seller_name ||
-                    '—';
-                  const completionRate = calculateCompletionRate(announcement);
-                  return (
-                    <TableRow key={announcement.id}>
-                      <TableCell>
-                        {announcement.main_image ? (
-                          <img
-                            src={announcement.main_image}
-                            alt={announcement.title}
-                            className="w-16 h-12 object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="w-16 h-12 rounded-lg bg-slate-100" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium text-gray-900">{announcement.title || 'Sans titre'}</div>
-                        <div className="text-xs text-gray-500">{announcement.category || '—'}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-gray-700">
-                          {sellerDisplay || announcement.source_name}
-                        </div>
-                        <div className="text-xs text-gray-400">{announcement.source_type || 'NATIVE'}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm font-semibold text-gray-900">{completionRate}%</div>
-                        <div className="text-xs text-gray-400">Champs remplis</div>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {announcement.created_at
-                          ? new Date(announcement.created_at).toLocaleDateString('fr-FR')
-                          : '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={status.className}>{status.label}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(createBusinessDetailsUrl(announcement), '_blank')}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleToggleCertified(announcement)}
-                            disabled={actionLoading === announcement.id}
-                            title={announcement.is_certified ? 'Retirer la certification' : 'Certifier l\'annonce'}
-                          >
-                            <ShieldCheck className={`w-4 h-4 ${announcement.is_certified ? 'text-emerald-600' : ''}`} />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleApprove(announcement)}
-                            disabled={actionLoading === announcement.id}
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedAnnouncement(announcement);
-                              setShowRejectDialog(true);
-                            }}
-                            disabled={actionLoading === announcement.id}
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDisable(announcement)}
-                            disabled={actionLoading === announcement.id}
-                          >
-                            Désactiver
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-12">
+                      Chargement...
+                    </TableCell>
+                  </TableRow>
+                ) : announcements.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-12">
+                      Aucune annonce trouvée.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  announcements.map((announcement) => {
+                    const status = STATUS_LABELS[announcement.status] || {
+                      label: announcement.status || 'Inconnu',
+                      className: 'bg-slate-100 text-slate-700'
+                    };
+                    const profile = announcement.seller_id ? sellerProfiles[announcement.seller_id] : null;
+                    const sellerDisplay =
+                      profile?.company_name ||
+                      profile?.full_name ||
+                      [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() ||
+                      announcement.seller_name ||
+                      '—';
+                    const completionRate = calculateCompletionRate(announcement);
+                    const isBusy = actionLoading === announcement.id;
+                    return (
+                      <TableRow key={announcement.id}>
+                        <TableCell>
+                          {announcement.main_image ? (
+                            <img src={announcement.main_image} alt={announcement.title} className="w-16 h-12 object-cover rounded-lg" />
+                          ) : (
+                            <div className="w-16 h-12 rounded-lg bg-slate-100" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium text-gray-900">{announcement.title || 'Sans titre'}</div>
+                          <div className="text-xs text-gray-500">{announcement.category || '—'}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-gray-700">{sellerDisplay || announcement.source_name}</div>
+                          <div className="text-xs text-gray-400">{announcement.source_type || 'NATIVE'}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm font-semibold text-gray-900">{completionRate}%</div>
+                          <div className="text-xs text-gray-400">Champs remplis</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {announcement.created_at ? new Date(announcement.created_at).toLocaleDateString('fr-FR') : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={status.className}>{status.label}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button size="sm" variant="outline" onClick={() => window.open(createBusinessDetailsUrl(announcement), '_blank')}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleToggleCertified(announcement)} disabled={isBusy} title={announcement.is_certified ? 'Retirer la certification' : 'Certifier'}>
+                              <ShieldCheck className={`w-4 h-4 ${announcement.is_certified ? 'text-emerald-600' : ''}`} />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleApprove(announcement)} disabled={isBusy} title="Approuver">
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => openRejectDialog(announcement)} disabled={isBusy} title="Refuser">
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleDisable(announcement)} disabled={isBusy}>
+                              Désactiver
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination */}
@@ -461,21 +468,11 @@ export default function AdminAnnonces() {
                 Page {page + 1} / {totalPages}
               </span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0 || loading}
-                  onClick={() => setPage(page - 1)}
-                >
+                <Button variant="outline" size="sm" disabled={page === 0 || loading} onClick={() => handlePageChange(page - 1)}>
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Précédent
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages - 1 || loading}
-                  onClick={() => setPage(page + 1)}
-                >
+                <Button variant="outline" size="sm" disabled={page >= totalPages - 1 || loading} onClick={() => handlePageChange(page + 1)}>
                   Suivant
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
@@ -485,12 +482,13 @@ export default function AdminAnnonces() {
         </Card>
       </div>
 
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+      {/* Reject dialog — rendered at root level via portal */}
+      <Dialog open={showRejectDialog} onOpenChange={(open) => { if (!open) { setShowRejectDialog(false); setSelectedAnnouncement(null); setRejectReason(''); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Refuser l'annonce</DialogTitle>
             <DialogDescription>
-              Ajoute un message qui sera transmis à l'utilisateur.
+              {selectedAnnouncement?.title ? `Annonce : ${selectedAnnouncement.title}` : 'Ajoute un message qui sera transmis à l\'utilisateur.'}
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -500,11 +498,14 @@ export default function AdminAnnonces() {
             className="min-h-[120px]"
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+            <Button variant="outline" onClick={() => { setShowRejectDialog(false); setSelectedAnnouncement(null); setRejectReason(''); }}>
               Annuler
             </Button>
-            <Button onClick={handleRejectSubmit} disabled={!rejectReason.trim()}>
-              Confirmer le refus
+            <Button
+              onClick={handleRejectSubmit}
+              disabled={!rejectReason.trim() || actionLoading === selectedAnnouncement?.id}
+            >
+              {actionLoading === selectedAnnouncement?.id ? 'Envoi...' : 'Confirmer le refus'}
             </Button>
           </DialogFooter>
         </DialogContent>
