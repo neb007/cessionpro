@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { announcementService } from '@/services/announcementService';
@@ -81,6 +81,7 @@ export default function AdminAnnonces() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [counts, setCounts] = useState({ pending: 0, active: 0, flagged: 0 });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Debounce search text
   useEffect(() => {
@@ -90,9 +91,6 @@ export default function AdminAnnonces() {
     }, 400);
     return () => clearTimeout(timer);
   }, [searchText]);
-
-  // Reset page when filters change
-  useEffect(() => { setPage(0); }, [statusFilter, sourceFilter]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -110,65 +108,73 @@ export default function AdminAnnonces() {
     loadAdminFlag();
   }, [user?.id]);
 
-  const loadCounts = useCallback(async () => {
-    const c = await announcementService.getAdminCounts();
-    setCounts(c);
-  }, []);
-
-  const loadAnnouncements = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const filters = {};
-      if (statusFilter !== 'ALL') filters.status = statusFilter;
-      if (sourceFilter !== 'ALL') filters.sourceType = sourceFilter;
-      if (searchDebounced) filters.searchText = searchDebounced;
-
-      const { data, totalCount: count } = await announcementService.listAdminAnnouncementsPaginated(filters, page, PAGE_SIZE);
-      setAnnouncements(data);
-      setTotalCount(count);
-      await loadSellerProfiles(data);
-      setLastUpdated(new Date());
-    } catch (err) {
-      console.error('Erreur lors du chargement des annonces admin:', err);
-      setError('Impossible de charger les annonces.');
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter, sourceFilter, searchDebounced, page]);
-
-  const loadSellerProfiles = async (items) => {
-    const sellerIds = Array.from(
-      new Set((items || []).map((a) => a.seller_id).filter(Boolean))
-    );
-    if (!sellerIds.length) { setSellerProfiles({}); return; }
-    try {
-      const response = await announcementService.fetchSellerProfiles(sellerIds);
-      if (response && 'error' in response && response.error) throw response.error;
-      const profilesMap = (response?.data || []).reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
-      setSellerProfiles(profilesMap);
-    } catch (profileError) {
-      console.error('Erreur lors du chargement des profils vendeurs:', profileError);
-      setSellerProfiles({});
-    }
-  };
-
-  // Load data when admin is confirmed
+  // Single effect: load counts once admin is confirmed
   useEffect(() => {
     if (!isAdmin) return;
-    loadCounts();
-  }, [isAdmin, loadCounts]);
+    announcementService.getAdminCounts().then(setCounts);
+  }, [isAdmin, refreshKey]);
 
-  // Load page data when filters/page change
+  // Single effect: load page data when any filter/page/refresh changes
   useEffect(() => {
     if (!isAdmin) return;
-    loadAnnouncements();
-  }, [isAdmin, loadAnnouncements]);
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const filters = {};
+        if (statusFilter !== 'ALL') filters.status = statusFilter;
+        if (sourceFilter !== 'ALL') filters.sourceType = sourceFilter;
+        if (searchDebounced) filters.searchText = searchDebounced;
+
+        const { data, totalCount: count } = await announcementService.listAdminAnnouncementsPaginated(filters, page, PAGE_SIZE);
+        if (cancelled) return;
+        setAnnouncements(data);
+        setTotalCount(count);
+
+        // Load seller profiles for this page
+        const sellerIds = Array.from(new Set((data || []).map((a) => a.seller_id).filter(Boolean)));
+        if (sellerIds.length) {
+          const response = await announcementService.fetchSellerProfiles(sellerIds);
+          if (!cancelled && response?.data) {
+            const map = response.data.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
+            setSellerProfiles(map);
+          }
+        } else if (!cancelled) {
+          setSellerProfiles({});
+        }
+
+        if (!cancelled) setLastUpdated(new Date());
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Erreur lors du chargement des annonces admin:', err);
+          setError('Impossible de charger les annonces.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [isAdmin, statusFilter, sourceFilter, searchDebounced, page, refreshKey]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  const handleRefresh = async () => {
-    await Promise.all([loadAnnouncements(), loadCounts()]);
+  // Filter handlers — reset page to 0 in the same batch
+  const handleStatusFilter = (val) => {
+    setStatusFilter(val);
+    setPage(0);
+  };
+
+  const handleSourceFilter = (val) => {
+    setSourceFilter(val);
+    setPage(0);
+  };
+
+  const handleRefresh = () => {
+    setRefreshKey((k) => k + 1);
   };
 
   const handleApprove = async (announcement) => {
@@ -187,7 +193,7 @@ export default function AdminAnnonces() {
           listingId: response.id, idempotencyKey: `smartmatch:${response.id}`, language: 'fr'
         });
       }
-      await handleRefresh();
+      handleRefresh();
     } finally { setActionLoading(null); }
   };
 
@@ -197,7 +203,7 @@ export default function AdminAnnonces() {
     try {
       const response = await announcementService.disableAnnouncement(announcement.id);
       if (response?.error) throw response.error;
-      await handleRefresh();
+      handleRefresh();
     } finally { setActionLoading(null); }
   };
 
@@ -207,7 +213,7 @@ export default function AdminAnnonces() {
     try {
       const response = await announcementService.toggleCertification(announcement.id, !announcement.is_certified);
       if (response?.error) throw response.error;
-      await handleRefresh();
+      handleRefresh();
     } finally { setActionLoading(null); }
   };
 
@@ -221,7 +227,7 @@ export default function AdminAnnonces() {
       setShowRejectDialog(false);
       setRejectReason('');
       setSelectedAnnouncement(null);
-      await handleRefresh();
+      handleRefresh();
     } finally { setActionLoading(null); }
   };
 
@@ -263,15 +269,15 @@ export default function AdminAnnonces() {
           </header>
 
           <div className="grid gap-4 md:grid-cols-3 mb-6">
-            <button type="button" onClick={() => setStatusFilter(statusFilter === 'pending' ? 'ALL' : 'pending')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'pending' ? 'ring-2 ring-orange-400 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'} border border-orange-100`}>
+            <button type="button" onClick={() => handleStatusFilter(statusFilter === 'pending' ? 'ALL' : 'pending')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'pending' ? 'ring-2 ring-orange-400 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'} border border-orange-100`}>
               <p className="text-xs text-gray-500">En attente</p>
               <p className="text-2xl font-semibold text-orange-600">{counts.pending}</p>
             </button>
-            <button type="button" onClick={() => setStatusFilter(statusFilter === 'flagged' ? 'ALL' : 'flagged')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'flagged' ? 'ring-2 ring-violet-400 bg-violet-100' : 'bg-violet-50 hover:bg-violet-100'} border border-violet-100`}>
+            <button type="button" onClick={() => handleStatusFilter(statusFilter === 'flagged' ? 'ALL' : 'flagged')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'flagged' ? 'ring-2 ring-violet-400 bg-violet-100' : 'bg-violet-50 hover:bg-violet-100'} border border-violet-100`}>
               <p className="text-xs text-gray-500">Signalées</p>
               <p className="text-2xl font-semibold text-violet-600">{counts.flagged}</p>
             </button>
-            <button type="button" onClick={() => setStatusFilter(statusFilter === 'active' ? 'ALL' : 'active')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'active' ? 'ring-2 ring-emerald-400 bg-emerald-100' : 'bg-emerald-50 hover:bg-emerald-100'} border border-emerald-100`}>
+            <button type="button" onClick={() => handleStatusFilter(statusFilter === 'active' ? 'ALL' : 'active')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'active' ? 'ring-2 ring-emerald-400 bg-emerald-100' : 'bg-emerald-50 hover:bg-emerald-100'} border border-emerald-100`}>
               <p className="text-xs text-gray-500">Actives</p>
               <p className="text-2xl font-semibold text-emerald-600">{counts.active}</p>
             </button>
@@ -285,7 +291,7 @@ export default function AdminAnnonces() {
                 placeholder="Rechercher par titre"
                 className="w-full sm:w-64"
               />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilter}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
@@ -299,7 +305,7 @@ export default function AdminAnnonces() {
                   <SelectItem value="flagged">Signalées</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <Select value={sourceFilter} onValueChange={handleSourceFilter}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Source" />
                 </SelectTrigger>
