@@ -28,7 +28,21 @@ import {
   Star
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import moment from 'moment';
+/** Lightweight relative-time formatter (replaces moment.js) */
+function timeAgo(dateStr) {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'il y a quelques secondes';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `il y a ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `il y a ${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `il y a ${days}j`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `il y a ${months} mois`;
+  const years = Math.floor(months / 12);
+  return `il y a ${years} an${years > 1 ? 's' : ''}`;
+}
 
 const statusConfig = {
   new: { label: { fr: 'Nouveau', en: 'New' }, color: 'bg-blue-100 text-blue-700', icon: Star },
@@ -285,7 +299,7 @@ export default function Leads() {
                           <div className="flex items-center gap-4 text-sm text-gray-500">
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {moment(lead.last_contact_date || lead.created_date).fromNow()}
+                              {timeAgo(lead.last_contact_date || lead.created_date)}
                             </span>
                             <span className="capitalize">{lead.source}</span>
                           </div>

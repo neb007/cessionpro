@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, Suspense, useEffect, useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { HelmetProvider } from 'react-helmet-async'
@@ -115,7 +115,14 @@ const AuthenticatedApp = () => {
   }
 
   // Render the main app
+  const suspenseFallback = (
+    <div className="fixed inset-0 flex items-center justify-center bg-[#FAF9F7]">
+      <div className="w-8 h-8 border-4 border-slate-200 border-t-[#FF6B4A] rounded-full animate-spin" />
+    </div>
+  );
+
   return (
+    <Suspense fallback={suspenseFallback}>
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
@@ -201,6 +208,7 @@ const AuthenticatedApp = () => {
       })}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </Suspense>
   );
 };
 

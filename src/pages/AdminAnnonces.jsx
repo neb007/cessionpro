@@ -185,10 +185,26 @@ export default function AdminAnnonces() {
     }
   };
 
+  const [allAnnouncements, setAllAnnouncements] = useState([]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    // Load all announcements once for counts
+    const loadAll = async () => {
+      try {
+        const data = await announcementService.listAdminAnnouncements({});
+        setAllAnnouncements(data || []);
+      } catch (err) {
+        console.error('Erreur chargement compteurs:', err);
+      }
+    };
+    loadAll();
+  }, [isAdmin]);
+
   useEffect(() => {
     if (!isAdmin) return;
     loadAnnouncements();
-  }, [isAdmin, statusFilter, sourceFilter, searchText]);
+  }, [isAdmin, statusFilter, sourceFilter]);
 
   const filteredAnnouncements = useMemo(() => {
     if (!searchText.trim()) return announcements;
@@ -200,13 +216,13 @@ export default function AdminAnnonces() {
 
   const counts = useMemo(() => {
     const total = { pending: 0, active: 0, flagged: 0 };
-    announcements.forEach((announcement) => {
+    allAnnouncements.forEach((announcement) => {
       if (announcement.status === 'pending') total.pending += 1;
       if (announcement.status === 'active') total.active += 1;
       if (announcement.status === 'flagged') total.flagged += 1;
     });
     return total;
-  }, [announcements]);
+  }, [allAnnouncements]);
 
   const handleApprove = async (announcement) => {
     setActionLoading(announcement.id);
@@ -300,42 +316,42 @@ export default function AdminAnnonces() {
 
   return (
     <div className="bg-[#FAF9F7] px-6 py-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-display font-bold text-gray-900">Admin • Annonces</h1>
-            <p className="text-sm text-gray-500">Modération et publication des annonces.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={loadAnnouncements} disabled={loading}>
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              Rafraîchir
-            </Button>
-            {lastUpdated && (
-              <span className="text-xs text-gray-500">
-                MAJ : {lastUpdated.toLocaleTimeString('fr-FR')}
-              </span>
-            )}
-          </div>
-        </header>
+      <div className="w-full space-y-6">
+        <Card className="p-6">
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-display font-bold text-gray-900">Admin • Annonces</h1>
+              <p className="text-sm text-gray-500">Modération et publication des annonces.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={loadAnnouncements} disabled={loading}>
+                <RefreshCcw className="w-4 h-4 mr-2" />
+                Rafraîchir
+              </Button>
+              {lastUpdated && (
+                <span className="text-xs text-gray-500">
+                  MAJ : {lastUpdated.toLocaleTimeString('fr-FR')}
+                </span>
+              )}
+            </div>
+          </header>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="p-4">
-            <p className="text-xs text-gray-500">En attente</p>
-            <p className="text-2xl font-semibold text-orange-600">{counts.pending}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-gray-500">Signalées</p>
-            <p className="text-2xl font-semibold text-violet-600">{counts.flagged}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-gray-500">Actives</p>
-            <p className="text-2xl font-semibold text-emerald-600">{counts.active}</p>
-          </Card>
-        </div>
+          <div className="grid gap-4 md:grid-cols-3 mb-6">
+            <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+              <p className="text-xs text-gray-500">En attente</p>
+              <p className="text-2xl font-semibold text-orange-600">{counts.pending}</p>
+            </div>
+            <div className="p-4 rounded-xl bg-violet-50 border border-violet-100">
+              <p className="text-xs text-gray-500">Signalées</p>
+              <p className="text-2xl font-semibold text-violet-600">{counts.flagged}</p>
+            </div>
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+              <p className="text-xs text-gray-500">Actives</p>
+              <p className="text-2xl font-semibold text-emerald-600">{counts.active}</p>
+            </div>
+          </div>
 
-        <Card className="p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Input
                 value={searchText}
@@ -343,7 +359,7 @@ export default function AdminAnnonces() {
                 placeholder="Rechercher par titre"
                 className="w-full sm:w-64"
               />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); }}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
@@ -357,7 +373,7 @@ export default function AdminAnnonces() {
                   <SelectItem value="flagged">Signalées</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <Select value={sourceFilter} onValueChange={(val) => { setSourceFilter(val); }}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Source" />
                 </SelectTrigger>
@@ -371,10 +387,9 @@ export default function AdminAnnonces() {
               </Select>
             </div>
           </div>
-        </Card>
 
-        <Card className="overflow-hidden">
           {error && <div className="p-4 text-sm text-red-600">{error}</div>}
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -502,6 +517,7 @@ export default function AdminAnnonces() {
               )}
             </TableBody>
           </Table>
+          </div>
         </Card>
       </div>
 

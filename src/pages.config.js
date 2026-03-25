@@ -1,97 +1,60 @@
 /**
  * pages.config.js - Page routing configuration
- * 
+ *
  * This file is AUTO-GENERATED. Do not add imports or modify PAGES manually.
  * Pages are auto-registered when you create files in the ./pages/ folder.
- * 
+ *
  * THE ONLY EDITABLE VALUE: mainPage
  * This controls which page is the landing page (shown when users visit the app).
- * 
- * Example file structure:
- * 
- *   import HomePage from './pages/HomePage';
- *   import Dashboard from './pages/Dashboard';
- *   import Settings from './pages/Settings';
- *   
- *   export const PAGES = {
- *       "HomePage": HomePage,
- *       "Dashboard": Dashboard,
- *       "Settings": Settings,
- *   }
- *   
- *   export const pagesConfig = {
- *       mainPage: "HomePage",
- *       Pages: PAGES,
- *   };
- * 
- * Example with Layout (wraps all pages):
- *
- *   import Home from './pages/Home';
- *   import Settings from './pages/Settings';
- *   import __Layout from './Layout.jsx';
- *
- *   export const PAGES = {
- *       "Home": Home,
- *       "Settings": Settings,
- *   }
- *
- *   export const pagesConfig = {
- *       mainPage: "Home",
- *       Pages: PAGES,
- *       Layout: __Layout,
- *   };
- *
- * To change the main page from HomePage to Dashboard, use find_replace:
- *   Old: mainPage: "HomePage",
- *   New: mainPage: "Dashboard",
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import AccountCreation from './pages/AccountCreation';
-import Ceder from './pages/Ceder';
-import Reprendre from './pages/Reprendre';
-import Expert from './pages/Expert';
-import GuideCession from './pages/GuideCession';
-import GuideRepreneur from './pages/GuideRepreneur';
-import GuideRepreneuriat from './pages/GuideRepreneuriat';
-import AuthCallback from './pages/AuthCallback';
-import BusinessDetails from './pages/BusinessDetails';
-import Annonces from './pages/Annonces';
-import Abonnement from './pages/Abonnement';
-import Billing from './pages/Billing';
-import Categories from './pages/Categories';
-import Checkout from './pages/Checkout';
-import Contact from './pages/Contact';
-import CreateBusiness from './pages/CreateBusiness';
-import Dataroom from './pages/Dataroom';
-import FAQ from './pages/FAQ';
-import Favorites from './pages/Favorites';
-import Financing from './pages/Financing';
+import { lazy } from 'react';
 import Home from './pages/Home';
-import Leads from './pages/Leads';
-import Login from './pages/Login';
-import Messages from './pages/Messages';
-import MyLeads from './pages/MyLeads';
-import MyListings from './pages/MyListings';
-import Outils from './pages/Outils';
-import PasswordReset from './pages/PasswordReset';
-import Pricing from './pages/Pricing';
-import Profile from './pages/Profile';
-import Register from './pages/Register';
-import Settings from './pages/Settings';
-import SmartMatching from './pages/SmartMatching';
-import SmartMatchingFeatures from './pages/SmartMatchingFeatures';
-import SmartMatchingNotifications from './pages/SmartMatchingNotifications';
-import Targeting from './pages/Targeting';
-import Valuations from './pages/Valuations';
-import MentionsLegales from './pages/MentionsLegales';
-import CGU from './pages/CGU';
-import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
-import Blog from './pages/Blog';
-import BlogArticle from './pages/BlogArticle';
-import Partners from './pages/Partners';
 import __Layout from './Layout.jsx';
 
+const AccountCreation = lazy(() => import('./pages/AccountCreation'));
+const Ceder = lazy(() => import('./pages/Ceder'));
+const Reprendre = lazy(() => import('./pages/Reprendre'));
+const Expert = lazy(() => import('./pages/Expert'));
+const GuideCession = lazy(() => import('./pages/GuideCession'));
+const GuideRepreneur = lazy(() => import('./pages/GuideRepreneur'));
+const GuideRepreneuriat = lazy(() => import('./pages/GuideRepreneuriat'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const BusinessDetails = lazy(() => import('./pages/BusinessDetails'));
+const Annonces = lazy(() => import('./pages/Annonces'));
+const Abonnement = lazy(() => import('./pages/Abonnement'));
+const Billing = lazy(() => import('./pages/Billing'));
+const Categories = lazy(() => import('./pages/Categories'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const Contact = lazy(() => import('./pages/Contact'));
+const CreateBusiness = lazy(() => import('./pages/CreateBusiness'));
+const Dataroom = lazy(() => import('./pages/Dataroom'));
+const FAQ = lazy(() => import('./pages/FAQ'));
+const Favorites = lazy(() => import('./pages/Favorites'));
+const Financing = lazy(() => import('./pages/Financing'));
+const Leads = lazy(() => import('./pages/Leads'));
+const Login = lazy(() => import('./pages/Login'));
+const Messages = lazy(() => import('./pages/Messages'));
+const MyLeads = lazy(() => import('./pages/MyLeads'));
+const MyListings = lazy(() => import('./pages/MyListings'));
+const Outils = lazy(() => import('./pages/Outils'));
+const PasswordReset = lazy(() => import('./pages/PasswordReset'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Register = lazy(() => import('./pages/Register'));
+const Settings = lazy(() => import('./pages/Settings'));
+const SmartMatching = lazy(() => import('./pages/SmartMatching'));
+const SmartMatchingFeatures = lazy(() => import('./pages/SmartMatchingFeatures'));
+const SmartMatchingNotifications = lazy(() => import('./pages/SmartMatchingNotifications'));
+const Targeting = lazy(() => import('./pages/Targeting'));
+const Valuations = lazy(() => import('./pages/Valuations'));
+const MentionsLegales = lazy(() => import('./pages/MentionsLegales'));
+const CGU = lazy(() => import('./pages/CGU'));
+const PolitiqueConfidentialite = lazy(() => import('./pages/PolitiqueConfidentialite'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogArticle = lazy(() => import('./pages/BlogArticle'));
+const Partners = lazy(() => import('./pages/Partners'));
 
 export const PAGES = {
     "AccountCreation": AccountCreation,

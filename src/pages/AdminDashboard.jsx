@@ -109,81 +109,83 @@ export default function AdminDashboard() {
 
   return (
     <div className="bg-[#FAF9F7] px-6 py-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-display font-bold text-gray-900">Admin • Dashboard</h1>
-            <p className="text-sm text-gray-500">Vue d’ensemble des statistiques de la plateforme.</p>
-          </div>
-        </header>
+      <div className="w-full space-y-6">
+        <Card className="p-6">
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-display font-bold text-gray-900">Admin • Dashboard</h1>
+              <p className="text-sm text-gray-500">Vue d’ensemble des statistiques de la plateforme.</p>
+            </div>
+          </header>
 
-        {error && <div className="text-sm text-red-600">{error}</div>}
+          {error && <div className="text-sm text-red-600 mb-4">{error}</div>}
 
-        {loading ? (
-          <div className="text-sm text-gray-500">Chargement des statistiques...</div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">Cessions publiées</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.cessionListings}</p>
+          {loading ? (
+            <div className="text-sm text-gray-500">Chargement des statistiques...</div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Cessions publiées</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.cessionListings}</p>
+                  </div>
+                  <FileText className="w-6 h-6 text-orange-500" />
                 </div>
-                <FileText className="w-6 h-6 text-orange-500" />
               </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">Acquisitions publiées</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.acquisitionListings}</p>
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Acquisitions publiées</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.acquisitionListings}</p>
+                  </div>
+                  <TrendingUp className="w-6 h-6 text-blue-500" />
                 </div>
-                <TrendingUp className="w-6 h-6 text-blue-500" />
               </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">Annonces en attente</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.pendingListings}</p>
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Annonces en attente</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.pendingListings}</p>
+                  </div>
+                  <Clock className="w-6 h-6 text-amber-500" />
                 </div>
-                <Clock className="w-6 h-6 text-amber-500" />
               </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">Annonces certifiées</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.certifiedListings}</p>
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Annonces certifiées</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.certifiedListings}</p>
+                  </div>
+                  <ShieldCheck className="w-6 h-6 text-emerald-500" />
                 </div>
-                <ShieldCheck className="w-6 h-6 text-emerald-500" />
               </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">Comptes créés</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.totalUsers}</p>
+              <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Comptes créés</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.totalUsers}</p>
+                  </div>
+                  <Users className="w-6 h-6 text-indigo-500" />
                 </div>
-                <Users className="w-6 h-6 text-indigo-500" />
-              </div>
-              <div className="mt-3 text-xs text-gray-500">
-                <span className="mr-2">Acheteurs: {stats.buyers}</span>
-                <span className="mr-2">Vendeurs: {stats.sellers}</span>
-                <span>Hybrides: {stats.hybrid}</span>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">Total annonces</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.totalListings}</p>
+                <div className="mt-3 text-xs text-gray-500">
+                  <span className="mr-2">Acheteurs: {stats.buyers}</span>
+                  <span className="mr-2">Vendeurs: {stats.sellers}</span>
+                  <span>Hybrides: {stats.hybrid}</span>
                 </div>
-                <FileText className="w-6 h-6 text-gray-500" />
               </div>
-            </Card>
-          </div>
-        )}
+              <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Total annonces</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stats.totalListings}</p>
+                  </div>
+                  <FileText className="w-6 h-6 text-gray-500" />
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );

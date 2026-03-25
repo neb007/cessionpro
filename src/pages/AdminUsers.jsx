@@ -197,16 +197,16 @@ export default function AdminUsers() {
 
   return (
     <div className="bg-[#FAF9F7] px-6 py-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-display font-bold text-gray-900">Admin • Utilisateurs</h1>
-            <p className="text-sm text-gray-500">Gestion des comptes créés sur la plateforme.</p>
-          </div>
-        </header>
+      <div className="w-full space-y-6">
+        <Card className="p-6">
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-display font-bold text-gray-900">Admin • Utilisateurs</h1>
+              <p className="text-sm text-gray-500">Gestion des comptes créés sur la plateforme.</p>
+            </div>
+          </header>
 
-        <Card className="p-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Users className="w-4 h-4" />
               {profiles.length} comptes
@@ -231,10 +231,9 @@ export default function AdminUsers() {
               />
             </div>
           </div>
-        </Card>
 
-        <Card className="overflow-hidden">
           {error && <div className="p-4 text-sm text-red-600">{error}</div>}
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -330,6 +329,7 @@ export default function AdminUsers() {
               )}
             </TableBody>
           </Table>
+          </div>
         </Card>
       </div>
     </div>
