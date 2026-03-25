@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { announcementService } from '@/services/announcementService';
@@ -12,7 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertTriangle, Check, Eye, RefreshCcw, ShieldCheck, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, Eye, RefreshCcw, ShieldCheck, XCircle } from 'lucide-react';
+
+const PAGE_SIZE = 20;
+
 const STATUS_LABELS = {
   pending: { label: 'En attente', className: 'bg-orange-100 text-orange-700' },
   active: { label: 'Active', className: 'bg-emerald-100 text-emerald-700' },
@@ -28,15 +31,48 @@ const SOURCE_FILTERS = [
   { value: 'SCRAPED', label: 'Importées' }
 ];
 
+const completionFields = [
+  'title', 'description', 'sector', 'asking_price', 'annual_revenue',
+  'ebitda', 'employees', 'location', 'country', 'department', 'region',
+  'year_founded', 'reason_for_sale', 'confidential', 'hide_location',
+  'assets_included', 'images', 'legal_structure', 'registration_number',
+  'lease_info', 'licenses', 'financial_years', 'market_position',
+  'competitive_advantages', 'growth_opportunities', 'customer_base',
+  'business_type', 'reference_number', 'buyer_budget_min', 'buyer_budget_max',
+  'buyer_sectors_interested', 'buyer_locations', 'buyer_employees_min',
+  'buyer_employees_max', 'buyer_revenue_min', 'buyer_revenue_max',
+  'buyer_investment_available', 'buyer_profile_type', 'buyer_notes',
+  'business_type_sought', 'seller_business_type', 'buyer_document_url',
+  'buyer_document_name'
+];
+
+function calculateCompletionRate(announcement) {
+  if (!announcement) return 0;
+  const total = completionFields.length;
+  if (!total) return 0;
+  const filled = completionFields.reduce((count, field) => {
+    const value = announcement[field];
+    if (Array.isArray(value)) return value.length > 0 ? count + 1 : count;
+    if (typeof value === 'boolean') return count + 1;
+    if (typeof value === 'number') return Number.isFinite(value) ? count + 1 : count;
+    if (typeof value === 'string') return value.trim().length > 0 ? count + 1 : count;
+    return value ? count + 1 : count;
+  }, 0);
+  return Math.round((filled / total) * 100);
+}
+
 export default function AdminAnnonces() {
   const { user, isLoadingAuth } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [sellerProfiles, setSellerProfiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const [searchDebounced, setSearchDebounced] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [sourceFilter, setSourceFilter] = useState('ALL');
+  const [page, setPage] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -44,80 +80,19 @@ export default function AdminAnnonces() {
   const [actionLoading, setActionLoading] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
+  const [counts, setCounts] = useState({ pending: 0, active: 0, flagged: 0 });
 
-  const completionFields = useMemo(
-    () => [
-      'title',
-      'description',
-      'sector',
-      'asking_price',
-      'annual_revenue',
-      'ebitda',
-      'employees',
-      'location',
-      'country',
-      'department',
-      'region',
-      'year_founded',
-      'reason_for_sale',
-      'confidential',
-      'hide_location',
-      'assets_included',
-      'images',
-      'legal_structure',
-      'registration_number',
-      'lease_info',
-      'licenses',
-      'financial_years',
-      'market_position',
-      'competitive_advantages',
-      'growth_opportunities',
-      'customer_base',
-      'business_type',
-      'reference_number',
-      'buyer_budget_min',
-      'buyer_budget_max',
-      'buyer_sectors_interested',
-      'buyer_locations',
-      'buyer_employees_min',
-      'buyer_employees_max',
-      'buyer_revenue_min',
-      'buyer_revenue_max',
-      'buyer_investment_available',
-      'buyer_profile_type',
-      'buyer_notes',
-      'business_type_sought',
-      'seller_business_type',
-      'buyer_document_url',
-      'buyer_document_name'
-    ],
-    []
-  );
+  // Debounce search text
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchDebounced(searchText.trim());
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
-  const calculateCompletionRate = (announcement) => {
-    if (!announcement) return 0;
-    const total = completionFields.length;
-    if (!total) return 0;
-
-    const filled = completionFields.reduce((count, field) => {
-      const value = announcement[field];
-      if (Array.isArray(value)) {
-        return value.length > 0 ? count + 1 : count;
-      }
-      if (typeof value === 'boolean') {
-        return count + 1;
-      }
-      if (typeof value === 'number') {
-        return Number.isFinite(value) ? count + 1 : count;
-      }
-      if (typeof value === 'string') {
-        return value.trim().length > 0 ? count + 1 : count;
-      }
-      return value ? count + 1 : count;
-    }, 0);
-
-    return Math.round((filled / total) * 100);
-  };
+  // Reset page when filters change
+  useEffect(() => { setPage(0); }, [statusFilter, sourceFilter]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -135,14 +110,24 @@ export default function AdminAnnonces() {
     loadAdminFlag();
   }, [user?.id]);
 
-  const loadAnnouncements = async () => {
+  const loadCounts = useCallback(async () => {
+    const c = await announcementService.getAdminCounts();
+    setCounts(c);
+  }, []);
+
+  const loadAnnouncements = useCallback(async () => {
     setLoading(true);
     setError(null);
-
     try {
-      const data = await announcementService.listAdminAnnouncements({});
-      setAnnouncements(data || []);
-      await loadSellerProfiles(data || []);
+      const filters = {};
+      if (statusFilter !== 'ALL') filters.status = statusFilter;
+      if (sourceFilter !== 'ALL') filters.sourceType = sourceFilter;
+      if (searchDebounced) filters.searchText = searchDebounced;
+
+      const { data, totalCount: count } = await announcementService.listAdminAnnouncementsPaginated(filters, page, PAGE_SIZE);
+      setAnnouncements(data);
+      setTotalCount(count);
+      await loadSellerProfiles(data);
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Erreur lors du chargement des annonces admin:', err);
@@ -150,28 +135,17 @@ export default function AdminAnnonces() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, sourceFilter, searchDebounced, page]);
 
   const loadSellerProfiles = async (items) => {
     const sellerIds = Array.from(
-      new Set((items || []).map((announcement) => announcement.seller_id).filter(Boolean))
+      new Set((items || []).map((a) => a.seller_id).filter(Boolean))
     );
-
-    if (!sellerIds.length) {
-      setSellerProfiles({});
-      return;
-    }
-
+    if (!sellerIds.length) { setSellerProfiles({}); return; }
     try {
       const response = await announcementService.fetchSellerProfiles(sellerIds);
       if (response && 'error' in response && response.error) throw response.error;
-      const profilesData = response?.data || [];
-
-      const profilesMap = profilesData.reduce((acc, profile) => {
-        acc[profile.id] = profile;
-        return acc;
-      }, {});
-
+      const profilesMap = (response?.data || []).reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
       setSellerProfiles(profilesMap);
     } catch (profileError) {
       console.error('Erreur lors du chargement des profils vendeurs:', profileError);
@@ -179,43 +153,23 @@ export default function AdminAnnonces() {
     }
   };
 
+  // Load data when admin is confirmed
+  useEffect(() => {
+    if (!isAdmin) return;
+    loadCounts();
+  }, [isAdmin, loadCounts]);
+
+  // Load page data when filters/page change
   useEffect(() => {
     if (!isAdmin) return;
     loadAnnouncements();
-  }, [isAdmin]);
+  }, [isAdmin, loadAnnouncements]);
 
-  const filteredAnnouncements = useMemo(() => {
-    let result = announcements;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-    if (statusFilter !== 'ALL') {
-      result = result.filter((a) => a.status === statusFilter);
-    }
-
-    if (sourceFilter !== 'ALL') {
-      if (sourceFilter === 'NATIVE') {
-        result = result.filter((a) => !a.source_type || a.source_type === 'NATIVE');
-      } else if (sourceFilter === 'SCRAPED') {
-        result = result.filter((a) => a.source_type === 'SCRAPED');
-      }
-    }
-
-    if (searchText.trim()) {
-      const query = searchText.toLowerCase();
-      result = result.filter((a) => a.title?.toLowerCase().includes(query));
-    }
-
-    return result;
-  }, [announcements, statusFilter, sourceFilter, searchText]);
-
-  const counts = useMemo(() => {
-    const total = { pending: 0, active: 0, flagged: 0 };
-    announcements.forEach((a) => {
-      if (a.status === 'pending') total.pending += 1;
-      if (a.status === 'active') total.active += 1;
-      if (a.status === 'flagged') total.flagged += 1;
-    });
-    return total;
-  }, [announcements]);
+  const handleRefresh = async () => {
+    await Promise.all([loadAnnouncements(), loadCounts()]);
+  };
 
   const handleApprove = async (announcement) => {
     setActionLoading(announcement.id);
@@ -226,21 +180,15 @@ export default function AdminAnnonces() {
       if (response?.status === 'active') {
         const idempotencyKey = `listing:${response.id}:published`;
         await emailNotificationService.sendListingPublished({
-          listingId: response.id,
-          recipientId: response.seller_id,
-          idempotencyKey,
-          language: 'fr'
+          listingId: response.id, recipientId: response.seller_id,
+          idempotencyKey, language: 'fr'
         });
         await emailNotificationService.sendSmartMatchNotification({
-          listingId: response.id,
-          idempotencyKey: `smartmatch:${response.id}`,
-          language: 'fr'
+          listingId: response.id, idempotencyKey: `smartmatch:${response.id}`, language: 'fr'
         });
       }
-      await loadAnnouncements();
-    } finally {
-      setActionLoading(null);
-    }
+      await handleRefresh();
+    } finally { setActionLoading(null); }
   };
 
   const handleDisable = async (announcement) => {
@@ -249,10 +197,8 @@ export default function AdminAnnonces() {
     try {
       const response = await announcementService.disableAnnouncement(announcement.id);
       if (response?.error) throw response.error;
-      await loadAnnouncements();
-    } finally {
-      setActionLoading(null);
-    }
+      await handleRefresh();
+    } finally { setActionLoading(null); }
   };
 
   const handleToggleCertified = async (announcement) => {
@@ -261,16 +207,12 @@ export default function AdminAnnonces() {
     try {
       const response = await announcementService.toggleCertification(announcement.id, !announcement.is_certified);
       if (response?.error) throw response.error;
-      await loadAnnouncements();
-    } finally {
-      setActionLoading(null);
-    }
+      await handleRefresh();
+    } finally { setActionLoading(null); }
   };
 
   const handleRejectSubmit = async () => {
-    if (!selectedAnnouncement) return;
-    if (!rejectReason.trim()) return;
-
+    if (!selectedAnnouncement || !rejectReason.trim()) return;
     setActionLoading(selectedAnnouncement.id);
     setError(null);
     try {
@@ -279,19 +221,12 @@ export default function AdminAnnonces() {
       setShowRejectDialog(false);
       setRejectReason('');
       setSelectedAnnouncement(null);
-      await loadAnnouncements();
-    } finally {
-      setActionLoading(null);
-    }
+      await handleRefresh();
+    } finally { setActionLoading(null); }
   };
 
-  if (isLoadingAuth) {
-    return <div className="p-8">Chargement...</div>;
-  }
-
-  if (isCheckingAdmin) {
-    return <div className="p-8">Vérification des droits...</div>;
-  }
+  if (isLoadingAuth) return <div className="p-8">Chargement...</div>;
+  if (isCheckingAdmin) return <div className="p-8">Vérification des droits...</div>;
 
   if (!isAdmin) {
     return (
@@ -299,9 +234,7 @@ export default function AdminAnnonces() {
         <Card className="p-6 max-w-lg text-center">
           <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900">Accès refusé</h2>
-          <p className="text-sm text-gray-500 mt-2">
-            Cette interface est réservée aux administrateurs.
-          </p>
+          <p className="text-sm text-gray-500 mt-2">Cette interface est réservée aux administrateurs.</p>
         </Card>
       </div>
     );
@@ -317,7 +250,7 @@ export default function AdminAnnonces() {
               <p className="text-sm text-gray-500">Modération et publication des annonces.</p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={loadAnnouncements} disabled={loading}>
+              <Button variant="outline" onClick={handleRefresh} disabled={loading}>
                 <RefreshCcw className="w-4 h-4 mr-2" />
                 Rafraîchir
               </Button>
@@ -380,7 +313,7 @@ export default function AdminAnnonces() {
               </Select>
             </div>
             <span className="text-sm text-gray-500">
-              {filteredAnnouncements.length} / {announcements.length} annonces
+              {totalCount} annonce{totalCount > 1 ? 's' : ''}
             </span>
           </div>
 
@@ -401,18 +334,18 @@ export default function AdminAnnonces() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-gray-500">
+                  <TableCell colSpan={7} className="text-center text-sm text-gray-500">
                     Chargement...
                   </TableCell>
                 </TableRow>
-              ) : filteredAnnouncements.length === 0 ? (
+              ) : announcements.length === 0 ? (
                 <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-gray-500">
+                  <TableCell colSpan={7} className="text-center text-sm text-gray-500">
                     Aucune annonce trouvée.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredAnnouncements.map((announcement) => {
+                announcements.map((announcement) => {
                   const status = STATUS_LABELS[announcement.status] || {
                     label: announcement.status || 'Inconnu',
                     className: 'bg-slate-100 text-slate-700'
@@ -514,15 +447,44 @@ export default function AdminAnnonces() {
             </TableBody>
           </Table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
+              <span className="text-sm text-gray-500">
+                Page {page + 1} / {totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0 || loading}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Précédent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1 || loading}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Suivant
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Refuser l’annonce</DialogTitle>
+            <DialogTitle>Refuser l'annonce</DialogTitle>
             <DialogDescription>
-              Ajoute un message qui sera transmis à l’utilisateur.
+              Ajoute un message qui sera transmis à l'utilisateur.
             </DialogDescription>
           </DialogHeader>
           <Textarea

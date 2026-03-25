@@ -50,6 +50,54 @@ export const announcementService = {
     }
   },
 
+  async listAdminAnnouncementsPaginated(filters = {}, page = 0, pageSize = 20) {
+    try {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
+        .from('businesses')
+        .select('*', { count: 'exact' });
+
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.sourceType) {
+        query = query.eq('source_type', filters.sourceType);
+      }
+      if (filters.searchText) {
+        query = query.ilike('title', `%${filters.searchText}%`);
+      }
+
+      query = query.order('created_at', { ascending: false }).range(from, to);
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return { data: data || [], totalCount: count || 0 };
+    } catch (error) {
+      console.error('Error listing admin announcements paginated:', error);
+      throw error;
+    }
+  },
+
+  async getAdminCounts() {
+    try {
+      const [pending, active, flagged] = await Promise.all([
+        supabase.from('businesses').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('businesses').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('businesses').select('id', { count: 'exact', head: true }).eq('status', 'flagged'),
+      ]);
+      return {
+        pending: pending.count || 0,
+        active: active.count || 0,
+        flagged: flagged.count || 0,
+      };
+    } catch (error) {
+      console.error('Error getting admin counts:', error);
+      return { pending: 0, active: 0, flagged: 0 };
+    }
+  },
+
   async approveAnnouncement(id) {
     return this.updateAnnouncement(id, {
       status: 'active',
