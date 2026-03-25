@@ -140,13 +140,7 @@ export default function AdminAnnonces() {
     setError(null);
 
     try {
-      const filters = {
-        status: statusFilter !== 'ALL' ? statusFilter.toLowerCase() : undefined,
-        sourceType: sourceFilter !== 'ALL' ? sourceFilter : undefined,
-        searchText: searchText.trim() || undefined
-      };
-
-      const data = await announcementService.listAdminAnnouncements(filters);
+      const data = await announcementService.listAdminAnnouncements({});
       setAnnouncements(data || []);
       await loadSellerProfiles(data || []);
       setLastUpdated(new Date());
@@ -185,44 +179,43 @@ export default function AdminAnnonces() {
     }
   };
 
-  const [allAnnouncements, setAllAnnouncements] = useState([]);
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    // Load all announcements once for counts
-    const loadAll = async () => {
-      try {
-        const data = await announcementService.listAdminAnnouncements({});
-        setAllAnnouncements(data || []);
-      } catch (err) {
-        console.error('Erreur chargement compteurs:', err);
-      }
-    };
-    loadAll();
-  }, [isAdmin]);
-
   useEffect(() => {
     if (!isAdmin) return;
     loadAnnouncements();
-  }, [isAdmin, statusFilter, sourceFilter]);
+  }, [isAdmin]);
 
   const filteredAnnouncements = useMemo(() => {
-    if (!searchText.trim()) return announcements;
-    const query = searchText.toLowerCase();
-    return announcements.filter((announcement) =>
-      announcement.title?.toLowerCase().includes(query)
-    );
-  }, [announcements, searchText]);
+    let result = announcements;
+
+    if (statusFilter !== 'ALL') {
+      result = result.filter((a) => a.status === statusFilter);
+    }
+
+    if (sourceFilter !== 'ALL') {
+      if (sourceFilter === 'NATIVE') {
+        result = result.filter((a) => !a.source_type || a.source_type === 'NATIVE');
+      } else if (sourceFilter === 'SCRAPED') {
+        result = result.filter((a) => a.source_type === 'SCRAPED');
+      }
+    }
+
+    if (searchText.trim()) {
+      const query = searchText.toLowerCase();
+      result = result.filter((a) => a.title?.toLowerCase().includes(query));
+    }
+
+    return result;
+  }, [announcements, statusFilter, sourceFilter, searchText]);
 
   const counts = useMemo(() => {
     const total = { pending: 0, active: 0, flagged: 0 };
-    allAnnouncements.forEach((announcement) => {
-      if (announcement.status === 'pending') total.pending += 1;
-      if (announcement.status === 'active') total.active += 1;
-      if (announcement.status === 'flagged') total.flagged += 1;
+    announcements.forEach((a) => {
+      if (a.status === 'pending') total.pending += 1;
+      if (a.status === 'active') total.active += 1;
+      if (a.status === 'flagged') total.flagged += 1;
     });
     return total;
-  }, [allAnnouncements]);
+  }, [announcements]);
 
   const handleApprove = async (announcement) => {
     setActionLoading(announcement.id);
