@@ -24,11 +24,12 @@
     <title>Riviqo | Plateforme de cession, acquisition et transmission d'entreprise en France et en Europe</title>
     <script>
     (function(w,d,s,o,f,js,fjs){
+      if (w.location.pathname.startsWith('/admin')) return;
       w['VulpaSoft']=o;w[o]=w[o]||function(){(w[o].q=w[o].q||[]).push(arguments)};
       js=d.createElement(s);fjs=d.getElementsByTagName(s)[0];
       js.id=o;js.src=f;js.async=1;fjs.parentNode.insertBefore(js,fjs);
     }(window,document,'script','vs','https://cdn.vulpasoft.com/sdk.js'));
-    vs('init', '08590ebb-c676-495f-9a24-b1a2effa3038');
+    if(window.vs) vs('init', '08590ebb-c676-495f-9a24-b1a2effa3038');
     </script>
   </head>
   <body>

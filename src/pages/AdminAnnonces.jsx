@@ -330,18 +330,18 @@ export default function AdminAnnonces() {
           </header>
 
           <div className="grid gap-4 md:grid-cols-3 mb-6">
-            <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+            <button type="button" onClick={() => setStatusFilter(statusFilter === 'pending' ? 'ALL' : 'pending')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'pending' ? 'ring-2 ring-orange-400 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'} border border-orange-100`}>
               <p className="text-xs text-gray-500">En attente</p>
               <p className="text-2xl font-semibold text-orange-600">{counts.pending}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-violet-50 border border-violet-100">
+            </button>
+            <button type="button" onClick={() => setStatusFilter(statusFilter === 'flagged' ? 'ALL' : 'flagged')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'flagged' ? 'ring-2 ring-violet-400 bg-violet-100' : 'bg-violet-50 hover:bg-violet-100'} border border-violet-100`}>
               <p className="text-xs text-gray-500">Signalées</p>
               <p className="text-2xl font-semibold text-violet-600">{counts.flagged}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+            </button>
+            <button type="button" onClick={() => setStatusFilter(statusFilter === 'active' ? 'ALL' : 'active')} className={`p-4 rounded-xl text-left transition-all ${statusFilter === 'active' ? 'ring-2 ring-emerald-400 bg-emerald-100' : 'bg-emerald-50 hover:bg-emerald-100'} border border-emerald-100`}>
               <p className="text-xs text-gray-500">Actives</p>
               <p className="text-2xl font-semibold text-emerald-600">{counts.active}</p>
-            </div>
+            </button>
           </div>
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
@@ -352,7 +352,7 @@ export default function AdminAnnonces() {
                 placeholder="Rechercher par titre"
                 className="w-full sm:w-64"
               />
-              <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); }}>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
@@ -366,7 +366,7 @@ export default function AdminAnnonces() {
                   <SelectItem value="flagged">Signalées</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={sourceFilter} onValueChange={(val) => { setSourceFilter(val); }}>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Source" />
                 </SelectTrigger>
@@ -379,6 +379,9 @@ export default function AdminAnnonces() {
                 </SelectContent>
               </Select>
             </div>
+            <span className="text-sm text-gray-500">
+              {filteredAnnouncements.length} / {announcements.length} annonces
+            </span>
           </div>
 
           {error && <div className="p-4 text-sm text-red-600">{error}</div>}

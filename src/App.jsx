@@ -20,6 +20,21 @@ function ScrollToTop() {
   return null;
 }
 
+function VulpaSoftController() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const isAdmin = pathname.startsWith('/admin');
+    if (typeof window.vs === 'function') {
+      if (isAdmin) {
+        window.vs('shutdown');
+      } else {
+        window.vs('init', '08590ebb-c676-495f-9a24-b1a2effa3038');
+      }
+    }
+  }, [pathname]);
+  return null;
+}
+
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
@@ -228,6 +243,7 @@ function App() {
               }}
             >
               <ScrollToTop />
+              <VulpaSoftController />
               <NavigationTracker />
               <AuthenticatedApp />
             </Router>
