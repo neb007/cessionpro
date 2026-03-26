@@ -1,4 +1,4 @@
-const BASE_URL = 'https://riviqo.com';
+const BASE_URL = 'https://www.riviqo.com';
 const OG_IMAGE = `${BASE_URL}/riviqo-logo.png`;
 
 export const SEO_DEFAULTS = {
@@ -264,7 +264,7 @@ export function getJsonLdWebSite() {
     url: BASE_URL,
     potentialAction: {
       '@type': 'SearchAction',
-      target: `${BASE_URL}/Annonces?q={search_term_string}`,
+      target: `${BASE_URL}/?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   };
@@ -314,7 +314,7 @@ export function getJsonLdBlog() {
     '@type': 'Blog',
     name: 'Blog Riviqo',
     description: 'Articles, guides et conseils d\'experts pour la cession et reprise d\'entreprise',
-    url: `${BASE_URL}/Blog`,
+    url: `${BASE_URL}/blog`,
     publisher: {
       '@type': 'Organization',
       name: 'Riviqo',
@@ -328,7 +328,7 @@ export function getJsonLdBreadcrumb(articleTitle, articleUrl) {
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Accueil', item: BASE_URL },
-      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${BASE_URL}/Blog` },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${BASE_URL}/blog` },
       { '@type': 'ListItem', position: 3, name: articleTitle, item: articleUrl },
     ],
   };

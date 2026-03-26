@@ -22,9 +22,10 @@ export default function SEO({ pageName, slug, ogImage, faqItems }) {
   // Fallback title/description
   const title = pageConfig?.[lang]?.title || `${pageName} | Riviqo`;
   const description = pageConfig?.[lang]?.description || '';
+  const lowerPageName = pageName.toLowerCase();
   const canonicalUrl = slug
-    ? `${SEO_DEFAULTS.baseUrl}/${pageName}/${slug}`
-    : `${SEO_DEFAULTS.baseUrl}/${pageName}`;
+    ? `${SEO_DEFAULTS.baseUrl}/${lowerPageName}/${slug}`
+    : `${SEO_DEFAULTS.baseUrl}/${lowerPageName}`;
   const locale = SEO_DEFAULTS.locale[lang];
   const image = ogImage || SEO_DEFAULTS.ogImage;
 
@@ -64,7 +65,6 @@ export default function SEO({ pageName, slug, ogImage, faqItems }) {
         <>
           <link rel="canonical" href={canonicalUrl} />
           <link rel="alternate" hrefLang="fr" href={canonicalUrl} />
-          <link rel="alternate" hrefLang="en" href={canonicalUrl} />
           <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
         </>
       )}

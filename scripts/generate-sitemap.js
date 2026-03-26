@@ -11,31 +11,31 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const BASE_URL = 'https://riviqo.com';
+const BASE_URL = 'https://www.riviqo.com';
 
 // Static pages with their priorities and change frequencies
 const STATIC_PAGES = [
   { loc: '/', changefreq: 'weekly', priority: '1.0' },
-  { loc: '/Ceder', changefreq: 'monthly', priority: '0.9' },
-  { loc: '/Reprendre', changefreq: 'monthly', priority: '0.9' },
-  { loc: '/Valuations', changefreq: 'monthly', priority: '0.9' },
-  { loc: '/Blog', changefreq: 'weekly', priority: '0.9' },
-  { loc: '/Financing', changefreq: 'monthly', priority: '0.8' },
-  { loc: '/Targeting', changefreq: 'monthly', priority: '0.8' },
-  { loc: '/SmartMatchingFeatures', changefreq: 'monthly', priority: '0.8' },
-  { loc: '/Pricing', changefreq: 'monthly', priority: '0.8' },
-  { loc: '/Outils', changefreq: 'monthly', priority: '0.8' },
-  { loc: '/GuideCession', changefreq: 'monthly', priority: '0.7' },
-  { loc: '/GuideRepreneur', changefreq: 'monthly', priority: '0.7' },
-  { loc: '/GuideRepreneuriat', changefreq: 'monthly', priority: '0.7' },
-  { loc: '/Expert', changefreq: 'monthly', priority: '0.7' },
-  { loc: '/FAQ', changefreq: 'monthly', priority: '0.7' },
-  { loc: '/Contact', changefreq: 'monthly', priority: '0.7' },
-  { loc: '/Dataroom', changefreq: 'monthly', priority: '0.7' },
-  { loc: '/Partners', changefreq: 'monthly', priority: '0.8' },
-  { loc: '/MentionsLegales', changefreq: 'yearly', priority: '0.3' },
-  { loc: '/CGU', changefreq: 'yearly', priority: '0.3' },
-  { loc: '/PolitiqueConfidentialite', changefreq: 'yearly', priority: '0.3' },
+  { loc: '/ceder', changefreq: 'monthly', priority: '0.9' },
+  { loc: '/reprendre', changefreq: 'monthly', priority: '0.9' },
+  { loc: '/valuations', changefreq: 'monthly', priority: '0.9' },
+  { loc: '/blog', changefreq: 'weekly', priority: '0.9' },
+  { loc: '/financing', changefreq: 'monthly', priority: '0.8' },
+  { loc: '/targeting', changefreq: 'monthly', priority: '0.8' },
+  { loc: '/smartmatchingfeatures', changefreq: 'monthly', priority: '0.8' },
+  { loc: '/pricing', changefreq: 'monthly', priority: '0.8' },
+  { loc: '/outils', changefreq: 'monthly', priority: '0.8' },
+  { loc: '/guidecession', changefreq: 'monthly', priority: '0.7' },
+  { loc: '/guiderepreneur', changefreq: 'monthly', priority: '0.7' },
+  { loc: '/guiderepreneuriat', changefreq: 'monthly', priority: '0.7' },
+  { loc: '/expert', changefreq: 'monthly', priority: '0.7' },
+  { loc: '/faq', changefreq: 'monthly', priority: '0.7' },
+  { loc: '/contact', changefreq: 'monthly', priority: '0.7' },
+  { loc: '/dataroom', changefreq: 'monthly', priority: '0.7' },
+  { loc: '/partners', changefreq: 'monthly', priority: '0.8' },
+  { loc: '/mentionslegales', changefreq: 'yearly', priority: '0.3' },
+  { loc: '/cgu', changefreq: 'yearly', priority: '0.3' },
+  { loc: '/politiqueconfidentialite', changefreq: 'yearly', priority: '0.3' },
 ];
 
 // Read blog articles from source

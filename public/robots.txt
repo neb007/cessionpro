@@ -1,26 +1,34 @@
 User-agent: *
 Allow: /
-Disallow: /Login
-Disallow: /Register
-Disallow: /AccountCreation
-Disallow: /PasswordReset
-Disallow: /AuthCallback
-Disallow: /Checkout
-Disallow: /Messages
-Disallow: /Settings
-Disallow: /Profile
-Disallow: /CreateBusiness
-Disallow: /MyListings
-Disallow: /MyLeads
-Disallow: /Leads
-Disallow: /Favorites
-Disallow: /Billing
-Disallow: /Abonnement
-Disallow: /SmartMatchingNotifications
-Disallow: /SmartMatching
-Disallow: /Annonces
-Disallow: /BusinessDetails
-Disallow: /Categories
 
-Sitemap: https://riviqo.com/sitemap.xml
+# Pages privees / authentification
+Disallow: /login
+Disallow: /register
+Disallow: /accountcreation
+Disallow: /passwordreset
+Disallow: /authcallback
+Disallow: /checkout
+
+# Pages utilisateur connecte
+Disallow: /messages
+Disallow: /settings
+Disallow: /profile
+Disallow: /createbusiness
+Disallow: /mylistings
+Disallow: /myleads
+Disallow: /leads
+Disallow: /favorites
+Disallow: /billing
+Disallow: /abonnement
+Disallow: /smartmatchingnotifications
+
+# Pages dynamiques/filtrees (contenu duplique)
+Disallow: /annonces
+Disallow: /businessdetails
+Disallow: /categories
+Disallow: /smartmatching
+
+# Admin
+Disallow: /admin
+
 Sitemap: https://www.riviqo.com/sitemap.xml

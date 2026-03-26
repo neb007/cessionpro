@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Eye, RefreshCcw, RotateCcw, ShieldCheck, XCircle } from 'lucide-react';
 
@@ -482,34 +481,35 @@ export default function AdminAnnonces() {
         </Card>
       </div>
 
-      {/* Reject dialog — rendered at root level via portal */}
-      <Dialog open={showRejectDialog} onOpenChange={(open) => { if (!open) { setShowRejectDialog(false); setSelectedAnnouncement(null); setRejectReason(''); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Refuser l'annonce</DialogTitle>
-            <DialogDescription>
+      {/* Reject modal */}
+      {showRejectDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/60" onClick={() => { setShowRejectDialog(false); setSelectedAnnouncement(null); setRejectReason(''); }} />
+          <div className="relative z-10 w-full max-w-lg mx-4 bg-white rounded-lg shadow-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Refuser l'annonce</h2>
+            <p className="text-sm text-gray-500">
               {selectedAnnouncement?.title ? `Annonce : ${selectedAnnouncement.title}` : 'Ajoute un message qui sera transmis à l\'utilisateur.'}
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={rejectReason}
-            onChange={(event) => setRejectReason(event.target.value)}
-            placeholder="Motif du refus (obligatoire)"
-            className="min-h-[120px]"
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowRejectDialog(false); setSelectedAnnouncement(null); setRejectReason(''); }}>
-              Annuler
-            </Button>
-            <Button
-              onClick={handleRejectSubmit}
-              disabled={!rejectReason.trim() || actionLoading === selectedAnnouncement?.id}
-            >
-              {actionLoading === selectedAnnouncement?.id ? 'Envoi...' : 'Confirmer le refus'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </p>
+            <Textarea
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              placeholder="Motif du refus (obligatoire)"
+              className="min-h-[120px]"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setShowRejectDialog(false); setSelectedAnnouncement(null); setRejectReason(''); }}>
+                Annuler
+              </Button>
+              <Button
+                onClick={handleRejectSubmit}
+                disabled={!rejectReason.trim() || actionLoading === selectedAnnouncement?.id}
+              >
+                {actionLoading === selectedAnnouncement?.id ? 'Envoi...' : 'Confirmer le refus'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
